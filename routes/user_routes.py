@@ -22,7 +22,7 @@ user_bp = Blueprint("user", __name__)
 
 
 def _ampyan_api_base_url():
-    return (os.environ.get("AMPYAN_API_BASE_URL") or "http://127.0.0.1:5001").rstrip("/")
+    return (os.environ.get("AMPYAN_API_BASE_URL") or "https://api.ampyan.com").rstrip("/")
 
 
 def _remote_request(path, method="GET", payload=None, timeout=8):

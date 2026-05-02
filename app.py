@@ -1030,29 +1030,28 @@ def reset_password(token):
 
 # ================= CREATE DB TABLES =================
 
-with app.app_context():
-    db.create_all()
+try:
+    with app.app_context():
+        db.create_all()
 
-    admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
-    changed = False
+        admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
+        changed = False
 
-    for admin_user in admin_users:
-        if admin_user.role != "admin":
-            admin_user.role = "admin"
-            changed = True
+        for admin_user in admin_users:
+            if admin_user.role != "admin":
+                admin_user.role = "admin"
+                changed = True
 
-    if changed:
-        db.session.commit()
+        if changed:
+            db.session.commit()
+except Exception as e:
+    print("Database initialization skipped:", e)
 # ================= START SERVER =================
 
 if __name__ == "__main__":
 
-    port = int(os.environ.get("PORT", 5002))
+    port = int(os.environ.get("PORT", 10000))
 
     print("Starting Motrnoix AMPYAN server on port:", port)
 
-    app.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False
-    )
+    app.run(host="0.0.0.0", port=port)
