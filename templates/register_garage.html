@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">Mechanic Onboarding</p>
+<h1 class="page-title">Register Your Garage On AMPYAN</h1>
+<p class="page-subtitle">Create your workshop profile, show your specialties and receive a trust level inside the AMPYAN automotive ecosystem.</p>
+</div>
+</div>
+
+<div class="profile-card mechanic-form-shell">
+<form method="POST">
+<div class="ui-grid ui-grid-2">
+<input type="text" name="business_name" placeholder="Garage / Workshop Name" class="profile-input" required>
+<input type="text" name="owner_name" placeholder="Owner / Lead Mechanic Name" class="profile-input" required>
+<input type="email" name="email" placeholder="Business Email" class="profile-input">
+<input type="text" name="phone" placeholder="Phone Number" class="profile-input" required>
+<input type="text" name="city" placeholder="City" class="profile-input" required>
+<input type="text" name="state" placeholder="State" class="profile-input">
+<input type="text" name="pincode" placeholder="Pincode" class="profile-input">
+<input type="text" name="experience_years" placeholder="Years of Experience" class="profile-input">
+<input type="text" name="specialties" placeholder="Specialties: brakes, engine, AC, EV" class="profile-input">
+<input type="text" name="service_types" placeholder="Service Types: general service, denting, diagnostics" class="profile-input">
+</div>
+
+<textarea name="address" placeholder="Workshop Address" class="profile-input mechanic-textarea mechanic-textarea-sm"></textarea>
+<textarea name="about" placeholder="Tell users about your garage, tools, quality standards and service approach" class="profile-input mechanic-textarea"></textarea>
+
+<div class="ui-pill-row mechanic-pill-row">
+<label class="ui-pill"><input type="checkbox" name="accepts_emergency" class="mechanic-checkbox"> Accept emergency work</label>
+<label class="ui-pill"><input type="checkbox" name="pickup_drop_available" class="mechanic-checkbox"> Pickup and drop available</label>
+</div>
+
+<button type="submit" class="auth-button mechanic-submit-btn">Register Garage Profile</button>
+</form>
+</div>
+</section>
+
+{% endblock %}

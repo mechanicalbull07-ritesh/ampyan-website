@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="auth-wrapper">
+
+    <div class="auth-card">
+
+        <!-- Switch Button -->
+        <div class="auth-top-switch">
+            {% if request.path == "/login" %}
+                <a href="/register">Create Account →</a>
+            {% else %}
+                <a href="/login">← Back to Login</a>
+            {% endif %}
+        </div>
+
+        <!-- Title -->
+        {% if request.path == "/login" %}
+            <h2>Welcome Back</h2>
+            <p class="auth-sub">Sign in to your AMPYAN account</p>
+        {% else %}
+            <h2>Create Account</h2>
+            <p class="auth-sub">Create your AMPYAN account</p>
+        {% endif %}
+
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="auth-flash">
+                    {% for message in messages %}
+                        <p>{{ message }}</p>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <!-- Google Login -->
+        <div class="google-login">
+            <a href="/login/google" class="google-btn">
+                <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google">
+                Continue with Google
+            </a>
+        </div>
+
+        <div class="divider">
+            <span>OR CONTINUE WITH EMAIL</span>
+        </div>
+
+        <!-- AUTH FORM -->
+        <form method="POST" autocomplete="off">
+
+            
+
+            <!-- Username -->
+            <input type="text"
+                   name="username"
+                   placeholder="Username or Email"
+                   required>
+
+            <!-- Password -->
+            <input type="password"
+                   name="password"
+                   placeholder="Password"
+                   required
+                   autocomplete="current-password">
+
+            <!-- Submit Button -->
+            {% if request.path == "/login" %}
+                <button type="submit" class="auth-btn">
+                    Login
+                </button>
+            {% else %}
+                <button type="submit" class="auth-btn">
+                    Register
+                </button>
+            {% endif %}
+
+        </form>
+
+        <!-- Forgot Password -->
+        {% if request.path == "/login" %}
+        <p style="margin-top:15px;">
+            <a href="/forgot-password" class="forgot-btn">Reset Password</a>
+        </p>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}

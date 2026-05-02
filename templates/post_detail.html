@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-shell">
+
+<div class="ui-card narrow-card">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">Community Discussion</p>
+<h1 class="page-title">{{ post.title }}</h1>
+</div>
+
+{% if post.can_edit %}
+<div class="ui-button-row">
+<a href="{{ post.edit_url }}" class="ui-button-secondary">Edit</a>
+<form method="POST" action="{{ post.delete_url }}" class="inline-form">
+<button type="submit" class="ui-button-danger" onclick="return confirm('Are you sure you want to delete this post?')">Delete</button>
+</form>
+</div>
+{% endif %}
+</div>
+
+<div class="author-left card-spacer">
+{% if post.author_avatar_url %}
+<img src="{{ post.author_avatar_url }}" class="author-avatar">
+{% else %}
+<div class="author-avatar-letter">{{ post.author_avatar_letter }}</div>
+{% endif %}
+
+<div class="author-info">
+<div class="author-name">
+{{ post.author_display_name }}
+<span class="author-badge">{{ post.author_badge }}</span>
+</div>
+<div class="author-location">⭐ {{ post.author_reputation }} points</div>
+</div>
+</div>
+
+<p class="body-copy-lg">{{ post.content }}</p>
+
+{% if post.image_url %}
+<img src="{{ post.image_url }}" class="post-image">
+{% endif %}
+</div>
+
+<div class="ui-card narrow-card">
+<h2 class="section-heading">Replies ({{ post.reply_count }})</h2>
+
+{% if post.comments %}
+<div class="ui-grid">
+{% for comment in post.comments %}
+<div class="simple-list-card">
+<p class="body-copy-lg" style="margin-top:0;">{{ comment.content }}</p>
+<div class="post-actions">
+<small class="page-subtitle" style="margin:0;">{{ comment.author_name }}</small>
+
+{% if comment.can_edit %}
+<div class="ui-button-row">
+<a href="{{ comment.edit_url }}" class="ui-button-secondary">Edit</a>
+<form method="POST" action="{{ comment.delete_url }}" class="inline-form">
+<button type="submit" class="ui-button-danger" onclick="return confirm('Delete this reply?')">Delete</button>
+</form>
+</div>
+{% endif %}
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No replies yet.</div>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+<div class="comment-form">
+<form method="POST" action="{{ post.reply_url }}">
+<textarea name="content" placeholder="Write your reply..." required class="profile-input" style="min-height:120px;resize:vertical;"></textarea>
+<button type="submit" class="auth-button">Post Reply</button>
+</form>
+</div>
+{% else %}
+<p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" style="color:#ff3b3b;">login</a> to reply.</p>
+{% endif %}
+
+</div>
+
+</section>
+
+{% endblock %}

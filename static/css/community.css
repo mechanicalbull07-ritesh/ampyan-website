@@ -1,0 +1,393 @@
+/* ================= COMMUNITY CONTROLS ================= */
+
+.create-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 15px;
+    padding: 12px 20px;
+    background: linear-gradient(135deg, #ff5a36, #ff7b29);
+    color: white;
+    text-decoration: none;
+    border-radius: 14px;
+    font-weight: 700;
+    transition: 0.3s;
+    box-shadow: 0 16px 32px rgba(255, 90, 54, 0.22);
+}
+
+.create-btn:hover {
+    transform: translateY(-2px);
+}
+
+.community-layout{
+    display:grid;
+    grid-template-columns:minmax(0,1.2fr) minmax(280px,0.8fr);
+    gap:24px;
+    align-items:start;
+}
+
+.community-main{
+    min-width:0;
+}
+
+.community-sidebar{
+    position:sticky;
+    top:110px;
+}
+
+.community-interactive-grid{
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:18px;
+}
+
+.community-stat-card{
+    padding:24px;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,0.08);
+    background:linear-gradient(160deg,#101010,#171717);
+    box-shadow:0 18px 44px rgba(0,0,0,0.22);
+}
+
+.community-stat-card span{
+    display:block;
+    margin-bottom:10px;
+    color:#ff9a9a;
+    font-size:12px;
+    letter-spacing:0.18em;
+    text-transform:uppercase;
+}
+
+.community-stat-card strong{
+    display:block;
+    font-size:30px;
+    color:#fff;
+    margin-bottom:8px;
+}
+
+.community-stat-card p{
+    margin:0;
+    color:#c5c5c5;
+    line-height:1.7;
+}
+
+.filter-bar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 0;
+    flex-wrap: wrap;
+}
+
+.filter-bar input {
+    background: #1c1c1c;
+    color: white;
+    border: 1px solid #333;
+    padding: 12px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    width: min(320px, 100%);
+}
+
+.filter-bar button {
+    background: linear-gradient(135deg, #ff5a36, #ff7b29);
+    border: none;
+    color: white;
+    padding: 12px 18px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.sort-btn {
+    background: #222;
+    color: white;
+    padding: 10px 18px;
+    border-radius: 999px;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.sort-btn:hover {
+    background: #ff3b3b;
+}
+
+.active-sort {
+    background: #ff3b3b !important;
+    color: white !important;
+}
+
+.community-section-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-bottom:18px;
+}
+
+.community-topic-row,
+.community-topic-stack{
+    display:grid;
+    gap:12px;
+}
+
+.community-topic-row{
+    grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+}
+
+.community-topic-chip,
+.community-starter-card,
+.community-contributor-card{
+    display:flex;
+    justify-content:space-between;
+    gap:12px;
+    padding:16px 18px;
+    border-radius:18px;
+    border:1px solid rgba(255,255,255,0.08);
+    background:rgba(255,255,255,0.03);
+    color:#fff;
+    text-decoration:none;
+    transition:0.25s;
+}
+
+.community-topic-chip:hover,
+.community-starter-card:hover,
+.community-contributor-card:hover{
+    transform:translateY(-2px);
+    border-color:#ff3b3b;
+}
+
+.community-topic-chip strong,
+.community-contributor-card h3{
+    margin:0;
+    font-size:16px;
+}
+
+.community-topic-chip span,
+.community-contributor-card p{
+    color:#bdbdbd;
+    font-size:13px;
+}
+
+.community-starter-card{
+    display:block;
+    color:#d9d9d9;
+    line-height:1.7;
+}
+
+.community-contributor-score{
+    white-space:nowrap;
+    color:#ffcc66;
+    font-weight:700;
+}
+
+/* ================= COMMUNITY POSTS ================= */
+
+.post-card{
+background:linear-gradient(180deg,#141414,#0c0c0c);
+border:1px solid #222;
+border-radius:20px;
+padding:22px;
+margin-bottom:20px;
+transition:all 0.3s ease;
+}
+
+.post-card:hover{
+border-color:#ff3b3b;
+box-shadow:0 0 20px rgba(255,59,59,0.25);
+}
+
+.post-header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:14px;
+}
+
+.author-left{
+display:flex;
+align-items:center;
+gap:12px;
+}
+
+.author-avatar{
+width:44px;
+height:44px;
+border-radius:50%;
+object-fit:cover;
+border:2px solid #ff3b3b;
+}
+
+.author-avatar-letter{
+width:44px;
+height:44px;
+border-radius:50%;
+background:#ff3b3b;
+display:flex;
+align-items:center;
+justify-content:center;
+color:white;
+font-weight:600;
+}
+
+.author-info{
+display:flex;
+flex-direction:column;
+}
+
+.author-name{
+font-weight:600;
+color:white;
+display:flex;
+gap:8px;
+}
+
+.author-badge{
+background:#1f1f1f;
+padding:2px 8px;
+border-radius:10px;
+font-size:12px;
+color:#aaa;
+}
+
+.author-location{
+font-size:12px;
+color:#888;
+}
+
+.author-reputation{
+margin-left:6px;
+color:#ffcc66;
+}
+
+.post-title{
+margin:6px 0 10px 0;
+font-size:20px;
+}
+
+.post-title a{
+color:white;
+text-decoration:none;
+}
+
+.post-title a:hover{
+color:#ff3b3b;
+}
+
+.post-preview{
+color:#aaa;
+font-size:14px;
+line-height:1.7;
+}
+
+.top-reply{
+margin-top:14px;
+padding:12px;
+background:#0f0f0f;
+border-radius:12px;
+border-left:3px solid #ff3b3b;
+}
+
+.top-reply-label{
+font-size:12px;
+color:#ff3b3b;
+font-weight:600;
+}
+
+.post-actions{
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.vote-btn{
+background:#1a1a1a;
+padding:8px 14px;
+border-radius:999px;
+text-decoration:none;
+color:#aaa;
+font-size:14px;
+}
+
+.vote-btn:hover,
+.vote-btn.voted{
+background:#ff3b3b;
+color:white;
+}
+
+.reply-count{
+color:#888;
+font-size:14px;
+text-decoration:none;
+}
+
+.reply-count:hover{
+color:white;
+}
+
+/* ================= CREATE POST PREMIUM ================= */
+
+.create-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 60px 20px;
+}
+
+.create-card {
+    width: 100%;
+    max-width: 700px;
+    background: #111;
+    padding: 40px;
+    border-radius: 14px;
+    border: 1px solid #222;
+    box-shadow: 0 0 40px rgba(255, 59, 59, 0.08);
+}
+
+.create-card h2 {
+    margin-bottom: 5px;
+    font-size: 28px;
+}
+
+.create-sub {
+    color: #aaa;
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+.create-card input,
+.create-card textarea,
+.create-card select {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 18px;
+    border-radius: 8px;
+}
+
+@media(max-width:768px){
+.community-layout,
+.community-interactive-grid{
+grid-template-columns:1fr;
+}
+
+.community-sidebar{
+position:static;
+}
+
+.filter-bar{
+flex-direction:column;
+align-items:stretch;
+}
+
+.filter-bar input,
+.filter-bar button,
+.sort-btn{
+width:100%;
+margin-left:0;
+text-align:center;
+}
+
+.author-name{
+flex-wrap:wrap;
+}
+}

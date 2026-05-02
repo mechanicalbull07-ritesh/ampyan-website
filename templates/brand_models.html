@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>{{ brand.name }} Models</h1>
+
+{% for model in brand.models %}
+    <div class="post-card">
+        <h2>
+            <a href="/handbook/model/{{ model.id }}" style="color:white; text-decoration:none;">
+                {{ model.name }}
+            </a>
+        </h2>
+    </div>
+{% else %}
+    <p>No models added.</p>
+{% endfor %}
+
+{% endblock %}

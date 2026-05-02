@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="create-wrapper">
+
+    <div class="create-card">
+
+        <h2>Create New Post</h2>
+        <p class="create-sub">Share your thoughts with the community</p>
+
+        <form method="POST" autocomplete="off">
+
+            <!-- Title -->
+            <input type="text"
+                   name="title"
+                   placeholder="Post Title"
+                   required>
+
+            <!-- Content -->
+            <textarea name="content"
+                      placeholder="Write your content..."
+                      rows="6"
+                      required></textarea>
+
+
+            <!-- Submit -->
+            <button type="submit" class="publish-btn">
+                🚀 Publish Post
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+{% endblock %}

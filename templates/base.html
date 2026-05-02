@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+<button id="topBtn" onclick="topFunction()">↑</button>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>AMPYAN - Powering Intelligent Mobility</title>
+
+<!-- FONTS -->
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- CSS -->
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/hero.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/community.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ai.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css') }}">
+<link rel="stylesheet" href="/static/css/news.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/garage.css') }}">
+
+<!-- ICONS -->
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+</head>
+
+<body>
+
+<div class="particles"></div>
+<div class="mouse-light"></div>
+<div class="cursor-glow"></div>
+<canvas id="neural-bg"></canvas>
+
+<!-- NAVBAR -->
+<div id="scrollBar"></div>
+<nav class="navbar">
+
+<!-- LEFT : LOGO -->
+
+<div class="navbar-logo">
+<img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
+</div>
+
+
+<!-- CENTER MENU -->
+
+<div class="nav-center">
+
+<!-- HOME -->
+
+<div class="nav-dropdown">
+
+<span class="nav-link">
+<i class="fa-solid fa-house"></i> Home
+<i class="fa-solid fa-chevron-down"></i>
+</span>
+
+<div class="nav-dropdown-content">
+
+<a href="/">Home</a>
+<a href="/about">About AMPYAN</a>
+<a href="/vision">Vision</a>
+<a href="/platform">Platform</a>
+<a href="/contact">Contact</a>
+
+<div class="dropdown-divider"></div>
+
+<a href="/privacy">Privacy Policy</a>
+<a href="/terms">Terms of Service</a>
+<a href="/disclaimer">Disclaimer</a>
+
+</div>
+
+</div>
+
+
+<!-- COMMUNITY -->
+
+<div class="nav-dropdown">
+
+<span class="nav-link">
+<i class="fa-solid fa-users"></i> Community
+<i class="fa-solid fa-chevron-down"></i>
+</span>
+
+<div class="nav-dropdown-content">
+
+<a href="/community">AMPYAN Community</a>
+<a href="/leaderboard">Leaderboard</a>
+<a href="/speed16">Badges</a>
+
+</div>
+
+</div>
+
+
+<!-- TOOLS -->
+
+<div class="nav-dropdown">
+
+<span class="nav-link">
+<i class="fa-solid fa-wrench"></i> Tools
+<i class="fa-solid fa-chevron-down"></i>
+</span>
+
+<div class="nav-dropdown-content">
+
+<a href="/tools/ai-diagnosis">AI Diagnosis</a>
+<a href="/tools/car-suggestion">Car Suggestion Tool</a>
+<a href="/tools/fuel-cost">Fuel Cost Calculator</a>
+
+</div>
+
+</div>
+
+
+<!-- EXPLORE -->
+
+<div class="nav-dropdown">
+
+<span class="nav-link">
+<i class="fa-solid fa-compass"></i> Explore
+<i class="fa-solid fa-chevron-down"></i>
+</span>
+
+<div class="nav-dropdown-content">
+
+<a href="/news">News</a>
+<a href="/videos">Videos</a>
+<a href="/garage-network">Garage Network</a>
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- RIGHT SIDE -->
+
+<div class="nav-right">
+
+<!-- MY GARAGE -->
+
+<a href="/garage-dashboard" class="nav-link highlight-garage">
+<i class="fa-solid fa-car"></i> My Garage
+</a>
+
+<!-- NOTIFICATION -->
+
+<div class="nav-notification">
+<i class="fa-solid fa-bell"></i>
+</div>
+
+<!-- THEME -->
+
+<button onclick="toggleTheme()" class="theme-toggle">
+<i id="themeIcon" class="fa-solid fa-moon"></i>
+</button>
+
+
+{% if current_user.is_authenticated %}
+
+<div class="nav-profile-wrapper">
+
+<div class="nav-profile">
+
+<div class="profile-badge">
+{{ current_user.username[0] | upper }}
+</div>
+
+<button class="user-button" onclick="toggleUserMenu()">
+{{ current_user.username }}
+<i class="fa-solid fa-chevron-down"></i>
+</button>
+
+</div>
+
+<div class="user-dropdown" id="userMenu">
+
+<a href="/profile">
+<i class="fa-solid fa-user"></i> Profile
+</a>
+
+<a href="/dashboard">
+{% if current_user.role == "mechanic" %}
+<i class="fa-solid fa-screwdriver-wrench"></i> Dashboard
+{% else %}
+<i class="fa-solid fa-car"></i> My Garage
+{% endif %}
+</a>
+
+<div class="dropdown-divider"></div>
+
+{% if current_user.role == "admin" %}
+
+<a href="/admin">
+<i class="fa-solid fa-user-shield"></i> Admin Panel
+</a>
+
+<div class="dropdown-divider"></div>
+
+{% endif %}
+
+<a href="/privacy">
+<i class="fa-solid fa-shield-halved"></i> Privacy Policy
+</a>
+
+<a href="/terms">
+<i class="fa-solid fa-file-contract"></i> Terms of Service
+</a>
+
+<a href="/disclaimer">
+<i class="fa-solid fa-circle-exclamation"></i> Disclaimer
+</a>
+
+<div class="dropdown-divider"></div>
+
+<a href="{{ url_for('auth.logout') }}">
+<i class="fa-solid fa-right-from-bracket"></i> Logout
+</a>
+
+</div>
+
+</div>
+
+{% else %}
+
+<a href="{{ url_for('auth.login') }}" class="nav-btn">
+Login
+</a>
+
+{% endif %}
+
+</div>
+
+</nav>
+
+
+
+<!-- MAIN CONTENT -->
+
+<main class="main-container">
+{% block content %}{% endblock %}
+</main>
+
+<!-- BRAND STRIP -->
+
+<section class="brand-strip">
+
+<div class="brand-content">
+
+<div class="brand-left">
+<h3>Powered by AMPYAN</h3>
+</div>
+
+<div class="brand-social">
+
+<a href="https://youtube.com/@speed16R" target="_blank" class="social-icon youtube">
+<i class="fab fa-youtube"></i>
+</a>
+
+<a href="https://instagram.com/channelspeed16" target="_blank" class="social-icon instagram">
+<i class="fab fa-instagram"></i>
+</a>
+
+</div>
+
+<p class="brand-founder">
+Founded by Ritesh, Engineer & Automotive Creator
+</p>
+
+</div>
+
+</section>
+
+<!-- AI FLOATING BUTTON -->
+
+{% if current_user.is_authenticated %}
+
+<div class="ai-orb" onclick="toggleAI()">
+<span class="ai-text">AI</span>
+</div>
+
+<div class="ai-chatbox" id="aiBox">
+
+<div class="ai-header">
+AMPYAN AI
+<span style="cursor:pointer;" onclick="toggleAI()">✖</span>
+</div>
+
+<div class="ai-messages" id="aiMessages">
+
+<div class="ai-message">
+Hi 👋 I’m your AMPYAN Car Assistant.
+Ask anything about buying, service, engine, EV or scams.
+</div>
+
+</div>
+
+<div class="ai-input-area">
+<input type="text" id="aiInput" placeholder="Ask something..." />
+<button onclick="sendAI()">Send</button>
+</div>
+
+</div>
+
+{% else %}
+
+<div class="ai-orb disabled-ai" onclick="redirectToLogin()">
+<span class="ai-text">AI</span>
+</div>
+
+{% endif %}
+
+<!-- FOOTER -->
+<button id="topBtn" onclick="topFunction()">↑</button>
+<footer class="site-footer">
+
+<div class="footer-container">
+
+<p>© 2026 AMPYAN Automotive Intelligence Platform</p>
+
+<div class="footer-links">
+
+<a href="/privacy">Privacy Policy</a> <a href="/terms">Terms of Service</a> <a href="/disclaimer">Disclaimer</a> <a href="/contact">Contact</a>
+
+</div>
+
+</div>
+
+</footer>
+
+<!-- SCRIPTS -->
+
+<script>
+
+function redirectToLogin(){
+alert("Login to unlock AMPYAN AI 🚗");
+window.location.href="{{ url_for('auth.login') }}";
+}
+
+function toggleAI(){
+const box=document.getElementById("aiBox");
+box.classList.toggle("show-ai");
+}
+
+function toggleUserMenu(){
+
+const menu=document.getElementById("userMenu");
+
+if(menu.style.display==="block"){
+menu.style.display="none";
+}else{
+menu.style.display="block";
+}
+
+}
+
+</script>
+
+<!-- CURSOR GLOW -->
+
+<script>
+
+const glow=document.querySelector(".cursor-glow");
+
+document.addEventListener("mousemove",function(e){
+
+if(!glow) return;
+
+glow.style.left=e.clientX+"px";
+glow.style.top=e.clientY+"px";
+
+});
+
+</script>
+
+<!-- HERO PARALLAX -->
+
+<script>
+
+document.addEventListener("DOMContentLoaded",function(){
+
+const hero=document.querySelector(".hero-main");
+
+document.addEventListener("mousemove",function(e){
+
+if(!hero) return;
+
+let x=(window.innerWidth/2 - e.clientX)/40;
+let y=(window.innerHeight/2 - e.clientY)/40;
+
+hero.style.transform="rotateY("+x+"deg) rotateX("+y+"deg)";
+
+});
+
+});
+
+</script>
+
+<!-- NEURAL BACKGROUND -->
+
+<script>
+
+const canvas=document.getElementById("neural-bg");
+const ctx=canvas.getContext("2d");
+
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+
+let nodes=[];
+
+for(let i=0;i<70;i++){
+
+nodes.push({
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+vx:(Math.random()-0.5)*0.4,
+vy:(Math.random()-0.5)*0.4
+});
+
+}
+
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+nodes.forEach(node=>{
+
+node.x+=node.vx;
+node.y+=node.vy;
+
+if(node.x<0 || node.x>canvas.width) node.vx*=-1;
+if(node.y<0 || node.y>canvas.height) node.vy*=-1;
+
+ctx.beginPath();
+ctx.arc(node.x,node.y,2,0,Math.PI*2);
+ctx.fillStyle="#ff2a2a";
+ctx.fill();
+
+nodes.forEach(other=>{
+
+let dx=node.x-other.x;
+let dy=node.y-other.y;
+
+let dist=Math.sqrt(dx*dx+dy*dy);
+
+if(dist<120){
+
+ctx.beginPath();
+ctx.moveTo(node.x,node.y);
+ctx.lineTo(other.x,other.y);
+
+ctx.strokeStyle="rgba(255,42,42,0.15)";
+ctx.stroke();
+
+}
+
+});
+
+});
+
+requestAnimationFrame(draw);
+
+}
+
+draw();
+
+</script>
+<script>
+
+/* ================= THEME SYSTEM ================= */
+
+const themeIcon = document.getElementById("themeIcon");
+
+/* load saved theme */
+
+if(localStorage.getItem("theme") === "light"){
+
+document.body.classList.add("light");
+
+if(themeIcon){
+themeIcon.classList.remove("fa-moon");
+themeIcon.classList.add("fa-sun");
+}
+
+}else{
+
+if(themeIcon){
+themeIcon.classList.remove("fa-sun");
+themeIcon.classList.add("fa-moon");
+}
+
+}
+
+/* toggle theme */
+
+function toggleTheme(){
+
+document.body.classList.toggle("light");
+
+if(document.body.classList.contains("light")){
+
+localStorage.setItem("theme","light");
+
+if(themeIcon){
+themeIcon.classList.remove("fa-moon");
+themeIcon.classList.add("fa-sun");
+}
+
+}else{
+
+localStorage.setItem("theme","dark");
+
+if(themeIcon){
+themeIcon.classList.remove("fa-sun");
+themeIcon.classList.add("fa-moon");
+}
+
+}
+
+}
+
+</script>
+<script>
+
+window.onscroll=function(){
+
+let winScroll=document.body.scrollTop || document.documentElement.scrollTop;
+
+let height=document.documentElement.scrollHeight - document.documentElement.clientHeight;
+
+let scrolled=(winScroll/height)*100;
+
+document.getElementById("scrollBar").style.width=scrolled+"%";
+
+}
+
+</script>
+<script>
+
+window.addEventListener("scroll",function(){
+
+let btn=document.getElementById("topBtn");
+
+if(window.scrollY>300){
+btn.style.display="block";
+}else{
+btn.style.display="none";
+}
+
+});
+
+function topFunction(){
+
+window.scrollTo({
+top:0,
+behavior:"smooth"
+});
+
+}
+
+</script>
+<script>
+
+const observer=new IntersectionObserver(entries=>{
+
+entries.forEach(entry=>{
+
+if(entry.isIntersecting){
+
+entry.target.classList.add("visible");
+
+}
+
+});
+
+});
+
+document.querySelectorAll("section").forEach(sec=>{
+sec.classList.add("fade-in");
+observer.observe(sec);
+});
+
+</script>
+<script>
+
+window.addEventListener("scroll", function(){
+
+let btn = document.getElementById("topBtn");
+
+if(window.scrollY > 300){
+
+btn.style.display = "block";
+
+}else{
+
+btn.style.display = "none";
+
+}
+
+});
+
+function topFunction(){
+
+window.scrollTo({
+
+top:0,
+
+behavior:"smooth"
+
+});
+
+}
+
+</script>
+</body>
+</html>

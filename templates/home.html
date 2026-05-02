@@ -1,0 +1,386 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="brand-hero-strip">
+<div class="brand-hero-copy">
+<p class="brand-kicker">AMPYAN Automotive Intelligence Platform</p>
+<h2>Powered by Speed 16</h2>
+<p>Built by Ritesh Singh for smarter diagnostics, stronger ownership clarity and a connected automotive ecosystem.</p>
+</div>
+
+<div class="brand-hero-badge">
+<span>Speed 16</span>
+<strong>Ritesh Singh</strong>
+</div>
+</section>
+
+<section class="hero hero-no-image">
+<div class="hero-container hero-container-wide">
+<div class="hero-left">
+<div class="hero-brand-line">
+<span class="hero-pill">AMPYAN</span>
+<span class="hero-pill muted">AI + Community + Garage</span>
+<span class="hero-pill muted">Built for Indian car users</span>
+</div>
+
+<h1 class="hero-copy-title">One place to understand your car, choose better cars, and discover trusted garages.</h1>
+<p class="hero-desc"><span id="aiText"></span></p>
+
+<form action="/tools/ai-diagnosis" method="POST" class="hero-search">
+<input
+type="text"
+id="problem-input"
+name="problem"
+placeholder="Describe your car problem..."
+autocomplete="off"
+required
+>
+
+<div id="suggestions-box"></div>
+
+<button type="submit">Diagnose</button>
+</form>
+
+<div class="hero-links">
+<a href="/garage-dashboard">My Garage</a>
+<a href="/community">Community</a>
+<a href="/tools/car-suggestion">Car Suggestion Tool</a>
+<a href="/garage-network">Garage Network</a>
+</div>
+<div class="cta-group">
+<a href="/tools/car-suggestion" class="premium-btn">Find My Next Car</a>
+<a href="/garage-network/register" class="outline-btn">Register A Garage</a>
+</div>
+</div>
+
+<div class="hero-right hero-right-panel">
+<div class="hero-visual-card hero-text-panel">
+<p class="hero-guide-label">AMPYAN Ecosystem Guide</p>
+<div class="hero-side-guide">
+<div class="hero-guide-step">
+<strong>1. Understand your current car</strong>
+<span>Use AI diagnosis, smart garage tracking and service history in one account.</span>
+</div>
+<div class="hero-guide-step">
+<strong>2. Find what fits your lifestyle</strong>
+<span>Use the car suggestion tool for city, highway, family, solo and occasional needs.</span>
+</div>
+<div class="hero-guide-step">
+<strong>3. Build a trusted service network</strong>
+<span>Discover workshops, compare trust and keep local mechanics inside the same flow.</span>
+</div>
+<div class="hero-highlight-strip">
+<div><span>{{ ecosystem_stats.owners }}</span><small>Owners</small></div>
+<div><span>{{ ecosystem_stats.mechanics }}</span><small>Garages</small></div>
+<div><span>{{ ecosystem_stats.car_profiles }}</span><small>Car Profiles</small></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="home-stats-strip">
+<div class="home-stat-card">
+<span>AI Support</span>
+<strong>Smart symptom analysis</strong>
+<p>Quick issue understanding before a workshop visit or parts replacement.</p>
+</div>
+
+<div class="home-stat-card">
+<span>Car Match</span>
+<strong>Usage-based suggestions</strong>
+<p>Shortlist better cars for city, highway, family, solo and daily run needs.</p>
+</div>
+
+<div class="home-stat-card">
+<span>Community</span>
+<strong>Real owner discussions</strong>
+<p>Practical learning from actual driving, maintenance and purchase experience.</p>
+</div>
+
+<div class="home-stat-card">
+<span>Garage Network</span>
+<strong>{{ ecosystem_stats.mechanics }} listed mechanics</strong>
+<p>Growing local workshop network with trust-based visibility and reviews.</p>
+</div>
+</section>
+
+<section class="comparison-spotlight">
+<div class="comparison-spotlight-card">
+<div class="comparison-copy">
+<p class="page-kicker">CAR SUGGESTION TOOL</p>
+<h2 class="section-heading">Not sure which car suits your life? Let your usage decide.</h2>
+<p class="section-copy">Tell AMPYAN whether your driving is city-heavy or highway-heavy, how much you run daily, whether the car is for family or solo use, and what you need on some special days. The tool will recommend cars that fit better.</p>
+
+<div class="comparison-feature-grid">
+<div class="comparison-feature-card">
+<strong>City vs Highway</strong>
+<span>Choose the driving environment that matters most.</span>
+</div>
+<div class="comparison-feature-card">
+<strong>Daily Run Logic</strong>
+<span>High running users get more efficiency-focused matches.</span>
+</div>
+<div class="comparison-feature-card">
+<strong>Family vs Solo Fit</strong>
+<span>Space, comfort and practicality adjust to your users.</span>
+</div>
+<div class="comparison-feature-card">
+<strong>Special Need Days</strong>
+<span>Road trips, rough roads and luggage days are included too.</span>
+</div>
+</div>
+<div class="app-actions">
+<a href="/tools/car-suggestion" class="widget-btn">Open Car Suggestion Tool</a>
+<a href="/tools" class="app-secondary-btn">Explore All Tools</a>
+</div>
+</div>
+
+<div class="comparison-preview-card">
+<p class="hero-guide-label">Example Profile</p>
+<div class="comparison-preview-list">
+<div class="comparison-preview-row"><span>Usage</span><strong>Mixed City + Highway</strong></div>
+<div class="comparison-preview-row"><span>Daily Run</span><strong>45 km/day</strong></div>
+<div class="comparison-preview-row"><span>User Type</span><strong>Family + Solo</strong></div>
+<div class="comparison-preview-row"><span>Special Need</span><strong>Weekend Road Trips</strong></div>
+<div class="comparison-preview-row"><span>Suggested Direction</span><strong>Balanced hatchback / compact SUV</strong></div>
+</div>
+</div>
+</div>
+</section>
+
+<section class="ownership-journey">
+<div class="ownership-copy">
+<p class="page-kicker">OWNER JOURNEY</p>
+<h2 class="section-heading">AMPYAN helps before buying, while driving, and when something goes wrong.</h2>
+<p class="section-copy">From car selection to daily running, issue detection and workshop trust, the platform is designed around the full ownership cycle.</p>
+</div>
+
+<div class="ownership-grid">
+<div class="ownership-step">
+<span>01</span>
+<h3>Choose smarter</h3>
+<p>Use the car suggestion tool to filter what actually matches your real driving life.</p>
+</div>
+<div class="ownership-step">
+<span>02</span>
+<h3>Track your car</h3>
+<p>Add mileage, service details and vehicle history into your AMPYAN garage profile.</p>
+</div>
+<div class="ownership-step">
+<span>03</span>
+<h3>Understand problems</h3>
+<p>Use AI diagnosis and community patterns to narrow likely causes with better explanations.</p>
+</div>
+<div class="ownership-step">
+<span>04</span>
+<h3>Find trusted help</h3>
+<p>Discover verified garages and mechanics when the issue needs real hands-on support.</p>
+</div>
+</div>
+</section>
+
+<section class="ecosystem-story">
+<div class="ecosystem-story-copy">
+<p class="page-kicker">AUTOMOTIVE ECOSYSTEM</p>
+<h2 class="section-heading">Not just a website. A focused automotive operating system.</h2>
+<p class="section-copy">AMPYAN is being built as one connected ecosystem for owners, independent mechanics, workshops, creators and automotive communities.</p>
+</div>
+
+<div class="ecosystem-story-grid">
+<div class="ecosystem-story-card">
+<span>For Owners</span>
+<h3>Ask, diagnose and compare</h3>
+<p>Understand your car, shortlist your next one and reduce guesswork around service decisions.</p>
+</div>
+<div class="ecosystem-story-card">
+<span>For Mechanics</span>
+<h3>Get discovered with trust</h3>
+<p>Join the AMPYAN Garage Network, build a profile and connect with local users looking for reliable service help.</p>
+</div>
+<div class="ecosystem-story-card">
+<span>For The Market</span>
+<h3>One connected graph</h3>
+<p>Cars, owners, garages, problems and solutions start living in one structured product ecosystem.</p>
+</div>
+</div>
+</section>
+
+<section class="garage-network-preview">
+<div class="garage-network-head">
+<div>
+<p class="page-kicker">LOCAL GARAGE NETWORK</p>
+<h2 class="section-heading">Nearby garages can register and grow trust on AMPYAN</h2>
+<p class="section-copy">Mechanics and workshops can create a profile, show specialties, support emergency service and build trust through reviews and approval.</p>
+</div>
+
+<div class="ui-button-row">
+<a href="/garage-network" class="ui-button-secondary">Browse Garages</a>
+<a href="/garage-network/register" class="auth-button">Register Garage</a>
+</div>
+</div>
+
+{% if nearby_mechanics %}
+<div class="garage-network-grid">
+{% for mechanic in nearby_mechanics %}
+<div class="garage-network-card">
+<div class="garage-trust-top">
+<span class="garage-trust-level">{{ mechanic.trust_level }}</span>
+<span class="garage-trust-score">Trust {{ mechanic.trust_score }}/100</span>
+</div>
+<h3>{{ mechanic.business_name }}</h3>
+<p class="garage-owner-name">{{ mechanic.owner_name }}</p>
+<p class="garage-location">{{ mechanic.city }}{% if mechanic.state %}, {{ mechanic.state }}{% endif %}</p>
+<p class="garage-meta">{{ mechanic.specialties or "General automotive service" }}</p>
+<div class="ui-pill-row">
+{% if mechanic.accepts_emergency %}
+<span class="ui-pill">Emergency Support</span>
+{% endif %}
+{% if mechanic.pickup_drop_available %}
+<span class="ui-pill">Pickup & Drop</span>
+{% endif %}
+{% if mechanic.is_verified %}
+<span class="ui-pill">Verified Account</span>
+{% endif %}
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No garages listed yet. Be the first to register your workshop on AMPYAN.</div>
+{% endif %}
+</section>
+
+<section class="platform-map">
+<h2>Explore the AMPYAN Ecosystem</h2>
+<div class="platform-grid">
+<a href="/tools/ai-diagnosis" class="platform-card">
+<i class="fa-solid fa-robot"></i>
+<h3>AI Diagnosis</h3>
+<p>Analyze car problems using AMPYAN AI</p>
+</a>
+
+<a href="/tools/car-suggestion" class="platform-card">
+<i class="fa-solid fa-car-side"></i>
+<h3>Car Suggestion Tool</h3>
+<p>Get a shortlist based on your real-life usage</p>
+</a>
+
+<a href="/garage-dashboard" class="platform-card">
+<i class="fa-solid fa-car"></i>
+<h3>Smart Garage</h3>
+<p>Track vehicle health and service timeline</p>
+</a>
+
+<a href="/community" class="platform-card">
+<i class="fa-solid fa-users"></i>
+<h3>AMPYAN Community</h3>
+<p>Learn from real automotive owners</p>
+</a>
+
+<a href="/garage-network" class="platform-card">
+<i class="fa-solid fa-screwdriver-wrench"></i>
+<h3>Garage Network</h3>
+<p>Discover trusted local workshops and mechanics</p>
+</a>
+
+<a href="/news" class="platform-card">
+<i class="fa-solid fa-newspaper"></i>
+<h3>Automotive News</h3>
+<p>Latest launches and industry updates</p>
+</a>
+</div>
+</section>
+
+<section class="section-grid">
+<div class="widget">
+<h2>Community Discussions</h2>
+{% if recent_posts %}
+<div class="post-grid">
+{% for post in recent_posts[:4] %}
+<div class="post-card">
+<div class="post-header">
+<div class="post-avatar">{{ post.author.username[0]|upper if post.author else "U" }}</div>
+<div class="post-user">{{ post.author.username if post.author else "Member" }}</div>
+</div>
+<h4 class="post-title">{{ post.title }}</h4>
+<p class="post-preview">{{ post.content[:120] if post.content else "" }}...</p>
+<a href="/post/{{ post.id }}" class="widget-btn">View Discussion</a>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<p>No discussions yet</p>
+{% endif %}
+</div>
+
+<div class="widget">
+<h2>Automotive News</h2>
+{% if latest_news %}
+<div class="news-grid">
+{% for news in latest_news[:4] %}
+<div class="news-card">
+<h4 class="news-title">{{ news.title }}</h4>
+<p class="news-preview">{{ news.content[:120] if news.content else "" }}...</p>
+<a href="/news/{{ news.id }}" class="widget-btn">Read Article</a>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<p>No news available</p>
+{% endif %}
+</div>
+</section>
+
+<section class="dual-audience-strip">
+<div class="audience-card owner-card">
+<p class="page-kicker">USER SIDE</p>
+<h3>Owners, Drivers, Enthusiasts</h3>
+<p>Use AMPYAN like a high-trust automotive Reddit + Quora + AI garage assistant built around your own car profile and buying decisions.</p>
+</div>
+
+<div class="audience-card mechanic-card">
+<p class="page-kicker">MECHANIC SIDE</p>
+<h3>Mechanics, Workshops, Garage Teams</h3>
+<p>Build a visible profile, earn trust, collect local demand and become part of a stronger automotive service network.</p>
+</div>
+</section>
+
+<section class="founder">
+<h3>Built for the automotive community</h3>
+<p>AMPYAN is founded by Ritesh Singh, focused on building a more useful and trusted automotive product ecosystem.</p>
+</section>
+
+<script>
+const text = "Diagnose current issues, compare what kind of car fits your routine, and discover trusted service support in one AMPYAN flow.";
+let index = 0;
+
+function typeAI(){
+if(index < text.length){
+document.getElementById("aiText").innerHTML += text.charAt(index);
+index++;
+setTimeout(typeAI, 24);
+}
+}
+
+typeAI();
+</script>
+
+<script>
+const input = document.getElementById("problem-input");
+const box = document.getElementById("suggestions-box");
+
+if(input){
+input.addEventListener("input", function(){
+let query = input.value.trim();
+
+if(query.length < 2){
+box.innerHTML="";
+return;
+}
+});
+}
+</script>
+
+{% endblock %}

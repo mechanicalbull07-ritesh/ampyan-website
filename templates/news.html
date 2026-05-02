@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-shell">
+
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Updates</p>
+<h1 class="page-title">Automotive News</h1>
+<p class="page-subtitle">Latest launches, industry updates and platform highlights in one clean feed.</p>
+</div>
+
+{% if current_user.is_authenticated and current_user.role == "admin" %}
+<a href="/admin/news/create" class="auth-button">Create News</a>
+{% endif %}
+</div>
+
+{% if news_items %}
+<div class="news-grid">
+{% for news in news_items %}
+<article class="ui-card news-card-ui">
+<a href="/news/{{ news.id }}">
+{% if news.image %}
+<img src="{{ url_for('static', filename='news_images/' + news.image) }}" class="news-card-image">
+{% endif %}
+
+<div class="news-card-body">
+<h3 class="news-card-title">{{ news.title }}</h3>
+<p class="news-card-date">{{ news.created_at.strftime('%d %b %Y') }}</p>
+</div>
+</a>
+
+{% if current_user.is_authenticated and current_user.role == "admin" %}
+<div class="news-card-actions">
+<a href="/admin/news/edit/{{ news.id }}" class="ui-button-secondary">Edit</a>
+<a href="/admin/news/delete/{{ news.id }}" class="ui-button-danger" onclick="return confirm('Delete this news?')">Delete</a>
+</div>
+{% endif %}
+</article>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No news available right now.</div>
+{% endif %}
+
+</section>
+
+{% endblock %}

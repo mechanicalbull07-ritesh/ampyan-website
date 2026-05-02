@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell profile-wrapper">
+
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Profile</p>
+<h1 class="page-title">{{ current_user.username }}</h1>
+<p class="page-subtitle">Manage your account, car details, service intelligence and community activity from one place.</p>
+</div>
+
+<div class="ui-button-row">
+<a href="#edit-profile" class="ui-button-secondary">Edit Profile</a>
+<a href="/add-car" class="auth-button">Add Car</a>
+</div>
+</div>
+
+<div class="profile-header ui-card">
+
+{% if current_user.profile_photo %}
+<img src="{{ url_for('static', filename='profile_images/' + current_user.profile_photo) }}" class="profile-avatar">
+{% else %}
+<div class="author-avatar-letter profile-avatar">
+{{ current_user.username[0] | upper }}
+</div>
+{% endif %}
+
+<h2 class="profile-name">{{ current_user.username }}</h2>
+<div class="profile-role">{{ current_user.badge }}</div>
+
+<div class="ui-pill-row">
+<span class="ui-pill">{{ current_user.email }}</span>
+{% if current_user.mobile %}
+<span class="ui-pill">{{ current_user.mobile }}</span>
+{% endif %}
+</div>
+
+</div>
+
+<div class="profile-stats">
+<div class="stat-card">
+<span>Cars</span>
+<div class="stat-number">{{ cars_count }}</div>
+</div>
+<div class="stat-card">
+<span>Posts</span>
+<div class="stat-number">{{ posts_count }}</div>
+</div>
+<div class="stat-card">
+<span>AI Used Today</span>
+<div class="stat-number">{{ ai_used }}</div>
+</div>
+<div class="stat-card">
+<span>Reputation</span>
+<div class="stat-number">{{ current_user.reputation }}</div>
+</div>
+</div>
+
+<div class="ui-grid ui-grid-2">
+
+<div class="profile-card">
+<h2 id="edit-profile" class="section-heading">Personal Information</h2>
+
+<form action="/update-profile" method="POST" enctype="multipart/form-data">
+<h3 class="profile-section">Location</h3>
+
+<div class="profile-grid">
+<input type="text" name="city" placeholder="City" value="{{ current_user.city or '' }}" class="profile-input">
+<input type="text" name="state" placeholder="State" value="{{ current_user.state or '' }}" class="profile-input">
+<input type="text" name="country" placeholder="Country" value="{{ current_user.country or '' }}" class="profile-input">
+<input type="text" name="pincode" placeholder="Pincode" value="{{ current_user.pincode or '' }}" class="profile-input">
+</div>
+
+<h3 class="profile-section">Mobile</h3>
+<input type="text" name="mobile" placeholder="Enter mobile number" value="{{ current_user.mobile or '' }}" class="profile-input">
+
+<h3 class="profile-section">Profile Photo</h3>
+<input type="file" name="profile_photo" class="file-input">
+
+<button type="submit" class="auth-button">Save Profile</button>
+</form>
+</div>
+
+<div class="profile-card">
+<h2 class="section-heading">Quick Access</h2>
+<div class="ui-meta-list">
+<div class="ui-meta-item">
+<span class="ui-meta-label">Email Verified</span>
+<span class="ui-meta-value">{{ "Yes" if current_user.email_verified else "No" }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Account Role</span>
+<span class="ui-meta-value">{{ current_user.role|title }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Helpful Answers</span>
+<span class="ui-meta-value">{{ current_user.helpful_answers }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Location</span>
+<span class="ui-meta-value">{{ current_user.city or "Not set" }}</span>
+</div>
+</div>
+
+<div class="profile-actions">
+{% if current_user.role == "mechanic" %}
+<a href="/mechanic-dashboard" class="auth-button">Mechanic Dashboard</a>
+<a href="/garage-network" class="ui-button-secondary">Garage Network</a>
+{% else %}
+<a href="/garage" class="auth-button">My Cars</a>
+<a href="/garage-dashboard" class="ui-button-secondary">Garage Dashboard</a>
+{% endif %}
+</div>
+</div>
+
+</div>
+
+<div class="profile-card profile-section-block">
+<h2 class="section-heading">Your Cars</h2>
+
+{% if cars %}
+<div class="ui-grid ui-grid-2">
+{% for car in cars %}
+{% if car.current_km and car.next_service_km %}
+{% set remaining = car.next_service_km - car.current_km %}
+{% else %}
+{% set remaining = None %}
+{% endif %}
+
+<div class="profile-car-card">
+<div class="ui-pill-row">
+<span class="ui-pill">{{ car.brand }} {{ car.model }}</span>
+<span class="ui-pill">{{ car.year or "Year N/A" }}</span>
+<span class="ui-pill">{{ car.fuel_type or "Fuel N/A" }}</span>
+</div>
+
+<h3 class="profile-car-title">{{ car.brand }} {{ car.model }}</h3>
+<p class="profile-car-health">Car Health: <strong>{{ car.health.score }}/100</strong></p>
+
+{% if car.health.score >= 90 %}
+    {% set bar_color = "#22c55e" %}
+{% elif car.health.score >= 75 %}
+    {% set bar_color = "#60a5fa" %}
+{% elif car.health.score >= 60 %}
+    {% set bar_color = "#fbbf24" %}
+{% else %}
+    {% set bar_color = "#ef4444" %}
+{% endif %}
+
+<div class="profile-health-track">
+<div class="health-bar" data-score="{{ car.health.score }}" data-color="{{ bar_color }}"></div>
+</div>
+
+<p class="profile-status-line">Status: <span>{{ car.health.status }}</span></p>
+
+{% if remaining is not none %}
+    {% if remaining <= 0 %}
+        <p class="ui-tag-danger">Service overdue</p>
+    {% elif remaining <= 1000 %}
+        <p class="ui-tag-danger">Service due soon</p>
+    {% elif remaining <= 5000 %}
+        <p class="ui-tag-warn">Service reminder approaching</p>
+    {% else %}
+        <p class="ui-tag-good">Service schedule healthy</p>
+    {% endif %}
+{% else %}
+<p class="ui-tag-warn">Add odometer and service data to enable reminders.</p>
+{% endif %}
+
+<div class="ui-meta-list">
+<div class="ui-meta-item">
+<span class="ui-meta-label">Current KM</span>
+<span class="ui-meta-value">{{ car.current_km or "N/A" }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Last Service</span>
+<span class="ui-meta-value">{{ car.last_service_km or "N/A" }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Next Service</span>
+<span class="ui-meta-value">{{ car.next_service_km or "N/A" }}</span>
+</div>
+{% if remaining is not none %}
+<div class="ui-meta-item">
+<span class="ui-meta-label">Due In</span>
+<span class="ui-meta-value">{{ remaining }} km</span>
+</div>
+{% endif %}
+{% if remaining is not none and car.daily_km %}
+{% set days_left = (remaining / car.daily_km) | round %}
+<div class="ui-meta-item">
+<span class="ui-meta-label">Estimated Days Left</span>
+<span class="ui-meta-value">{{ days_left }}</span>
+</div>
+{% endif %}
+</div>
+
+{% if car.health.reasons %}
+<h4>Health Reasons</h4>
+<ul class="ui-list">
+{% for r in car.health.reasons %}
+<li>{{ r }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+
+<h4>Maintenance Suggestions</h4>
+<ul class="ui-list">
+{% for item in car.maintenance %}
+<li>{{ item }}</li>
+{% endfor %}
+</ul>
+
+<h4>Failure Risk Prediction</h4>
+<ul class="ui-list">
+{% for item in car.failure_prediction %}
+<li>{{ item.component }} - {{ item.risk }} risk ({{ item.advice }})</li>
+{% endfor %}
+</ul>
+
+<h4>Driving Pattern</h4>
+<ul class="ui-list">
+<li>Pattern: {{ car.driving_pattern.pattern }}</li>
+<li>Wear Level: {{ car.driving_pattern.wear_level }}</li>
+<li>Maintenance Risk: {{ car.driving_pattern.maintenance_risk }}</li>
+</ul>
+
+<h4>Component Health</h4>
+<ul class="ui-list">
+<li>Brake Health: {{ car.components.brake }}%</li>
+<li>Clutch Health: {{ car.components.clutch }}%</li>
+<li>Tyre Health: {{ car.components.tyre }}%</li>
+<li>Battery Health: {{ car.components.battery }}%</li>
+</ul>
+
+<div class="ui-button-row">
+<a href="/edit-car/{{ car.id }}" class="ui-button-secondary">Edit Car</a>
+<a href="/delete-car/{{ car.id }}" class="ui-button-danger" onclick="return confirm('Delete this car?')">Delete Car</a>
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No cars added yet. Add your first car to unlock Smart Garage insights.</div>
+{% endif %}
+</div>
+
+<div class="profile-card">
+<h2 class="section-heading">Your Posts</h2>
+
+{% if profile_posts %}
+<div class="ui-grid">
+{% for post in profile_posts %}
+<div class="profile-post-card">
+<h3>{% if post.detail_url %}<a href="{{ post.detail_url }}">{{ post.title }}</a>{% else %}{{ post.title }}{% endif %}</h3>
+<p>{{ post.content[:120] }}{% if post.content|length > 120 %}...{% endif %}</p>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">You have not created any community posts yet.</div>
+{% endif %}
+</div>
+
+</section>
+
+<script>
+document.querySelectorAll(".health-bar").forEach(bar => {
+const score = bar.getAttribute("data-score");
+const color = bar.getAttribute("data-color");
+bar.style.width = score + "%";
+bar.style.background = color;
+});
+</script>
+
+{% endblock %}

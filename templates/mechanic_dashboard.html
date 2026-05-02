@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">Mechanic Dashboard</p>
+<h1 class="page-title">{{ mechanic.business_name }}</h1>
+<p class="page-subtitle">Manage your garage presence, trust level, reviews and approval status inside the AMPYAN network.</p>
+</div>
+
+<div class="ui-button-row">
+<a href="/garage-network/{{ mechanic.id }}" class="ui-button-secondary">Public Profile</a>
+<a href="/garage-network" class="auth-button">Garage Network</a>
+</div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Trust Score</span><div class="stat-number">{{ mechanic.trust_score }}</div></div>
+<div class="stat-card"><span>Trust Level</span><div class="stat-number">{{ mechanic.trust_level }}</div></div>
+<div class="stat-card"><span>Average Rating</span><div class="stat-number">{{ average_rating }}</div></div>
+<div class="stat-card"><span>Reviews</span><div class="stat-number">{{ review_count }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-2">
+<div class="ui-card">
+<h2 class="section-heading">Approval Status</h2>
+<div class="ui-meta-list">
+<div class="ui-meta-item"><span class="ui-meta-label">Admin Approval</span><span class="ui-meta-value">{{ "Approved" if mechanic.is_verified else "Pending" }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Featured</span><span class="ui-meta-value">{{ "Yes" if mechanic.is_featured else "No" }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Emergency Support</span><span class="ui-meta-value">{{ "Yes" if mechanic.accepts_emergency else "No" }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Pickup & Drop</span><span class="ui-meta-value">{{ "Yes" if mechanic.pickup_drop_available else "No" }}</span></div>
+</div>
+<p class="section-copy" style="margin-top:18px;">Approved garages appear publicly in AMPYAN search and gain stronger trust visibility.</p>
+</div>
+
+<div class="ui-card">
+<h2 class="section-heading">Business Snapshot</h2>
+<div class="ui-meta-list">
+<div class="ui-meta-item"><span class="ui-meta-label">Owner</span><span class="ui-meta-value">{{ mechanic.owner_name }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">City</span><span class="ui-meta-value">{{ mechanic.city }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Phone</span><span class="ui-meta-value">{{ mechanic.phone }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Specialties</span><span class="ui-meta-value">{{ mechanic.specialties or "General automotive" }}</span></div>
+</div>
+</div>
+</div>
+
+<div class="ui-card" style="margin-top:28px;">
+<h2 class="section-heading">Recent Reviews</h2>
+{% if mechanic.reviews %}
+<div class="ui-grid">
+{% for review in mechanic.reviews|sort(attribute='id', reverse=True)[:5] %}
+<div class="simple-list-card">
+<h4>{{ review.author.username }}</h4>
+<p class="section-copy">{{ review.rating }}/5 • {{ review.created_at.strftime('%d %b %Y') }}</p>
+<p class="section-copy">{{ review.review_text or "No written review shared." }}</p>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No reviews yet. Share your AMPYAN public profile to start building trust.</div>
+{% endif %}
+</div>
+
+</section>
+
+{% endblock %}

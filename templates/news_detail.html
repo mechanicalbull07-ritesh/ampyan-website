@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-shell">
+<div class="ui-card narrow-card">
+<p class="page-kicker">AMPYAN News</p>
+<h1 class="page-title">{{ news.title }}</h1>
+<p class="page-subtitle">{{ news.created_at.strftime('%d %B %Y') }}</p>
+
+{% if news.image %}
+<img src="{{ url_for('static', filename='news_images/' + news.image) }}" class="news-detail-image">
+{% endif %}
+
+<div class="body-copy-lg">
+{{ news.content }}
+</div>
+</div>
+</section>
+
+{% endblock %}

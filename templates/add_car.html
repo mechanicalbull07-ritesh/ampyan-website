@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="auth-wrapper">
+
+<div class="auth-container">
+
+<h2 class="auth-title">Add Your Car</h2>
+
+<form action="/add-car" method="POST" class="auth-form">
+
+<!-- BRAND -->
+
+<input
+type="text"
+name="brand"
+placeholder="Car Brand (Maruti, Hyundai)"
+required
+class="auth-input"
+/>
+
+<!-- MODEL -->
+
+<input
+type="text"
+name="model"
+placeholder="Car Model (Swift, Creta)"
+required
+class="auth-input"
+/>
+
+<!-- YEAR -->
+
+<input
+type="number"
+name="year"
+placeholder="Manufacturing Year"
+required
+class="auth-input"
+/>
+
+<!-- FUEL TYPE -->
+
+<select name="fuel" class="auth-input" required>
+
+<option value="">Select Fuel Type</option>
+<option value="Petrol">Petrol</option>
+<option value="Diesel">Diesel</option>
+<option value="CNG">CNG</option>
+<option value="Electric">Electric</option>
+
+</select>
+
+<!-- MILEAGE -->
+
+<h3>Mileage (KM/L or KM/Charge)</h3>
+
+<input
+type="number"
+name="mileage"
+placeholder="Example: 20"
+required
+class="auth-input"
+/>
+
+<!-- CURRENT KM -->
+
+<h3>Current Odometer KM</h3>
+
+<input
+type="number"
+name="current_km"
+placeholder="Example: 15000"
+class="auth-input"
+/>
+
+<!-- LAST SERVICE -->
+
+<h3>Last Service KM</h3>
+
+<input
+type="number"
+name="last_service_km"
+placeholder="Example: 10000"
+class="auth-input"
+/>
+
+<!-- DAILY DRIVING -->
+
+<h3>Average Daily Driving (KM)</h3>
+
+<input
+type="number"
+name="daily_km"
+placeholder="Example: 30"
+class="auth-input"
+/>
+
+<!-- SUBMIT -->
+
+<button type="submit" class="auth-button">
+Add Car
+</button>
+
+</form>
+
+</div>
+
+</div>
+
+{% endblock %}

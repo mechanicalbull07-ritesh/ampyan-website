@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="create-wrapper">
+
+<div class="create-card">
+
+<h2>Create Community Post</h2>
+<p class="create-sub">Share your car problem, experience or advice.</p>
+
+<form method="POST" enctype="multipart/form-data">
+
+<input 
+type="text"
+name="title"
+placeholder="Post title"
+required
+>
+
+<textarea 
+name="content"
+rows="6"
+placeholder="Describe your problem or discussion..."
+required
+></textarea>
+
+<div class="image-upload">
+
+<label style="display:block; margin-bottom:8px; color:#aaa;">
+Add Photo (optional)
+</label>
+
+<input 
+type="file" 
+name="image" 
+accept="image/png, image/jpeg, image/webp"
+style="
+background:#111;
+color:#aaa;
+padding:10px;
+border:1px solid #333;
+border-radius:6px;
+width:100%;
+">
+
+<p style="font-size:12px; color:#666; margin-top:6px;">
+Max file size: 10MB • JPG • PNG • WEBP
+</p>
+
+</div>
+
+<button type="submit" class="publish-btn">
+Publish Post
+</button>
+
+
+</form>
+
+</div>
+
+</div>
+
+{% endblock %}

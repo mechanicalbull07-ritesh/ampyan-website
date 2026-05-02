@@ -1,0 +1,309 @@
+/* ===============================
+   TOOLS DASHBOARD
+================================ */
+
+.tools-page{
+padding:50px 20px;
+max-width:1200px;
+margin:auto;
+text-align:center;
+}
+
+.tools-title{
+font-size:36px;
+font-weight:600;
+margin-bottom:10px;
+color:var(--text);
+}
+
+.tools-subtitle{
+color:var(--text-secondary);
+margin-bottom:45px;
+font-size:16px;
+}
+
+.tools-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+gap:30px;
+}
+
+/* ================= TOOL CARD ================= */
+
+.tool-card{
+
+background:var(--card);
+
+border-radius:14px;
+padding:28px;
+
+text-decoration:none;
+color:var(--text);
+
+border:1px solid var(--border);
+
+transition:all 0.3s ease;
+
+box-shadow:0 5px 20px rgba(0,0,0,0.25);
+
+}
+
+.tool-card:hover{
+
+transform:translateY(-6px);
+
+border:1px solid var(--accent);
+
+box-shadow:0 12px 40px rgba(255,0,0,0.25);
+
+}
+
+/* ================= TOOL ICON ================= */
+
+.tool-icon{
+
+font-size:42px;
+margin-bottom:18px;
+
+}
+
+/* ================= TOOL TITLE ================= */
+
+.tool-card h3{
+
+font-size:20px;
+margin-bottom:10px;
+
+}
+
+/* ================= TOOL DESCRIPTION ================= */
+
+.tool-card p{
+
+color:var(--text-secondary);
+
+font-size:14px;
+line-height:1.5;
+
+}
+
+/* ================= OPEN TOOL BUTTON ================= */
+
+.tool-button{
+
+display:inline-block;
+
+margin-top:15px;
+
+padding:8px 16px;
+
+background:var(--accent);
+
+color:white;
+
+border-radius:6px;
+
+font-size:14px;
+
+}
+
+/* ================= DISABLED CARD ================= */
+
+.disabled{
+
+opacity:0.55;
+
+pointer-events:none;
+
+}
+
+/* ================= COMING SOON ================= */
+
+.coming{
+
+display:inline-block;
+
+margin-top:12px;
+
+color:var(--text-secondary);
+
+font-size:13px;
+
+}
+
+/* ================= LIGHT MODE EXTRA FIX ================= */
+
+body.light .tool-card{
+
+background:#ffffff;
+
+border:1px solid #e3e3e3;
+
+box-shadow:0 5px 18px rgba(0,0,0,0.08);
+
+}
+
+body.light .tool-card:hover{
+
+border:1px solid #ff2a2a;
+
+box-shadow:0 10px 30px rgba(255,0,0,0.15);
+
+}
+/* ===============================
+   HOMEPAGE HERO
+================================ */
+
+.home-hero{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:80px 10%;
+gap:40px;
+flex-wrap:wrap;
+}
+
+.hero-left{
+max-width:520px;
+}
+
+.hero-title{
+font-size:70px;
+color:#ff2d2d;
+font-weight:800;
+}
+
+.hero-tagline{
+font-size:22px;
+margin-top:10px;
+color:var(--text-secondary);
+}
+
+.hero-desc{
+margin-top:20px;
+color:var(--text-secondary);
+line-height:1.6;
+}
+
+.hero-buttons{
+margin-top:25px;
+}
+
+.hero-btn{
+padding:12px 26px;
+border-radius:8px;
+margin-right:10px;
+text-decoration:none;
+font-size:14px;
+}
+
+.hero-btn.primary{
+background:#ff2d2d;
+color:white;
+}
+
+.hero-btn.secondary{
+background:var(--card);
+border:1px solid var(--border);
+color:var(--text);
+}
+
+.hero-badges{
+margin-top:25px;
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+}
+
+.hero-badges span{
+background:var(--card);
+border:1px solid var(--border);
+padding:6px 14px;
+border-radius:20px;
+font-size:12px;
+}
+
+.hero-avatar{
+width:260px;
+}
+
+/* ===============================
+   AI PREVIEW
+================================ */
+
+.ai-preview{
+text-align:center;
+padding:60px 10%;
+}
+
+.ai-preview h2{
+font-size:32px;
+margin-bottom:10px;
+}
+
+/* ===============================
+   ECOSYSTEM GRID
+================================ */
+
+.ecosystem{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+gap:25px;
+padding:60px 10%;
+}
+
+.eco-card{
+background:var(--card);
+border:1px solid var(--border);
+border-radius:12px;
+padding:26px;
+transition:0.3s;
+}
+
+.eco-card:hover{
+transform:translateY(-6px);
+border:1px solid var(--accent);
+}
+
+.eco-card h3{
+margin-bottom:10px;
+color:#ff2d2d;
+}
+
+.eco-card p{
+font-size:14px;
+color:var(--text-secondary);
+}
+
+.eco-card a{
+display:inline-block;
+margin-top:14px;
+font-size:13px;
+color:#ff2d2d;
+}
+
+/* ===============================
+   TRUST SECTION
+================================ */
+
+.trust{
+text-align:center;
+padding:60px 10%;
+}
+
+.trust h3{
+margin-bottom:10px;
+}
+
+.trust-stats{
+display:flex;
+justify-content:center;
+gap:40px;
+margin-top:25px;
+flex-wrap:wrap;
+}
+
+.trust-stats h4{
+font-size:28px;
+color:#ff2d2d;
+}

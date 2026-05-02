@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>{{ topic.title }}</h1>
+
+{% for article in topic.articles %}
+    <div class="post-card">
+        <p>{{ article.content }}</p>
+    </div>
+{% else %}
+    <p>No articles added.</p>
+{% endfor %}
+
+{% endblock %}

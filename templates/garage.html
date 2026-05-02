@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Garage</p>
+<h1 class="page-title">My Garage</h1>
+<p class="page-subtitle">Manage your saved vehicles, set a default car and keep your garage synced with the AMPYAN platform.</p>
+</div>
+
+<div class="ui-button-row">
+<a href="/garage-dashboard" class="ui-button-secondary">Open Dashboard</a>
+<a href="/add-car" class="auth-button">Add Another Car</a>
+</div>
+</div>
+
+{% if cars %}
+<ul class="simple-list">
+{% for car in cars %}
+<li class="simple-list-card">
+<div class="ui-pill-row">
+<span class="ui-pill">{{ car.brand }} {{ car.model }}</span>
+<span class="ui-pill">{{ car.year or "Year N/A" }}</span>
+<span class="ui-pill">{{ car.fuel_type or "Fuel N/A" }}</span>
+{% if car.is_default %}
+<span class="ui-pill ui-tag-good">Default Car</span>
+{% endif %}
+</div>
+
+<div class="ui-meta-list">
+<div class="ui-meta-item">
+<span class="ui-meta-label">Odometer</span>
+<span class="ui-meta-value">{{ car.current_km or "N/A" }} km</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Last Service KM</span>
+<span class="ui-meta-value">{{ car.last_service_km or "Not set" }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Next Service KM</span>
+<span class="ui-meta-value">{{ car.next_service_km or "Not set" }}</span>
+</div>
+</div>
+
+<div class="ui-button-row">
+{% if not car.is_default %}
+<a href="/set-default-car/{{ car.id }}" class="ui-button-secondary">Set Default</a>
+{% endif %}
+<a href="/edit-car/{{ car.id }}" class="ui-button-secondary">Edit</a>
+<a href="/delete-car/{{ car.id }}" class="ui-button-danger" onclick="return confirm('Delete this car?')">Delete</a>
+</div>
+</li>
+{% endfor %}
+</ul>
+{% else %}
+<div class="empty-state">
+<p>No cars added yet.</p>
+<a href="/add-car" class="auth-button">Add Your First Car</a>
+</div>
+{% endif %}
+
+</section>
+
+{% endblock %}

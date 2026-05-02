@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">Car Suggestion Tool</p>
+<h1 class="page-title">Tell AMPYAN how you drive, and get car suggestions that fit your life.</h1>
+<p class="page-subtitle">Fill your usage details like city or highway focus, daily running, family or solo use and occasional needs. The system will recommend cars that match your profile better.</p>
+</div>
+</div>
+
+<div class="car-match-layout">
+<div class="ui-card car-match-form-card">
+<h2 class="section-heading">Your Driving Profile</h2>
+<form method="POST" class="car-match-form">
+<div class="ui-grid ui-grid-2">
+<div>
+<label class="form-label">Primary Usage</label>
+<select name="usage_mix">
+<option value="city" {% if form_data.usage_mix == "city" %}selected{% endif %}>Mostly City</option>
+<option value="mixed" {% if form_data.usage_mix == "mixed" %}selected{% endif %}>Mixed City + Highway</option>
+<option value="highway" {% if form_data.usage_mix == "highway" %}selected{% endif %}>Mostly Highway</option>
+</select>
+</div>
+
+<div>
+<label class="form-label">Daily Run</label>
+<input type="number" min="0" name="daily_run" value="{{ form_data.daily_run }}" placeholder="Example: 35">
+</div>
+
+<div>
+<label class="form-label">Who Will Use It Most?</label>
+<select name="family_use">
+<option value="family" {% if form_data.family_use == "family" %}selected{% endif %}>Family Use</option>
+<option value="solo" {% if form_data.family_use == "solo" %}selected{% endif %}>Mostly Solo</option>
+<option value="mixed" {% if form_data.family_use == "mixed" %}selected{% endif %}>Both Family + Solo</option>
+</select>
+</div>
+
+<div>
+<label class="form-label">Budget Range</label>
+<select name="budget">
+<option value="budget" {% if form_data.budget == "budget" %}selected{% endif %}>Budget</option>
+<option value="mid" {% if form_data.budget == "mid" %}selected{% endif %}>Mid Range</option>
+<option value="premium" {% if form_data.budget == "premium" %}selected{% endif %}>Premium</option>
+</select>
+</div>
+
+<div>
+<label class="form-label">Fuel Preference</label>
+<select name="fuel_preference">
+<option value="any" {% if form_data.fuel_preference == "any" %}selected{% endif %}>Any</option>
+<option value="petrol" {% if form_data.fuel_preference == "petrol" %}selected{% endif %}>Petrol</option>
+<option value="cng" {% if form_data.fuel_preference == "cng" %}selected{% endif %}>CNG</option>
+<option value="diesel" {% if form_data.fuel_preference == "diesel" %}selected{% endif %}>Diesel</option>
+</select>
+</div>
+
+<div>
+<label class="form-label">Transmission</label>
+<select name="transmission">
+<option value="any" {% if form_data.transmission == "any" %}selected{% endif %}>Any</option>
+<option value="manual" {% if form_data.transmission == "manual" %}selected{% endif %}>Manual</option>
+<option value="automatic" {% if form_data.transmission == "automatic" %}selected{% endif %}>Automatic</option>
+</select>
+</div>
+
+<div>
+<label class="form-label">Top Priority</label>
+<select name="priority">
+<option value="balanced" {% if form_data.priority == "balanced" %}selected{% endif %}>Balanced Overall</option>
+<option value="low_running_cost" {% if form_data.priority == "low_running_cost" %}selected{% endif %}>Low Running Cost</option>
+<option value="comfort" {% if form_data.priority == "comfort" %}selected{% endif %}>Comfort</option>
+<option value="space" {% if form_data.priority == "space" %}selected{% endif %}>Space / Family Practicality</option>
+</select>
+</div>
+
+<div>
+<label class="form-label">Some Days Special Need</label>
+<select name="occasional_need">
+<option value="weekend" {% if form_data.occasional_need == "weekend" %}selected{% endif %}>Normal Weekend Use</option>
+<option value="road_trips" {% if form_data.occasional_need == "road_trips" %}selected{% endif %}>Occasional Road Trips</option>
+<option value="rough_roads" {% if form_data.occasional_need == "rough_roads" %}selected{% endif %}>Bad / Rough Roads</option>
+<option value="airport_luggage" {% if form_data.occasional_need == "airport_luggage" %}selected{% endif %}>Extra Luggage Sometimes</option>
+</select>
+</div>
+</div>
+
+<button type="submit" class="auth-button car-match-submit">Get Car Suggestions</button>
+</form>
+</div>
+
+<div class="car-match-side">
+<div class="ui-card">
+<p class="page-kicker">How It Works</p>
+<h2 class="section-heading">Simple profile, useful recommendations</h2>
+<ul class="feature-checklist">
+<li><strong>Usage fit first</strong>The suggestions prioritize where and how you drive daily.</li>
+<li><strong>Family vs solo balance</strong>Space, comfort and practicality adjust based on your users.</li>
+<li><strong>Occasional needs included</strong>Road trips, rough roads or luggage days also affect the shortlist.</li>
+</ul>
+</div>
+
+{% if profile_summary %}
+<div class="ui-card">
+<p class="page-kicker">Your Profile</p>
+<div class="ui-meta-list">
+{% for label, value in profile_summary.items() %}
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ label.replace("_", " ")|title }}</span>
+<span class="ui-meta-value">{{ value }}</span>
+</div>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+</div>
+</div>
+
+{% if recommendations %}
+<div class="car-match-results">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">Recommendations</p>
+<h2 class="section-heading">Best matches for your profile</h2>
+</div>
+</div>
+
+<div class="ui-grid ui-grid-3">
+{% for car in recommendations %}
+<div class="car-match-card">
+<div class="car-match-score">Match {{ car.match_score }}%</div>
+<h3>{{ car.name }}</h3>
+<p class="car-match-body">{{ car.body_style }} • {{ car.price_band }} range</p>
+<p class="car-match-reason">{{ car.reason }}</p>
+<p class="car-match-fit">{{ car.fit_summary }}</p>
+<div class="ui-pill-row">
+{% for fuel in car.fuel %}
+<span class="ui-pill">{{ fuel|upper }}</span>
+{% endfor %}
+{% for mode in car.transmission %}
+<span class="ui-pill">{{ mode|title }}</span>
+{% endfor %}
+</div>
+</div>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+</section>
+
+{% endblock %}

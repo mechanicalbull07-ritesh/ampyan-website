@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:700px;margin:auto;padding:40px 20px;">
+
+<h2>Edit News</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+<input
+type="text"
+name="title"
+value="{{ news.title }}"
+class="auth-input"
+required
+>
+
+<textarea
+name="content"
+class="auth-input"
+style="height:200px"
+required
+>{{ news.content }}</textarea>
+
+<label>Change Image</label>
+
+<input
+type="file"
+name="image"
+class="auth-input"
+>
+
+<button type="submit" class="auth-button">
+Update News
+</button>
+
+</form>
+
+</div>
+
+{% endblock %}

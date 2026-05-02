@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="tools-page">
+
+<h2 class="tools-title">Fuel Cost Calculator</h2>
+
+<p class="tools-subtitle">
+Estimate your daily, monthly and yearly fuel expenses.
+</p>
+
+<form method="POST" class="auth-form">
+
+<input
+type="number"
+name="daily_km"
+placeholder="Daily Driving KM"
+required
+class="auth-input"
+/>
+
+<input
+type="number"
+name="mileage"
+placeholder="Car Mileage (km/l)"
+required
+class="auth-input"
+/>
+
+<input
+type="number"
+name="fuel_price"
+placeholder="Fuel Price (₹/L)"
+required
+class="auth-input"
+/>
+
+<button type="submit" class="auth-button">
+Calculate
+</button>
+
+</form>
+
+{% if result %}
+
+<div class="profile-card" style="margin-top:30px;">
+
+<h3>Fuel Usage</h3>
+
+<p>Daily Fuel Used : {{ result.daily_fuel }} L</p>
+
+<h3>Cost</h3>
+
+<p>Daily Cost : ₹ {{ result.daily_cost }}</p>
+<p>Monthly Cost : ₹ {{ result.monthly_cost }}</p>
+<p>Yearly Cost : ₹ {{ result.yearly_cost }}</p>
+
+</div>
+
+{% endif %}
+
+</div>
+
+{% endblock %}

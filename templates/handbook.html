@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>Car Handbook</h1>
+
+{% for brand in brands %}
+    <div class="post-card">
+        <h2>
+            <a href="/handbook/{{ brand.id }}" style="color:white; text-decoration:none;">
+                {{ brand.name }}
+            </a>
+        </h2>
+    </div>
+{% else %}
+    <p>No brands added yet.</p>
+{% endfor %}
+
+{% endblock %}

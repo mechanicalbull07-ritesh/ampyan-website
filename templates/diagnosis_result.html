@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+{% set t = ui_text if ui_text is defined else {
+    "page_title": "Final AI Diagnosis",
+    "detected_language": "Detected language",
+    "car": "Car",
+    "final_issue": "Final Detected Issue",
+    "confidence": "Confidence",
+    "severity": "Severity",
+    "urgency": "Urgency",
+    "repair_cost": "Estimated Repair",
+    "driveability": "Can You Drive It?",
+    "why": "Why This Diagnosis?",
+    "checks": "Quick Checks You Can Do",
+    "next_steps": "What Should You Do Next?",
+    "other_issues": "Other Possible Issues",
+    "feedback": "Was this diagnosis accurate?",
+    "yes": "Yes, this looks right",
+    "no": "No, this seems wrong",
+    "save": "Save your diagnosis",
+    "login_cta": "Login to unlock features",
+    "retry": "Check Another Problem",
+    "no_result": "No Diagnosis Found",
+    "no_result_desc": "AMPYAN AI could not identify the issue clearly. Please describe the problem in more detail."
+} %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN AI Diagnosis</p>
+<h1 class="page-title">{{ t.page_title }}</h1>
+<p class="page-subtitle">{{ t.detected_language }}: {{ response_language_name|default('English') }}</p>
+</div>
+</div>
+
+{% if results %}
+
+<div class="ui-grid ui-grid-2 card-spacer">
+<div class="ui-card">
+<p class="page-kicker">{{ t.final_issue }}</p>
+<h2 class="section-heading">{{ results[0].issue }}</h2>
+<div class="ui-meta-list">
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ t.car }}</span>
+<span class="ui-meta-value">{{ car.brand }} {{ car.model }} ({{ car.year }})</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ t.confidence }}</span>
+<span class="ui-meta-value">{{ results[0].confidence }}%</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ t.severity }}</span>
+<span class="ui-meta-value">{{ results[0].severity_label }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ t.urgency }}</span>
+<span class="ui-meta-value">{{ results[0].urgency_label }}</span>
+</div>
+{% if results[0].repair_cost %}
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ t.repair_cost }}</span>
+<span class="ui-meta-value">₹{{ results[0].repair_cost.min }} - ₹{{ results[0].repair_cost.max }}</span>
+</div>
+{% endif %}
+</div>
+</div>
+
+<div class="ui-card">
+<p class="page-kicker">{{ t.driveability }}</p>
+<h3 class="section-heading">{{ results[0].urgency_label }}</h3>
+<p class="section-copy"><strong>{{ t.severity }}:</strong> {{ results[0].severity_summary }}</p>
+<p class="section-copy"><strong>{{ t.urgency }}:</strong> {{ results[0].urgency_summary }}</p>
+<p class="section-copy"><strong>{{ t.driveability }}:</strong> {{ results[0].driveability }}</p>
+<p class="section-copy"><strong>Next priority:</strong> {{ results[0].urgency_next_step }}</p>
+</div>
+</div>
+
+{% if results[0].explanation %}
+<div class="ui-card card-spacer">
+<h3 class="section-heading">{{ t.why }}</h3>
+<ul class="ui-list">
+{% for e in results[0].explanation %}
+<li>{{ e }}</li>
+{% endfor %}
+</ul>
+</div>
+{% endif %}
+
+<div class="ui-grid ui-grid-2 card-spacer">
+{% if results[0].user_checks %}
+<div class="ui-card">
+<h3 class="section-heading">{{ t.checks }}</h3>
+<ul class="ui-list">
+{% for check in results[0].user_checks %}
+<li>{{ check }}</li>
+{% endfor %}
+</ul>
+</div>
+{% endif %}
+
+<div class="ui-card">
+<h3 class="section-heading">{{ t.next_steps }}</h3>
+<ul class="ui-list">
+{% for step in results[0].recommended_steps %}
+<li>{{ step }}</li>
+{% endfor %}
+<li>{{ results[0].urgency_next_step }}</li>
+</ul>
+</div>
+</div>
+
+{% if results|length > 1 %}
+<div class="ui-card card-spacer">
+<h3 class="section-heading">{{ t.other_issues }}</h3>
+<div class="ui-grid ui-grid-2">
+{% for r in results[1:] %}
+<div class="simple-list-card">
+<h4>{{ r.issue }}</h4>
+<div class="ui-meta-list">
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ t.confidence }}</span>
+<span class="ui-meta-value">{{ r.confidence }}%</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ t.severity }}</span>
+<span class="ui-meta-value">{{ r.severity_label }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ t.urgency }}</span>
+<span class="ui-meta-value">{{ r.urgency_label }}</span>
+</div>
+</div>
+<p class="section-copy">{{ r.severity_summary }}</p>
+</div>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+<div class="ui-card card-spacer feedback-card">
+<h3 class="section-heading">{{ t.feedback }}</h3>
+<div class="feedback-actions">
+<button onclick="sendFeedback('yes')" class="auth-button">{{ t.yes }}</button>
+<button onclick="sendFeedback('no')" class="ui-button-danger">{{ t.no }}</button>
+</div>
+</div>
+
+{% else %}
+
+<div class="ui-card">
+<h3 class="section-heading">{{ t.no_result }}</h3>
+<p class="section-copy">{{ t.no_result_desc }}</p>
+</div>
+
+{% endif %}
+
+{% if not current_user.is_authenticated %}
+<div class="login-reminder ui-card card-spacer">
+<h3>{{ t.save }}</h3>
+<p>Login to save this result, track maintenance, and get service reminders.</p>
+<a href="/login" class="auth-button">{{ t.login_cta }}</a>
+</div>
+{% endif %}
+
+<div class="login-reminder ui-card">
+<a href="/tools/ai-diagnosis" class="diagnosis-cta">{{ t.retry }}</a>
+</div>
+
+</section>
+
+<script>
+function sendFeedback(type) {
+    fetch('/submit_feedback', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ feedback: type })
+    })
+    .then(res => res.json())
+    .then(() => {
+        alert("Feedback saved");
+    });
+}
+</script>
+
+{% endblock %}

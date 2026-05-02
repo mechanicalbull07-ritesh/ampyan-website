@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="discussion-container">
+
+    <h1 style="margin-bottom:20px;">
+        {{ post.title }}
+    </h1>
+
+    <div class="post-box">
+        <p>{{ post.content }}</p>
+        <p style="color:gray; margin-top:15px;">
+            Posted by {{ post.username }}
+        </p>
+    </div>
+
+    <h2>Replies ({{ post.comments|length }})</h2>
+
+    {% for comment in post.comments %}
+        <div class="comment-box">
+            <p>{{ comment.content }}</p>
+            <p style="color:gray; font-size:13px;">
+                — {{ comment.username }}
+            </p>
+        </div>
+    {% endfor %}
+
+    <h3 style="margin-top:40px;">Add Reply</h3>
+
+    <form method="POST">
+        <input type="text" name="username" placeholder="Your Name" required>
+        <textarea name="comment" placeholder="Write your reply..." required></textarea>
+        <button type="submit">Post Reply</button>
+    </form>
+
+</div>
+
+{% endblock %}

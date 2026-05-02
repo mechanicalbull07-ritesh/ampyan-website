@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">Garage Profile</p>
+<h1 class="page-title">{{ mechanic.business_name }}</h1>
+<p class="page-subtitle">{{ mechanic.city }}{% if mechanic.state %}, {{ mechanic.state }}{% endif %} • {{ mechanic.trust_level }}</p>
+</div>
+
+<div class="ui-pill-row">
+<span class="garage-trust-level">{{ mechanic.trust_level }}</span>
+<span class="garage-trust-score">Trust {{ mechanic.trust_score }}/100</span>
+<span class="garage-trust-score">{{ average_rating }}/5 rating</span>
+</div>
+</div>
+
+<div class="ui-grid ui-grid-2 card-spacer">
+<div class="ui-card">
+<h2 class="section-heading">Garage Details</h2>
+<div class="ui-meta-list">
+<div class="ui-meta-item"><span class="ui-meta-label">Owner</span><span class="ui-meta-value">{{ mechanic.owner_name }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Phone</span><span class="ui-meta-value">{{ mechanic.phone }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Experience</span><span class="ui-meta-value">{{ mechanic.experience_years or 0 }} years</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Reviews</span><span class="ui-meta-value">{{ review_count }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Address</span><span class="ui-meta-value">{{ mechanic.address or mechanic.city }}</span></div>
+</div>
+<p class="section-copy" style="margin-top:18px;">{{ mechanic.about or "Independent automotive workshop listed on the AMPYAN network." }}</p>
+</div>
+
+<div class="ui-card">
+<h2 class="section-heading">Service Profile</h2>
+<div class="ui-pill-row">
+{% if mechanic.specialties %}
+<span class="ui-pill">{{ mechanic.specialties }}</span>
+{% endif %}
+{% if mechanic.service_types %}
+<span class="ui-pill">{{ mechanic.service_types }}</span>
+{% endif %}
+{% if mechanic.accepts_emergency %}
+<span class="ui-pill">Emergency Support</span>
+{% endif %}
+{% if mechanic.pickup_drop_available %}
+<span class="ui-pill">Pickup & Drop</span>
+{% endif %}
+{% if mechanic.is_verified %}
+<span class="ui-pill">Admin Approved</span>
+{% endif %}
+</div>
+
+{% if current_user.is_authenticated and current_user.role != "mechanic" %}
+<form method="POST" action="/garage-network/{{ mechanic.id }}/review" class="mechanic-review-form">
+<h3 class="section-heading">Rate This Garage</h3>
+<select name="rating" class="profile-input" required>
+<option value="">Choose rating</option>
+{% for value in range(5, 0, -1) %}
+<option value="{{ value }}" {% if existing_review and existing_review.rating == value %}selected{% endif %}>{{ value }} / 5</option>
+{% endfor %}
+</select>
+<textarea name="review_text" class="profile-input mechanic-textarea mechanic-textarea-sm" placeholder="Share your service experience">{% if existing_review %}{{ existing_review.review_text or '' }}{% endif %}</textarea>
+<button type="submit" class="auth-button mechanic-submit-btn">{{ "Update Review" if existing_review else "Submit Review" }}</button>
+</form>
+{% elif not current_user.is_authenticated %}
+<p class="section-copy" style="margin-top:18px;">Login as a user account to rate this garage.</p>
+{% endif %}
+</div>
+</div>
+
+<div class="ui-card">
+<h2 class="section-heading">Reviews</h2>
+{% if mechanic.reviews %}
+<div class="ui-grid">
+{% for review in mechanic.reviews|sort(attribute='id', reverse=True) %}
+<div class="simple-list-card">
+<h4>{{ review.author.username }}</h4>
+<p class="section-copy">{{ review.rating }}/5 • {{ review.created_at.strftime('%d %b %Y') }}</p>
+<p class="section-copy">{{ review.review_text or "No written review shared." }}</p>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No reviews yet. Be the first to rate this garage.</div>
+{% endif %}
+</div>
+
+</section>
+
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h1>{{ model.name }} Topics</h1>
+
+{% for topic in model.topics %}
+    <div class="post-card">
+        <h2>
+            <a href="/handbook/topic/{{ topic.id }}" style="color:white; text-decoration:none;">
+                {{ topic.title }}
+            </a>
+        </h2>
+    </div>
+{% else %}
+    <p>No topics added.</p>
+{% endfor %}
+
+{% endblock %}

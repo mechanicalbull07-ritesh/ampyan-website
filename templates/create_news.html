@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:700px;margin:auto;padding:40px 20px;">
+
+<h2>Create News</h2>
+
+<form method="POST" enctype="multipart/form-data">
+
+<input
+type="text"
+name="title"
+placeholder="News Title"
+class="auth-input"
+required
+>
+
+<textarea
+name="content"
+placeholder="News Content"
+class="auth-input"
+style="height:200px"
+required
+></textarea>
+
+<label>Upload Image</label>
+
+<input
+type="file"
+name="image"
+class="auth-input"
+>
+
+<button type="submit" class="auth-button">
+Publish News
+</button>
+
+</form>
+
+</div>
+
+{% endblock %}

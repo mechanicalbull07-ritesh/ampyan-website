@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Admin</p>
+<h1 class="page-title">Admin Dashboard</h1>
+<p class="page-subtitle">Designed for high traffic moderation. Urgent queues, latest activity and moderation actions are grouped so you can scan fast and act faster.</p>
+</div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Total Users</span><div class="stat-number">{{ total_users }}</div></div>
+<div class="stat-card"><span>Total Posts</span><div class="stat-number">{{ posts|length }}</div></div>
+<div class="stat-card"><span>Total AI Usage</span><div class="stat-number">{{ total_ai_usage }}</div></div>
+<div class="stat-card"><span>Website Visits</span><div class="stat-number">{{ visit_count }}</div></div>
+</div>
+
+<div class="admin-priority-grid card-spacer">
+<div class="ui-card">
+<p class="page-kicker">Critical Queue</p>
+<h2 class="section-heading">What needs attention first</h2>
+<div class="admin-alert-stack">
+<div class="admin-alert-row">
+<span>Pending garage approvals</span>
+<strong>{{ pending_garages_count }}</strong>
+</div>
+<div class="admin-alert-row">
+<span>Banned users</span>
+<strong>{{ banned_users_count }}</strong>
+</div>
+<div class="admin-alert-row">
+<span>Recent reviews to scan</span>
+<strong>{{ reviews|length }}</strong>
+</div>
+</div>
+</div>
+
+<div class="ui-card">
+<p class="page-kicker">Platform Health</p>
+<h2 class="section-heading">Snapshot</h2>
+<div class="ui-meta-list">
+<div class="ui-meta-item"><span class="ui-meta-label">Comments</span><span class="ui-meta-value">{{ comments|length }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">News Items</span><span class="ui-meta-value">{{ news|length }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Garage Profiles</span><span class="ui-meta-value">{{ mechanics|length }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Reviews</span><span class="ui-meta-value">{{ reviews|length }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Admin Accounts</span><span class="ui-meta-value">{{ admin_users_count }}</span></div>
+</div>
+</div>
+
+<div class="ui-card">
+<p class="page-kicker">Ops Focus</p>
+<h2 class="section-heading">Admin focus</h2>
+<ul class="feature-checklist">
+<li><strong>Approve trusted garages</strong>Keep the service discovery network high-quality and reliable.</li>
+<li><strong>Protect community quality</strong>Review suspicious accounts, bans and harmful behavior quickly.</li>
+<li><strong>Track ecosystem growth</strong>Watch how AI usage, content and service supply are growing together.</li>
+</ul>
+</div>
+</div>
+
+<div class="ui-grid ui-grid-3 card-spacer">
+<div class="ui-card">
+<p class="page-kicker">Garages</p>
+<h2 class="section-heading">Garage snapshot</h2>
+<div class="admin-mini-stats">
+<div><span>Pending</span><strong>{{ pending_garages_count }}</strong></div>
+<div><span>Approved</span><strong>{{ approved_garages_count }}</strong></div>
+<div><span>Featured</span><strong>{{ featured_garages_count }}</strong></div>
+</div>
+</div>
+
+<div class="ui-card">
+<p class="page-kicker">Users</p>
+<h2 class="section-heading">User moderation</h2>
+<div class="admin-mini-stats">
+<div><span>Total</span><strong>{{ total_users }}</strong></div>
+<div><span>Banned</span><strong>{{ banned_users_count }}</strong></div>
+<div><span>Admins</span><strong>{{ admin_users_count }}</strong></div>
+</div>
+</div>
+
+<div class="ui-card">
+<p class="page-kicker">Content</p>
+<h2 class="section-heading">Content flow</h2>
+<div class="admin-mini-stats">
+<div><span>Posts</span><strong>{{ posts|length }}</strong></div>
+<div><span>Comments</span><strong>{{ comments|length }}</strong></div>
+<div><span>News</span><strong>{{ news|length }}</strong></div>
+</div>
+</div>
+</div>
+
+<div class="ui-card card-spacer">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Urgent Queue</p>
+<h2 class="section-heading">Pending garage approvals</h2>
+</div>
+<span class="garage-trust-score">{{ pending_garages_count }} waiting</span>
+</div>
+{% if pending_mechanics %}
+<div class="ui-grid">
+{% for mechanic in pending_mechanics %}
+<div class="simple-list-card admin-queue-card">
+<div class="garage-trust-top">
+<span class="garage-trust-level">{{ mechanic.trust_level }}</span>
+<span class="garage-trust-score">Pending</span>
+</div>
+<h3>{{ mechanic.business_name }}</h3>
+<p class="garage-owner-name">{{ mechanic.owner_name }}</p>
+<p class="section-copy">{{ mechanic.city }}{% if mechanic.state %}, {{ mechanic.state }}{% endif %} • Trust {{ mechanic.trust_score }}/100</p>
+<div class="ui-button-row">
+<a href="/admin/approve-garage/{{ mechanic.id }}" class="auth-button">Approve</a>
+<a href="/admin/feature-garage/{{ mechanic.id }}" class="ui-button-secondary">Feature</a>
+<a href="/garage-network/{{ mechanic.id }}" class="ui-button-secondary">View Profile</a>
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No garage profiles submitted yet.</div>
+{% endif %}
+</div>
+
+<div class="ui-grid ui-grid-2 card-spacer">
+<div class="ui-card">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Recent Users</p>
+<h2 class="section-heading">Latest accounts</h2>
+</div>
+<span class="garage-trust-score">Newest first</span>
+</div>
+<div class="admin-compact-list">
+{% for user in recent_users %}
+<div class="admin-compact-row">
+<div>
+<h3>{{ user.username }}</h3>
+<p class="section-copy">{{ user.email }}</p>
+</div>
+<div class="ui-pill-row">
+<span class="ui-pill">{{ user.role }}</span>
+{% if user.is_banned %}
+<span class="ui-pill ui-tag-danger">Banned</span>
+{% endif %}
+</div>
+</div>
+{% endfor %}
+</div>
+</div>
+
+<div class="ui-card">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Latest Posts</p>
+<h2 class="section-heading">Recent community activity</h2>
+</div>
+<span class="garage-trust-score">{{ recent_posts|length }} visible</span>
+</div>
+<div class="admin-compact-list">
+{% for post in recent_posts %}
+<div class="admin-compact-row">
+<div>
+<h3>{{ post.title }}</h3>
+<p class="section-copy">{{ post.author.username if post.author else "Member" }}</p>
+</div>
+<a href="/post/{{ post.id }}" class="ui-button-secondary">Open</a>
+</div>
+{% endfor %}
+</div>
+</div>
+</div>
+
+<div class="ui-card card-spacer">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Full Moderation</p>
+<h2 class="section-heading">Users</h2>
+</div>
+<span class="garage-trust-score">{{ users|length }} total</span>
+</div>
+<div class="ui-grid">
+{% for user in users %}
+<div class="simple-list-card admin-user-card">
+<div class="admin-user-top">
+<div>
+<h3>{{ user.username }}</h3>
+<p class="section-copy">{{ user.email }}</p>
+</div>
+<div class="ui-pill-row">
+<span class="ui-pill">{{ user.role }}</span>
+{% if user.is_banned %}
+<span class="ui-pill ui-tag-danger">Banned</span>
+{% endif %}
+</div>
+</div>
+<div class="ui-button-row">
+{% if user.role == "admin" and user.id != current_user.id %}
+<a class="ui-button-danger" href="/admin/remove-admin/{{ user.id }}">Remove Admin</a>
+{% elif user.role != "admin" %}
+{% if user.is_banned %}
+<a class="ui-button-secondary" href="/admin/unban-user/{{ user.id }}">Unban</a>
+{% else %}
+<a class="ui-button-danger" href="/admin/ban-user/{{ user.id }}">Ban</a>
+{% endif %}
+<a class="ui-button-danger" href="/admin/delete-user/{{ user.id }}" onclick="return confirm('Delete this user permanently?')">Delete</a>
+{% endif %}
+</div>
+</div>
+{% endfor %}
+</div>
+</div>
+
+<div class="ui-grid ui-grid-2">
+<div class="ui-card">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Review Watch</p>
+<h2 class="section-heading">Recent reviews</h2>
+</div>
+<span class="garage-trust-score">{{ reviews|length }} latest</span>
+</div>
+{% if reviews %}
+<div class="ui-grid">
+{% for review in reviews %}
+<div class="simple-list-card">
+<h4>{{ review.mechanic.business_name }}</h4>
+<p class="section-copy">By {{ review.author.username }} • {{ review.rating }}/5</p>
+<p class="section-copy">{{ review.review_text or "No written review." }}</p>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No reviews submitted yet.</div>
+{% endif %}
+</div>
+
+<div class="ui-card">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Approved Supply</p>
+<h2 class="section-heading">Approved garages</h2>
+</div>
+<span class="garage-trust-score">{{ approved_mechanics|length }} shown</span>
+</div>
+{% if approved_mechanics %}
+<div class="admin-compact-list">
+{% for mechanic in approved_mechanics %}
+<div class="admin-compact-row">
+<div>
+<h3>{{ mechanic.business_name }}</h3>
+<p class="section-copy">{{ mechanic.city }}{% if mechanic.state %}, {{ mechanic.state }}{% endif %}</p>
+</div>
+<div class="ui-pill-row">
+{% if mechanic.is_featured %}
+<span class="ui-pill ui-tag-good">Featured</span>
+{% endif %}
+<span class="ui-pill">{{ mechanic.trust_level }}</span>
+</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No approved garages yet.</div>
+{% endif %}
+</div>
+</div>
+
+{% if banned_users %}
+<div class="ui-card">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Restricted Accounts</p>
+<h2 class="section-heading">Banned users</h2>
+</div>
+<span class="garage-trust-score">{{ banned_users|length }} shown</span>
+</div>
+<div class="admin-compact-list">
+{% for user in banned_users %}
+<div class="admin-compact-row">
+<div>
+<h3>{{ user.username }}</h3>
+<p class="section-copy">{{ user.email }}</p>
+</div>
+<a class="ui-button-secondary" href="/admin/unban-user/{{ user.id }}">Unban</a>
+</div>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+</section>
+
+{% endblock %}

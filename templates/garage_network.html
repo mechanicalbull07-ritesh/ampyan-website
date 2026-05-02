@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Garage Network</p>
+<h1 class="page-title">Trusted Mechanics & Local Garages</h1>
+<p class="page-subtitle">Discover local workshops, compare trust level and let mechanics grow inside the AMPYAN automotive ecosystem.</p>
+</div>
+
+<div class="ui-button-row">
+<a href="/garage-network/register" class="auth-button">Register Garage</a>
+</div>
+</div>
+
+<div class="ui-card card-spacer">
+<form method="GET" class="filter-bar">
+<input type="text" name="city" value="{{ selected_city }}" placeholder="Search by city">
+<button type="submit">Find Garages</button>
+<a href="/garage-network?view=map{% if selected_city %}&city={{ selected_city }}{% endif %}" class="sort-btn {% if city_mode == 'map' %}active-sort{% endif %}">Map View</a>
+<a href="/garage-network?view=list{% if selected_city %}&city={{ selected_city }}{% endif %}" class="sort-btn {% if city_mode != 'map' %}active-sort{% endif %}">List View</a>
+<a href="/garage-network" class="sort-btn">Reset</a>
+</form>
+</div>
+
+{% if city_groups %}
+<div class="ui-card card-spacer">
+<h2 class="section-heading">City Discovery</h2>
+<div class="city-cluster-grid">
+{% for city_name, city_mechanics in city_groups.items() %}
+<a href="/garage-network?city={{ city_name }}" class="city-cluster-card">
+<span>{{ city_name }}</span>
+<strong>{{ city_mechanics|length }} garages</strong>
+<p>Open local network</p>
+</a>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+{% if mechanics %}
+{% if city_mode == "map" %}
+<div class="garage-map-grid card-spacer">
+{% for mechanic in mechanics %}
+<article class="garage-map-card">
+<div class="garage-map-pin"><i class="fa-solid fa-location-dot"></i></div>
+<div class="garage-map-body">
+<div class="garage-trust-top">
+<span class="garage-trust-level">{{ mechanic.trust_level }}</span>
+<span class="garage-trust-score">{{ mechanic.city }}</span>
+</div>
+<h3>{{ mechanic.business_name }}</h3>
+<p class="garage-owner-name">{{ mechanic.owner_name }}</p>
+<p class="section-copy">{{ mechanic.address or mechanic.city }}</p>
+<div class="ui-button-row">
+<a href="/garage-network/{{ mechanic.id }}" class="auth-button">View Profile</a>
+</div>
+</div>
+</article>
+{% endfor %}
+</div>
+{% else %}
+<div class="garage-network-grid">
+{% for mechanic in mechanics %}
+<article class="garage-network-card">
+<div class="garage-trust-top">
+<span class="garage-trust-level">{{ mechanic.trust_level }}</span>
+<span class="garage-trust-score">Trust {{ mechanic.trust_score }}/100</span>
+</div>
+<h3>{{ mechanic.business_name }}</h3>
+<p class="garage-owner-name">{{ mechanic.owner_name }}</p>
+<p class="garage-location">{{ mechanic.city }}{% if mechanic.state %}, {{ mechanic.state }}{% endif %}</p>
+<p class="garage-meta">{{ mechanic.specialties or "General automotive service" }}</p>
+<p class="section-copy">{{ mechanic.about or "Independent local garage listed on the AMPYAN network." }}</p>
+
+<div class="ui-meta-list">
+<div class="ui-meta-item">
+<span class="ui-meta-label">Phone</span>
+<span class="ui-meta-value">{{ mechanic.phone }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Experience</span>
+<span class="ui-meta-value">{{ mechanic.experience_years or 0 }} years</span>
+</div>
+</div>
+
+<div class="ui-pill-row">
+{% if mechanic.accepts_emergency %}
+<span class="ui-pill">Emergency Support</span>
+{% endif %}
+{% if mechanic.pickup_drop_available %}
+<span class="ui-pill">Pickup & Drop</span>
+{% endif %}
+{% if mechanic.is_verified %}
+<span class="ui-pill">Verified Account</span>
+{% endif %}
+{% if mechanic.service_types %}
+<span class="ui-pill">{{ mechanic.service_types }}</span>
+{% endif %}
+</div>
+<div class="ui-button-row garage-card-actions">
+<a href="/garage-network/{{ mechanic.id }}" class="auth-button">View Profile</a>
+</div>
+</article>
+{% endfor %}
+</div>
+{% endif %}
+{% else %}
+<div class="empty-state">No garages found for this city yet. Register your workshop to appear here first.</div>
+{% endif %}
+
+</section>
+
+{% endblock %}

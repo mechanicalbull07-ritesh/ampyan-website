@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="diagnose-page">
+
+<h1 class="diagnose-title">AMPYAN AI Car Diagnosis</h1>
+
+<p class="ai-version">YAANIX.AI Brain 1 - Beta</p>
+
+<div class="diagnose-layout">
+
+<!-- LEFT SIDE FORM -->
+
+<div class="diagnose-card">
+
+{% if default_car %}
+
+<p class="default-car">
+Default Car:
+<strong>{{ default_car.brand }} {{ default_car.model }}</strong>
+</p>
+
+<form method="POST" action="/tools/ai-diagnosis">
+
+<select name="car_id" class="auth-input" required>
+
+{% for car in cars %}
+<option value="{{ car.id }}"
+{% if default_car and car.id == default_car.id %}selected{% endif %}>
+{{ car.brand }} {{ car.model }} ({{ car.year }})
+</option>
+{% endfor %}
+
+</select>
+
+<input
+type="text"
+name="problem"
+placeholder="Describe your car problem..."
+class="auth-input"
+required
+>
+
+<button type="submit" class="auth-button">
+Diagnose Now
+</button>
+
+</form>
+
+<div class="popular-problems">
+
+<h3>Popular Problems</h3>
+
+<div class="problem-buttons">
+<button onclick="fillProblem('car not starting')">Car not starting</button>
+<button onclick="fillProblem('engine vibration')">Engine vibration</button>
+<button onclick="fillProblem('brake noise')">Brake noise</button>
+<button onclick="fillProblem('ac not cooling')">AC not cooling</button>
+<button onclick="fillProblem('steering vibration')">Steering vibration</button>
+</div>
+
+</div>
+
+{% else %}
+
+<p>Add your car first</p>
+<a href="/add-car" class="auth-button">Add Car</a>
+
+{% endif %}
+
+</div>
+
+
+<!-- RIGHT SIDE RESULT -->
+
+<div class="diagnose-result">
+
+{% if diagnosis_result %}
+
+<h2>AI Analysis</h2>
+
+<div class="result-block">
+
+<h3>Possible Causes</h3>
+<ul>
+{% for cause in diagnosis_result.causes %}
+<li>{{ cause.name }} — {{ cause.probability }}%</li>
+{% endfor %}
+</ul>
+
+</div>
+
+
+<div class="result-block">
+<h3>Severity</h3>
+<p class="severity-{{ diagnosis_result.severity | lower }}">
+{{ diagnosis_result.severity }}
+</p>
+</div>
+
+
+<div class="result-block">
+<h3>User Check</h3>
+<ul>
+{% for check in diagnosis_result.user_checks %}
+<li>{{ check }}</li>
+{% endfor %}
+</ul>
+</div>
+
+
+<div class="result-block">
+<h3>Estimated Repair Cost</h3>
+<ul>
+{% for cost in diagnosis_result.estimated_cost %}
+<li>{{ cost }}</li>
+{% endfor %}
+</ul>
+</div>
+
+
+<div class="result-block">
+<h3>Mechanic Advice</h3>
+<p>{{ diagnosis_result.advice }}</p>
+</div>
+
+
+<!-- 🔥 QUESTIONS WITH YES/NO + FORM -->
+
+{% if questions and questions|length > 0 %}
+
+<div class="result-block">
+
+<h3>🔍 Follow-up Questions</h3>
+
+<form method="POST" action="/tools/ai-diagnosis-followup">
+
+{% for q in questions %}
+
+<div style="margin-bottom:15px;">
+
+<p>
+{% if q.text %}
+    {{ q.text }}
+{% elif q.question %}
+    {{ q.question }}
+{% else %}
+    {{ q }}
+{% endif %}
+</p>
+
+<label>
+<input type="radio" name="{{ q.id if q.id else 'q' ~ loop.index }}" value="yes" required>
+Yes
+</label>
+
+<label style="margin-left:10px;">
+<input type="radio" name="{{ q.id if q.id else 'q' ~ loop.index }}" value="no">
+No
+</label>
+
+</div>
+
+{% endfor %}
+
+<input type="hidden" name="problem" value="{{ request.form.get('problem') }}">
+
+<button type="submit" class="auth-button">
+Submit Answers
+</button>
+
+</form>
+
+</div>
+
+{% endif %}
+
+{% else %}
+
+<div class="result-placeholder">
+
+<h3>AI Diagnosis Result</h3>
+
+<p>
+Describe your car issue and the AI will analyze
+possible causes and repair suggestions.
+</p>
+
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+</section>
+
+<script>
+function fillProblem(problem){
+document.querySelector("input[name='problem']").value = problem;
+}
+</script>
+
+{% endblock %}

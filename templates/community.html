@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Network</p>
+<h1 class="page-title">AMPYAN Community</h1>
+<p class="page-subtitle">Ask questions, share ownership experience and learn from real car owners across the platform.</p>
+</div>
+
+<a href="/create-post" class="create-btn">Create Post</a>
+</div>
+
+<div class="community-interactive-grid card-spacer">
+<div class="community-stat-card">
+<span>Posts</span>
+<strong>{{ community_stats.posts }}</strong>
+<p>Active discussions visible right now.</p>
+</div>
+<div class="community-stat-card">
+<span>Replies</span>
+<strong>{{ community_stats.comments }}</strong>
+<p>Community responses and real ownership advice.</p>
+</div>
+<div class="community-stat-card">
+<span>Reactions</span>
+<strong>{{ community_stats.votes }}</strong>
+<p>Helpful votes from members across the feed.</p>
+</div>
+<div class="community-stat-card">
+<span>Contributors</span>
+<strong>{{ community_stats.contributors }}</strong>
+<p>Visible top contributors shaping discussions.</p>
+</div>
+</div>
+
+<div class="ui-card card-spacer">
+<form method="GET" class="filter-bar">
+<input type="text" name="q" value="{{ search_query }}" placeholder="Search posts, topics, problems...">
+<button type="submit">Search</button>
+<a href="{{ url_for('community.community', q=search_query, sort='new') }}" class="sort-btn {% if current_sort == 'new' %}active-sort{% endif %}">New</a>
+<a href="{{ url_for('community.community', q=search_query, sort='popular') }}" class="sort-btn {% if current_sort == 'popular' %}active-sort{% endif %}">Popular</a>
+</form>
+</div>
+
+<div class="community-layout">
+<div class="community-main">
+{% if active_topics %}
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Trending Topics</h2>
+<p class="section-copy">Jump into the most discussed areas right now.</p>
+</div>
+<div class="community-topic-row">
+{% for topic, count in active_topics %}
+<a href="{{ url_for('community.community', q=topic) }}" class="community-topic-chip">
+<strong>{{ topic }}</strong>
+<span>{{ count }} posts</span>
+</a>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+<div class="community-posts">
+{% if posts %}
+{% for post in posts %}
+<div class="post-card">
+<div class="post-header">
+<div class="author-left">
+{% if post.author_avatar_url %}
+<img src="{{ post.author_avatar_url }}" class="author-avatar">
+{% else %}
+<div class="author-avatar-letter">{{ post.author_avatar_letter }}</div>
+{% endif %}
+
+<div class="author-info">
+<div class="author-name">
+{{ post.author_display_name }}
+<span class="author-badge">{{ post.author_badge }}</span>
+<span class="author-reputation">⭐ {{ post.author_reputation }}</span>
+{% if post.is_remote %}
+<span class="author-badge">Phone/App</span>
+{% endif %}
+</div>
+<div class="author-location">
+{% if post.author_city %}
+📍 {{ post.author_city }}
+{% else %}
+Community Member
+{% endif %}
+</div>
+</div>
+</div>
+</div>
+
+<h2 class="post-title">
+<a href="{{ post.detail_url }}">{{ post.title }}</a>
+</h2>
+
+<p class="post-preview">{{ post.preview_text }}</p>
+
+{% if post.image_url %}
+<img src="{{ post.image_url }}" class="post-image">
+{% endif %}
+
+{% if post.top_comments %}
+{% for comment in post.top_comments %}
+<div class="top-reply">
+<span class="top-reply-label">{% if loop.index == 1 %}Top Reply{% else %}2nd Reply{% endif %}</span>
+<p>{{ comment.content[:120] }}{% if comment.content|length > 120 %}...{% endif %}</p>
+</div>
+{% endfor %}
+{% endif %}
+
+<div class="post-divider"></div>
+
+<div class="post-actions">
+{% if post.vote_url %}
+<a href="{{ post.vote_url }}" class="vote-btn {% if current_user.is_authenticated and not post.is_remote and post.votes|selectattr('user_id','equalto',current_user.id)|list|length > 0 %}voted{% endif %}">
+🔥 {{ post.vote_count }}
+</a>
+{% else %}
+<span class="vote-btn" style="opacity:0.7;pointer-events:none;">🔥 {{ post.vote_count }}</span>
+{% endif %}
+
+<a href="{{ post.detail_url }}" class="reply-count">
+💬 {{ post.reply_count }} replies
+</a>
+</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state">No posts yet.</div>
+{% endif %}
+</div>
+</div>
+
+<aside class="community-sidebar">
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Conversation Starters</h2>
+<p class="section-copy">Quick prompts to make posting easier.</p>
+</div>
+<div class="community-topic-stack">
+<a href="/create-post" class="community-starter-card">My car is giving a new warning sign. What could it mean?</a>
+<a href="/create-post" class="community-starter-card">Which car is better for daily city use and family comfort?</a>
+<a href="/create-post" class="community-starter-card">What maintenance should I do before a long road trip?</a>
+</div>
+</div>
+
+<div class="ui-card">
+<div class="community-section-head">
+<h2 class="section-heading">Top Contributors</h2>
+<p class="section-copy">Members helping the community the most.</p>
+</div>
+{% if top_contributors %}
+<div class="community-topic-stack">
+{% for user in top_contributors %}
+<div class="community-contributor-card">
+<div>
+<h3>{{ loop.index }}. {{ user.username }}</h3>
+<p>{{ user.badge }}</p>
+</div>
+<div class="community-contributor-score">⭐ {{ user.reputation }}</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">Contributors will appear here as activity grows.</div>
+{% endif %}
+</div>
+</aside>
+</div>
+
+</section>
+
+{% endblock %}

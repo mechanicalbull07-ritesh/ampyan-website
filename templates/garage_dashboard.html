@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="garage-wrapper">
+
+<!-- HEADER -->
+
+<div class="garage-header">
+
+<div class="garage-title-box">
+
+<div class="garage-icon">
+<i class="fa-solid fa-car-side"></i>
+</div>
+
+<div class="garage-title-text">
+<h2>Smart Garage</h2>
+<p>AI Vehicle Intelligence Dashboard</p>
+</div>
+
+</div>
+
+<select class="car-switcher" onchange="switchCar(this.value)">
+{% for c in cars %}
+<option value="{{ c.id }}" {% if c.is_default %}selected{% endif %}>
+{{ c.brand }} {{ c.model }} ({{ c.year }})
+</option>
+{% endfor %}
+</select>
+
+</div>
+
+{% for car in cars %}
+{% if car.is_default %}
+
+<!-- SUMMARY -->
+
+<div class="garage-summary">
+
+<div class="summary-box">
+<div class="summary-icon">🚗</div>
+<div>
+<p class="summary-title">Vehicle</p>
+<p class="summary-value">{{ car.brand }} {{ car.model }}</p>
+</div>
+</div>
+
+<div class="summary-box">
+<div class="summary-icon">⚡</div>
+<div>
+<p class="summary-title">Health</p>
+<p class="summary-value">{{ car.health.score }}/100</p>
+</div>
+</div>
+
+<div class="summary-box">
+<div class="summary-icon">🔧</div>
+<div>
+<p class="summary-title">Next Service</p>
+<p class="summary-value">{{ car.next_service_km }} km</p>
+</div>
+</div>
+
+<div class="summary-box">
+<div class="summary-icon">⚠</div>
+<div>
+<p class="summary-title">Risk</p>
+<p class="summary-value">{{ car.health.status }}</p>
+</div>
+</div>
+
+</div>
+
+
+<div class="garage-layout">
+
+<!-- VEHICLE HEALTH (FULL WIDTH) -->
+
+<div class="garage-card full-width">
+
+<h3>⚡ Vehicle Health</h3>
+
+<div class="health-circle">
+
+<svg width="180" height="180">
+
+<circle cx="90" cy="90" r="70"
+stroke="#1f2937"
+stroke-width="14"
+fill="none"/>
+
+<circle cx="90" cy="90" r="70"
+stroke="#ef4444"
+stroke-width="14"
+fill="none"
+stroke-dasharray="440"
+stroke-dashoffset="{{ 440 - (car.health.score * 4.4) }}"
+stroke-linecap="round"/>
+
+</svg>
+
+<div class="health-number">
+{{ car.health.score }}
+</div>
+
+</div>
+
+<p>Status : <strong>{{ car.health.status }}</strong></p>
+
+{% if car.health.reasons %}
+
+<h4>Reasons</h4>
+
+<ul>
+{% for r in car.health.reasons %}
+<li>{{ r }}</li>
+{% endfor %}
+</ul>
+
+{% endif %}
+
+</div>
+
+
+<!-- LEFT -->
+
+<div class="garage-left">
+
+<!-- COMPONENT HEALTH -->
+
+<div class="garage-card">
+
+<h3>🔧 Component Health</h3>
+
+<p>Brake Health : {{ car.components.brake }}%</p>
+
+<p>Clutch Health : {{ car.components.clutch }}%</p>
+
+<p>Tyre Health : {{ car.components.tyre }}%</p>
+
+<p>Battery Health : {{ car.components.battery }}%</p>
+
+</div>
+
+<!-- DRIVING PATTERN -->
+
+<div class="garage-card">
+
+<h3>🚦 Driving Pattern</h3>
+
+<p>Pattern : {{ car.driving_pattern.pattern }}</p>
+
+<p>Vehicle Wear : {{ car.driving_pattern.wear_level }}</p>
+
+<p>Maintenance Risk : {{ car.driving_pattern.maintenance_risk }}</p>
+
+</div>
+
+</div>
+
+
+<!-- RIGHT -->
+
+<div class="garage-right">
+
+<!-- SERVICE INFO -->
+
+<div class="garage-card">
+
+<h3>📅 Service Info</h3>
+
+<p>Last Service : {{ car.last_service_km }} km</p>
+
+<p>Next Service : {{ car.next_service_km }} km</p>
+
+</div>
+
+<!-- MAINTENANCE -->
+
+<div class="garage-card">
+
+<h3>🛠 Maintenance Suggestions</h3>
+
+<ul>
+
+{% for item in car.maintenance %}
+
+<li>{{ item }}</li>
+{% endfor %}
+
+</ul>
+
+</div>
+
+<!-- FAILURE RISK -->
+
+<div class="garage-card">
+
+<h3>⚠ Failure Risk Prediction</h3>
+
+<ul>
+
+{% for item in car.failure_prediction %}
+
+<li>
+{{ item.component }} – {{ item.risk }} risk
+({{ item.advice }})
+</li>
+
+{% endfor %}
+
+</ul>
+
+</div>
+
+<!-- SERVICE TIMELINE -->
+
+<div class="garage-card">
+
+<h3>🛠 Service Timeline</h3>
+
+{% for step in car.timeline %}
+
+<p><strong>At {{ step.km }} km</strong></p>
+
+<ul>
+{% for task in step.tasks %}
+<li>{{ task }}</li>
+{% endfor %}
+</ul>
+
+{% endfor %}
+
+</div>
+
+<!-- MANUFACTURER SCHEDULE -->
+
+<div class="garage-card">
+
+<h3>🏭 Manufacturer Service Schedule</h3>
+
+{% for step in car.service_schedule %}
+
+<p><strong>At {{ step.km }} km</strong></p>
+
+<ul>
+{% for task in step.tasks %}
+<li>{{ task }}</li>
+{% endfor %}
+</ul>
+
+{% endfor %}
+
+</div>
+
+</div>
+
+</div>
+
+
+<!-- ACTION BUTTONS -->
+
+<div class="button-group">
+
+<a href="/edit-car/{{ car.id }}" class="auth-button">
+Edit Car
+</a>
+
+<a href="/delete-car/{{ car.id }}" class="auth-button">
+Delete Car
+</a>
+
+</div>
+
+
+<!-- SERVICE ALERT -->
+
+{% if car.current_km %}
+{% set remaining = car.next_service_km - car.current_km %}
+{% else %}
+{% set remaining = None %}
+{% endif %}
+
+{% if remaining is not none %}
+
+{% if remaining <= 0 %}
+
+<p style="color:#dc2626;">🚨 Service Overdue</p>
+
+{% elif remaining <= 1000 %}
+
+<p style="color:#ef4444;">🔴 Service Due</p>
+
+{% elif remaining <= 5000 %}
+
+<p style="color:#fbbf24;">⚠ Service Due Soon</p>
+
+{% else %}
+
+<p style="color:#22c55e;">✅ Service Healthy</p>
+
+{% endif %}
+
+{% endif %}
+
+{% if remaining is not none %}
+
+<p>Service due in {{ remaining }} km</p>
+{% endif %}
+
+{% if remaining is not none and car.daily_km %}
+{% set days_left = (remaining / car.daily_km) | round %}
+
+<p style="color:#60a5fa;">Estimated : {{ days_left }} days</p>
+{% endif %}
+
+{% endif %}
+{% endfor %}
+
+
+<div class="garage-disclaimer">
+
+<h4>⚠ Automotive AI Disclaimer</h4>
+
+<p>
+AMPYAN AI vehicle diagnostics and maintenance suggestions are based on
+algorithmic analysis and user-provided data.
+</p>
+
+<p>
+Always consult a qualified mechanic before making repair decisions.
+</p>
+
+</div>
+
+</div>
+
+<script>
+
+function switchCar(carId){
+window.location.href="/set-default-car/"+carId;
+}
+
+</script>
+
+{% endblock %}

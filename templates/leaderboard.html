@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-shell tools-page">
+
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">Community Trust</p>
+<h1 class="page-title">AMPYAN Leaderboard</h1>
+<p class="page-subtitle">Top contributors ranked by reputation, helpful answers and community participation.</p>
+</div>
+</div>
+
+{% if users %}
+<div class="explore-grid">
+
+{% for user in users %}
+
+<div class="explore-card">
+
+<div class="ui-pill-row">
+<span class="ui-pill">Rank #{{ loop.index }}</span>
+<span class="ui-pill">{{ user.badge }}</span>
+</div>
+
+<h3>{{ user.username }}</h3>
+
+<div class="ui-meta-list">
+<div class="ui-meta-item">
+<span class="ui-meta-label">Reputation</span>
+<span class="ui-meta-value">{{ user.reputation }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Helpful Answers</span>
+<span class="ui-meta-value">{{ user.helpful_answers }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Posts</span>
+<span class="ui-meta-value">{{ user.posts_count }}</span>
+</div>
+</div>
+
+<p class="section-copy">Recognized contributor in the AMPYAN automotive community.</p>
+
+</div>
+
+{% endfor %}
+
+</div>
+{% else %}
+<div class="empty-state">No contributors found yet.</div>
+{% endif %}
+
+</section>
+
+{% endblock %}

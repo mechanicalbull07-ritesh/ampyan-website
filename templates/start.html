@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div style="max-width:700px; margin:auto; padding:40px;">
+    <h2 style="color:white;">Start New Discussion</h2>
+
+    <form method="POST">
+        <input name="title" placeholder="Discussion Title"
+               style="width:100%; padding:10px; margin-bottom:15px;" required>
+
+        <textarea name="content" placeholder="Write your problem..."
+                  style="width:100%; padding:10px; height:150px;" required></textarea>
+
+        <br><br>
+        <button style="padding:10px 20px; background:red; border:none; color:white;">
+            Post Discussion
+        </button>
+    </form>
+</div>
+
+{% endblock %}

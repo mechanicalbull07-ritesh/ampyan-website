@@ -1,0 +1,162 @@
+/* ================= NEWS GRID ================= */
+
+.news-container{
+max-width:1100px;
+margin:auto;
+padding:40px 20px;
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+gap:30px;
+}
+
+/* ================= NEWS CARD ================= */
+
+.news-card{
+background:#111;
+border-radius:14px;
+overflow:hidden;
+text-decoration:none;
+color:white;
+box-shadow:0 8px 30px rgba(0,0,0,0.5);
+transition:0.3s;
+}
+
+.news-card:hover{
+transform:translateY(-6px);
+}
+
+/* ================= IMAGE ================= */
+
+.news-image{
+position:relative;
+height:220px;
+overflow:hidden;
+}
+
+.news-image img{
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+/* ================= TAG ================= */
+
+.news-tag{
+position:absolute;
+top:14px;
+left:14px;
+background:white;
+color:black;
+font-size:12px;
+padding:6px 12px;
+border-radius:20px;
+font-weight:600;
+}
+
+/* ================= CONTENT ================= */
+
+.news-content{
+padding:18px;
+}
+
+.news-title{
+font-size:20px;
+line-height:1.4;
+margin-bottom:12px;
+}
+
+.news-meta{
+font-size:14px;
+color:#aaa;
+display:flex;
+align-items:center;
+gap:8px;
+}
+
+.dot{
+font-size:18px;
+}
+/* ================= NEWS PAGE ================= */
+
+.news-container{
+max-width:1200px;
+margin:auto;
+padding:40px 20px;
+}
+
+.news-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+gap:30px;
+margin-top:30px;
+}
+
+.news-card{
+background:#0d0d0d;
+border-radius:16px;
+overflow:hidden;
+border:1px solid rgba(255,0,0,0.2);
+transition:0.3s;
+}
+
+.news-card:hover{
+transform:translateY(-6px);
+box-shadow:0 0 25px rgba(255,0,0,0.3);
+}
+
+.news-image{
+width:100%;
+height:200px;
+object-fit:cover;
+}
+
+.news-content{
+padding:20px;
+}
+
+.news-title{
+font-size:20px;
+font-weight:600;
+margin-bottom:10px;
+color:white;
+}
+
+.news-date{
+font-size:13px;
+color:#aaa;
+margin-bottom:15px;
+}
+
+.news-admin{
+display:flex;
+gap:10px;
+margin-top:10px;
+}
+
+.news-admin a{
+padding:8px 14px;
+border-radius:6px;
+font-size:13px;
+text-decoration:none;
+}
+
+.news-edit{
+border:1px solid red;
+color:red;
+}
+
+.news-delete{
+background:red;
+color:white;
+}
+
+.create-news-btn{
+margin-top:20px;
+display:inline-block;
+padding:12px 22px;
+background:red;
+color:white;
+border-radius:8px;
+text-decoration:none;
+font-weight:600;
+}
