@@ -44,6 +44,11 @@
 <a href="{{ url_for('community.community', q=search_query, sort='new') }}" class="sort-btn {% if current_sort == 'new' %}active-sort{% endif %}">New</a>
 <a href="{{ url_for('community.community', q=search_query, sort='popular') }}" class="sort-btn {% if current_sort == 'popular' %}active-sort{% endif %}">Popular</a>
 </form>
+<div class="community-quick-row">
+{% for label, topic in quick_topics %}
+<a href="{{ url_for('community.community', q=topic) }}" class="community-quick-chip">{{ label }}</a>
+{% endfor %}
+</div>
 </div>
 
 <div class="community-layout">
@@ -140,6 +145,40 @@ Community Member
 </div>
 
 <aside class="community-sidebar">
+{% if unanswered_posts %}
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Needs Answers</h2>
+<p class="section-copy">Help owners who have not received a reply yet.</p>
+</div>
+<div class="community-topic-stack">
+{% for post in unanswered_posts %}
+<a href="{{ post.detail_url }}" class="community-starter-card">
+<strong>{{ post.title }}</strong>
+<span>Be first to reply</span>
+</a>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+{% if most_active_posts %}
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Active Now</h2>
+<p class="section-copy">Discussions getting the most replies or votes.</p>
+</div>
+<div class="community-topic-stack">
+{% for post in most_active_posts %}
+<a href="{{ post.detail_url }}" class="community-starter-card">
+<strong>{{ post.title }}</strong>
+<span>{{ post.reply_count }} replies • {{ post.vote_count }} votes</span>
+</a>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
 <div class="ui-card card-spacer">
 <div class="community-section-head">
 <h2 class="section-heading">Conversation Starters</h2>

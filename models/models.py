@@ -311,3 +311,28 @@ class WebsiteVisit(db.Model):
     is_page_view = db.Column(db.Boolean, default=True)
 
     user = db.relationship("User", backref="website_visits")
+
+
+class WebsiteEvent(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    event_time = db.Column(
+        db.DateTime,
+        default=db.func.current_timestamp()
+    )
+
+    event_type = db.Column(db.String(40), nullable=False)
+    label = db.Column(db.String(160))
+    path = db.Column(db.String(500))
+    target_url = db.Column(db.String(500))
+    visitor_id = db.Column(db.String(80))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    ip_address = db.Column(db.String(50))
+    referrer = db.Column(db.String(500))
+    user_agent = db.Column(db.String(500))
+    device_type = db.Column(db.String(30))
+    is_authenticated = db.Column(db.Boolean, default=False)
+    severity = db.Column(db.String(20), default="info")
+
+    user = db.relationship("User", backref="website_events")

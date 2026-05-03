@@ -99,6 +99,32 @@
     font-weight: 600;
 }
 
+.community-quick-row{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:14px;
+}
+
+.community-quick-chip{
+    display:inline-flex;
+    align-items:center;
+    padding:9px 13px;
+    border-radius:999px;
+    color:#d9d9d9;
+    text-decoration:none;
+    background:rgba(255,255,255,0.04);
+    border:1px solid rgba(255,255,255,0.08);
+    font-size:13px;
+    transition:0.25s;
+}
+
+.community-quick-chip:hover{
+    color:#fff;
+    border-color:#ff5a36;
+    transform:translateY(-1px);
+}
+
 .sort-btn {
     background: #222;
     color: white;
@@ -174,6 +200,17 @@
     display:block;
     color:#d9d9d9;
     line-height:1.7;
+}
+
+.community-starter-card strong,
+.community-starter-card span{
+    display:block;
+}
+
+.community-starter-card span{
+    margin-top:4px;
+    color:#a9a9a9;
+    font-size:13px;
 }
 
 .community-contributor-score{

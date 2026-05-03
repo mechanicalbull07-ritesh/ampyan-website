@@ -298,6 +298,19 @@ def community():
 
     total_votes = sum(post.vote_count for post in posts)
     total_comments = sum(post.reply_count for post in posts)
+    unanswered_posts = [post for post in posts if post.reply_count == 0][:5]
+    most_active_posts = sorted(
+        posts,
+        key=lambda post: (post.reply_count + post.vote_count, str(post.created_at or "")),
+        reverse=True,
+    )[:4]
+    quick_topics = [
+        ("Engine problem", "engine"),
+        ("Mileage drop", "mileage"),
+        ("Service advice", "service"),
+        ("Battery issue", "battery"),
+        ("Buying help", "buying"),
+    ]
 
     return render_template(
         "community.html",
@@ -306,6 +319,9 @@ def community():
         current_sort=sort,
         top_contributors=top_contributors,
         active_topics=active_topics,
+        unanswered_posts=unanswered_posts,
+        most_active_posts=most_active_posts,
+        quick_topics=quick_topics,
         community_stats={
             "posts": len(posts),
             "comments": total_comments,

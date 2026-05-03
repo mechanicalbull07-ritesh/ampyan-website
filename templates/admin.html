@@ -26,6 +26,13 @@
 </div>
 
 <div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Yesterday Views</span><div class="stat-number">{{ yesterday_page_views }}</div></div>
+<div class="stat-card"><span>Today Change</span><div class="stat-number">{{ "+" if traffic_delta_today >= 0 else "" }}{{ traffic_delta_today }}</div></div>
+<div class="stat-card"><span>Tracked Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
+<div class="stat-card"><span>Security Events 24h</span><div class="stat-number">{{ security_events_24h|length }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
 <div class="stat-card"><span>Vehicle Profiles</span><div class="stat-number">{{ total_cars }}</div></div>
 <div class="stat-card"><span>Car Owners</span><div class="stat-number">{{ car_owner_count }}</div></div>
 <div class="stat-card"><span>Service Due</span><div class="stat-number">{{ service_due_cars|length }}</div></div>
@@ -78,6 +85,168 @@
 <li><strong>Protect community quality</strong>Review suspicious accounts, bans and harmful behavior quickly.</li>
 <li><strong>Track ecosystem growth</strong>Watch how AI usage, content and service supply are growing together.</li>
 </ul>
+</div>
+</div>
+
+<div class="ui-card card-spacer">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Website Intelligence</p>
+<h2 class="section-heading">Traffic, clicks and safety</h2>
+<p class="section-copy">Privacy-safe product analytics for improving AMPYAN. Tracks page views, normal link/button clicks and blocked abuse patterns, not passwords, tokens or private secrets.</p>
+</div>
+<span class="garage-trust-score">Last 30 days</span>
+</div>
+
+<div class="admin-analytics-grid">
+<div class="admin-analytics-panel">
+<h3>Hourly traffic</h3>
+<div class="admin-bar-list">
+{% for label, count in hourly_traffic[-12:] %}
+<div class="admin-bar-row">
+<span>{{ label }}</span>
+<div><i style="width:{{ [count * 8, 100]|min }}%;"></i></div>
+<strong>{{ count }}</strong>
+</div>
+{% endfor %}
+</div>
+</div>
+
+<div class="admin-analytics-panel">
+<h3>Daily traffic</h3>
+<div class="admin-bar-list">
+{% for label, count in daily_traffic[-10:] %}
+<div class="admin-bar-row">
+<span>{{ label }}</span>
+<div><i style="width:{{ [count * 4, 100]|min }}%;"></i></div>
+<strong>{{ count }}</strong>
+</div>
+{% endfor %}
+</div>
+</div>
+
+<div class="admin-analytics-panel">
+<h3>Monthly traffic</h3>
+<div class="admin-bar-list">
+{% for label, count in monthly_traffic %}
+<div class="admin-bar-row">
+<span>{{ label }}</span>
+<div><i style="width:{{ [count * 2, 100]|min }}%;"></i></div>
+<strong>{{ count }}</strong>
+</div>
+{% endfor %}
+</div>
+</div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Top clicked items</h3>
+{% if top_clicks %}
+<div class="ui-meta-list">
+{% for label, count in top_clicks %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">Clicks will appear after users interact with links and buttons.</p>
+{% endif %}
+</div>
+
+<div class="admin-analytics-panel">
+<h3>Top click pages</h3>
+{% if top_click_pages %}
+<div class="ui-meta-list">
+{% for path, count in top_click_pages %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ path }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No click page data yet.</p>
+{% endif %}
+</div>
+
+<div class="admin-analytics-panel">
+<h3>Top referrers</h3>
+{% if top_referrers %}
+<div class="ui-meta-list">
+{% for source, count in top_referrers %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ source }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No referrer data yet.</p>
+{% endif %}
+</div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel admin-wide-panel">
+<h3>Page performance</h3>
+{% if page_metrics %}
+<div class="admin-table-wrap">
+<table class="admin-analytics-table">
+<thead>
+<tr><th>Page</th><th>Views</th><th>Unique</th><th>Logged-in</th><th>Guests</th><th>Clicks</th><th>Last Visit</th></tr>
+</thead>
+<tbody>
+{% for page in page_metrics %}
+<tr>
+<td>{{ page.path }}</td>
+<td>{{ page.views }}</td>
+<td>{{ page.unique }}</td>
+<td>{{ page.logged_in }}</td>
+<td>{{ page.guest }}</td>
+<td>{{ page.clicks }}</td>
+<td>{{ page.last_visit.strftime("%d %b %H:%M") if page.last_visit else "N/A" }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% else %}
+<p class="section-copy">No page metrics yet.</p>
+{% endif %}
+</div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Safety alerts</h3>
+<div class="admin-alert-stack">
+{% for alert in safety_alerts %}
+<div class="admin-alert-row">
+<span><strong>{{ alert.severity }}</strong> {{ alert.title }}<br><small>{{ alert.detail }}</small></span>
+</div>
+{% endfor %}
+</div>
+</div>
+
+<div class="admin-analytics-panel">
+<h3>Suspicious sources</h3>
+{% if suspicious_ips %}
+<div class="ui-meta-list">
+{% for ip, count in suspicious_ips %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ ip }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No repeated suspicious source in the last 24 hours.</p>
+{% endif %}
+</div>
+
+<div class="admin-analytics-panel">
+<h3>Recent security events</h3>
+{% if security_events %}
+<div class="ui-meta-list">
+{% for event in security_events[:8] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ event.path }} • {{ event.label }}</span><span class="ui-meta-value">{{ event.severity }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No security events recorded yet.</p>
+{% endif %}
+</div>
 </div>
 </div>
 

@@ -22,7 +22,7 @@ from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
 # ================= MODELS =================
-from models.models import db, User, Post, Comment, Vote, News, Video, DiagnosticLearning, HelpReport, Car, WebsiteVisit
+from models.models import db, User, Post, Comment, Vote, News, Video, DiagnosticLearning, HelpReport, Car, WebsiteVisit, WebsiteEvent
 print("Models loaded")
 
 # ================= SECURITY =================
@@ -631,6 +631,44 @@ def security_path_matches(path):
     return normalized in SENSITIVE_PATHS or any(normalized.startswith(f"{prefix}/") for prefix in ("/.git", "/vendor", "/node_modules"))
 
 
+def sanitize_event_text(value, max_length=160):
+    cleaned = re.sub(r"\s+", " ", (value or "").strip())
+    return cleaned[:max_length]
+
+
+def normalize_event_url(value):
+    parsed = urlparse((value or "").strip())
+    if parsed.netloc and parsed.netloc not in {"ampyan.com", "www.ampyan.com"}:
+        return parsed.netloc[:500]
+    path = parsed.path or "/"
+    return path[:500]
+
+
+def record_website_event(event_type, label="", target_url="", severity="info", path=None):
+    try:
+        if not database_initialized:
+            initialize_database()
+        visitor_id = request.cookies.get("ampyan_visitor_id") or getattr(g, "set_visitor_cookie", None)
+        event = WebsiteEvent(
+            event_type=sanitize_event_text(event_type, 40),
+            label=sanitize_event_text(label, 160),
+            path=(path or request.path or "")[:500],
+            target_url=normalize_event_url(target_url),
+            visitor_id=visitor_id,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            ip_address=client_ip()[:50],
+            referrer=(request.referrer or "")[:500],
+            user_agent=(request.headers.get("User-Agent", "") or "")[:500],
+            device_type=detect_device_type(request.headers.get("User-Agent", "")),
+            is_authenticated=current_user.is_authenticated,
+            severity=sanitize_event_text(severity, 20) or "info",
+        )
+        db.session.add(event)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
 def rate_limited(path):
     rule = RATE_LIMIT_RULES.get(path)
     if not rule:
@@ -651,6 +689,13 @@ def rate_limited(path):
 @app.before_request
 def security_guard():
     if security_path_matches(request.path):
+        record_website_event(
+            "security",
+            label="Blocked sensitive path",
+            target_url=request.path,
+            severity="high",
+            path=request.path,
+        )
         return "Not found", 404
 
     content_length = request.content_length or 0
@@ -658,6 +703,13 @@ def security_guard():
         return jsonify({"status": "error", "message": "Request too large"}), 413
 
     if rate_limited(request.path):
+        record_website_event(
+            "security",
+            label="Rate limit triggered",
+            target_url=request.path,
+            severity="medium",
+            path=request.path,
+        )
         if wants_json_response():
             return jsonify({"status": "error", "message": "Too many requests. Please try again soon."}), 429
         return "Too many requests. Please try again soon.", 429
@@ -1212,6 +1264,31 @@ def api_help_report():
     db.session.add(report)
     db.session.commit()
     return jsonify({"status": "success", "report_id": report.id})
+
+
+@app.route("/api/track-event", methods=["POST"])
+def api_track_event():
+    payload = request.get_json(silent=True) or {}
+    event_type = sanitize_event_text(payload.get("event_type") or "click", 40)
+
+    if event_type != "click":
+        return jsonify({"status": "error", "message": "unsupported event type"}), 400
+
+    label = sanitize_event_text(payload.get("label") or "Click", 120)
+    target_url = normalize_event_url(payload.get("target_url") or "")
+    source_path = normalize_event_url(payload.get("path") or request.path)
+
+    if not label and not target_url:
+        return jsonify({"status": "error", "message": "event label or target is required"}), 400
+
+    record_website_event(
+        "click",
+        label=label,
+        target_url=target_url,
+        severity="info",
+        path=source_path,
+    )
+    return jsonify({"status": "success"})
 # ================= FORGOT PASSWORD =================
 
 @app.route("/forgot-password", methods=["GET", "POST"])

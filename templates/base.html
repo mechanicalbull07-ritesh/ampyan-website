@@ -601,6 +601,44 @@ observer.observe(sec);
 </script>
 <script>
 
+/* ================= PRIVACY-SAFE PRODUCT ANALYTICS ================= */
+
+document.addEventListener("click", function(event){
+
+const target = event.target.closest("a, button");
+
+if(!target) return;
+
+if(target.closest(".ai-chatbox")) return;
+
+const label = (target.getAttribute("data-analytics-label") || target.innerText || target.getAttribute("aria-label") || target.href || "Click").trim().slice(0,120);
+const targetUrl = target.getAttribute("href") || target.getAttribute("data-target-url") || "";
+
+const payload = JSON.stringify({
+event_type: "click",
+label: label,
+target_url: targetUrl,
+path: window.location.pathname
+});
+
+if(navigator.sendBeacon){
+const blob = new Blob([payload], {type: "application/json"});
+navigator.sendBeacon("/api/track-event", blob);
+return;
+}
+
+fetch("/api/track-event", {
+method: "POST",
+headers: {"Content-Type": "application/json"},
+body: payload,
+keepalive: true
+}).catch(function(){});
+
+});
+
+</script>
+<script>
+
 window.addEventListener("scroll", function(){
 
 let btn = document.getElementById("topBtn");

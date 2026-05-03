@@ -990,6 +990,90 @@ font-size:14px;
 color:var(--text-primary);
 }
 
+.admin-analytics-grid{
+display:grid;
+grid-template-columns:repeat(3,minmax(0,1fr));
+gap:16px;
+}
+
+.admin-analytics-panel{
+padding:18px;
+border-radius:18px;
+border:1px solid var(--border);
+background:rgba(255,255,255,0.03);
+min-width:0;
+}
+
+.admin-wide-panel{
+grid-column:1 / -1;
+}
+
+.admin-analytics-panel h3{
+margin:0 0 14px;
+font-size:17px;
+}
+
+.admin-bar-list{
+display:grid;
+gap:10px;
+}
+
+.admin-bar-row{
+display:grid;
+grid-template-columns:90px minmax(80px,1fr) 34px;
+align-items:center;
+gap:10px;
+font-size:12px;
+color:var(--text-secondary);
+}
+
+.admin-bar-row div{
+height:8px;
+border-radius:999px;
+background:rgba(255,255,255,0.06);
+overflow:hidden;
+}
+
+.admin-bar-row i{
+display:block;
+height:100%;
+min-width:4px;
+border-radius:999px;
+background:linear-gradient(90deg,var(--accent),#4aa3ff);
+}
+
+.admin-table-wrap{
+overflow-x:auto;
+}
+
+.admin-analytics-table{
+width:100%;
+border-collapse:collapse;
+min-width:760px;
+}
+
+.admin-analytics-table th,
+.admin-analytics-table td{
+padding:12px;
+border-bottom:1px solid var(--border);
+text-align:left;
+font-size:13px;
+}
+
+.admin-analytics-table th{
+color:var(--text-secondary);
+text-transform:uppercase;
+letter-spacing:0.08em;
+font-size:11px;
+}
+
+.admin-alert-row small{
+display:block;
+margin-top:4px;
+color:var(--text-secondary);
+line-height:1.5;
+}
+
 @media(max-width:900px){
 .page-shell{
 padding:42px 0 72px;
@@ -1016,7 +1100,8 @@ padding:22px;
 
 .admin-vehicle-stats,
 .admin-car-grid,
-.admin-car-meta{
+.admin-car-meta,
+.admin-analytics-grid{
 grid-template-columns:1fr;
 }
 }
