@@ -96,12 +96,19 @@ def register():
 
             new_user = User(
                 username=username,
+                mobile="",
                 email=email,
                 password=hashed_password,
                 role="user",
+                is_banned=False,
                 email_verified=not require_verification,
                 verification_token=token,
                 verification_token_expiry=expiry,
+                reputation=0,
+                posts_count=0,
+                helpful_answers=0,
+                contributor_score=0,
+                badge="New Member",
             )
 
             _commit_new_user_with_id_fallback(new_user)

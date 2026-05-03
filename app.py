@@ -506,10 +506,17 @@ def google_callback():
         if not user:
             user = User(
                 username=build_unique_username(email.split("@")[0]),
+                mobile="",
                 email=email,
                 password=generate_password_hash(secrets.token_urlsafe(16)),
                 role="user",
+                is_banned=False,
                 email_verified=True,
+                reputation=0,
+                posts_count=0,
+                helpful_answers=0,
+                contributor_score=0,
+                badge="New Member",
             )
             commit_new_user_with_id_fallback(user)
 
@@ -1100,6 +1107,14 @@ def ensure_user_schema():
         db.session.execute(text(f'ALTER TABLE "user" ADD COLUMN {column_name} {column_definition}'))
 
     if dialect == "postgresql":
+        required_user_columns = {"id", "username", "email", "password"}
+        for column in inspect(db.engine).get_columns("user"):
+            column_name = column["name"]
+            if column_name in required_user_columns or column.get("nullable", True):
+                continue
+            safe_column = column_name.replace('"', '""')
+            db.session.execute(text(f'ALTER TABLE "user" ALTER COLUMN "{safe_column}" DROP NOT NULL'))
+
         db.session.execute(text('CREATE SEQUENCE IF NOT EXISTS user_id_seq OWNED BY "user".id'))
         db.session.execute(text("SELECT setval('user_id_seq', COALESCE((SELECT MAX(id) FROM \"user\"), 0) + 1, false)"))
         db.session.execute(text("ALTER TABLE \"user\" ALTER COLUMN id SET DEFAULT nextval('user_id_seq')"))
