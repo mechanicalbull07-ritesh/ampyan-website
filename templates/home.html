@@ -1,16 +1,64 @@
 {% extends "base.html" %}
 {% block content %}
 
-<section class="brand-hero-strip">
-<div class="brand-hero-copy">
-<p class="brand-kicker">AMPYAN Automotive Intelligence Platform</p>
-<h2>Powered by Speed 16</h2>
-<p>Built by Ritesh Singh for smarter diagnostics, stronger ownership clarity and a connected automotive ecosystem.</p>
+<section class="feature-nav-section">
+<div class="feature-nav-head">
+<p class="page-kicker">EXPLORE AMPYAN</p>
+<h2 class="section-heading">Jump into the tools drivers need most.</h2>
+<p class="section-copy">Diagnosis, garage tracking, community help and ownership tools are one tap away.</p>
 </div>
 
-<div class="brand-hero-badge">
-<span>Speed 16</span>
-<strong>Ritesh Singh</strong>
+<div class="feature-nav-grid">
+<a href="/tools/ai-diagnosis" class="feature-nav-card">
+<i class="fa-solid fa-stethoscope"></i>
+<h3>AI Diagnosis</h3>
+<p>Understand symptoms and likely issues.</p>
+</a>
+
+<a href="/garage-dashboard" class="feature-nav-card">
+<i class="fa-solid fa-warehouse"></i>
+<h3>My Garage</h3>
+<p>Track cars, service and health records.</p>
+</a>
+
+<a href="/community" class="feature-nav-card">
+<i class="fa-solid fa-users"></i>
+<h3>Community</h3>
+<p>Ask owners and learn from experts.</p>
+</a>
+
+<a href="/tools" class="feature-nav-card">
+<i class="fa-solid fa-screwdriver-wrench"></i>
+<h3>Tools</h3>
+<p>Open AMPYAN ownership utilities.</p>
+</a>
+
+<!-- TODO: Replace /platform with /explore when a dedicated Explore route exists. -->
+<a href="/platform" class="feature-nav-card">
+<i class="fa-solid fa-compass"></i>
+<h3>Explore</h3>
+<p>See the full AMPYAN platform map.</p>
+</a>
+
+<!-- TODO: Replace /garage-dashboard with a dedicated service/maintenance route when available. -->
+<a href="/garage-dashboard" class="feature-nav-card">
+<i class="fa-solid fa-calendar-check"></i>
+<h3>Service / Maintenance</h3>
+<p>Manage service timeline and reminders.</p>
+</a>
+
+<!-- TODO: Replace /tools/ai-diagnosis with a dedicated cost estimator route when available. -->
+<a href="/tools/ai-diagnosis" class="feature-nav-card">
+<i class="fa-solid fa-calculator"></i>
+<h3>Cost Estimator</h3>
+<p>Review repair cost context after diagnosis.</p>
+</a>
+
+<a href="/profile" class="feature-nav-card">
+<i class="fa-solid fa-user-gear"></i>
+<h3>Profile</h3>
+<p>Manage your AMPYAN account details.</p>
+</a>
 </div>
 </section>
 
@@ -412,6 +460,19 @@ required
 <p class="page-kicker">MECHANIC SIDE</p>
 <h3>Mechanics, Workshops, Garage Teams</h3>
 <p>Build a visible profile, earn trust, collect local demand and become part of a stronger automotive service network.</p>
+</div>
+</section>
+
+<section class="brand-hero-strip brand-hero-strip-bottom">
+<div class="brand-hero-copy">
+<p class="brand-kicker">AMPYAN Automotive Intelligence Platform</p>
+<h2>Powered by Speed 16</h2>
+<p>Built by Ritesh Singh for smarter diagnostics, stronger ownership clarity and a connected automotive ecosystem.</p>
+</div>
+
+<div class="brand-hero-badge">
+<span>Speed 16</span>
+<strong>Ritesh Singh</strong>
 </div>
 </section>
 
