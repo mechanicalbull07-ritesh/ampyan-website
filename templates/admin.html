@@ -25,6 +25,13 @@
 <div class="stat-card"><span>Logged-in Views</span><div class="stat-number">{{ logged_in_views }}</div></div>
 </div>
 
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Vehicle Profiles</span><div class="stat-number">{{ total_cars }}</div></div>
+<div class="stat-card"><span>Car Owners</span><div class="stat-number">{{ car_owner_count }}</div></div>
+<div class="stat-card"><span>Service Due</span><div class="stat-number">{{ service_due_cars|length }}</div></div>
+<div class="stat-card"><span>Expired Docs</span><div class="stat-number">{{ insurance_expired_cars|length + pollution_expired_cars|length }}</div></div>
+</div>
+
 <div class="admin-priority-grid card-spacer">
 <div class="ui-card">
 <p class="page-kicker">Critical Queue</p>
@@ -42,6 +49,10 @@
 <span>Recent reviews to scan</span>
 <strong>{{ reviews|length }}</strong>
 </div>
+<div class="admin-alert-row">
+<span>Cars with service due</span>
+<strong>{{ service_due_cars|length }}</strong>
+</div>
 </div>
 </div>
 
@@ -53,6 +64,7 @@
 <div class="ui-meta-item"><span class="ui-meta-label">Comments</span><span class="ui-meta-value">{{ comments|length }}</span></div>
 <div class="ui-meta-item"><span class="ui-meta-label">News Items</span><span class="ui-meta-value">{{ news|length }}</span></div>
 <div class="ui-meta-item"><span class="ui-meta-label">Garage Profiles</span><span class="ui-meta-value">{{ mechanics|length }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Vehicle Profiles</span><span class="ui-meta-value">{{ total_cars }}</span></div>
 <div class="ui-meta-item"><span class="ui-meta-label">Reviews</span><span class="ui-meta-value">{{ reviews|length }}</span></div>
 <div class="ui-meta-item"><span class="ui-meta-label">Admin Accounts</span><span class="ui-meta-value">{{ admin_users_count }}</span></div>
 </div>
@@ -129,6 +141,70 @@
 <div><span>News</span><strong>{{ news|length }}</strong></div>
 </div>
 </div>
+</div>
+
+<div class="ui-card card-spacer">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Owner Garage Data</p>
+<h2 class="section-heading">Vehicle and service overview</h2>
+<p class="section-copy">Admin-only operational view for support, safety reminders and service troubleshooting. Use only for lawful AMPYAN support and platform operations.</p>
+</div>
+<span class="garage-trust-score">{{ recent_cars|length }} latest</span>
+</div>
+
+<div class="admin-mini-stats admin-vehicle-stats">
+<div><span>Total Cars</span><strong>{{ total_cars }}</strong></div>
+<div><span>Owners</span><strong>{{ car_owner_count }}</strong></div>
+<div><span>Service Due</span><strong>{{ service_due_cars|length }}</strong></div>
+<div><span>Due Soon</span><strong>{{ service_soon_cars|length }}</strong></div>
+<div><span>Insurance Expired</span><strong>{{ insurance_expired_cars|length }}</strong></div>
+<div><span>Pollution Expired</span><strong>{{ pollution_expired_cars|length }}</strong></div>
+</div>
+
+{% if recent_cars %}
+<div class="admin-car-grid">
+{% for car in recent_cars %}
+<article class="simple-list-card admin-car-card">
+<div class="admin-user-top">
+<div>
+<h3>{{ car.brand or "Unknown" }} {{ car.model or "Vehicle" }}</h3>
+<p class="section-copy">
+Owner: {{ car.owner.username if car.owner else "Unknown" }}
+{% if car.owner and car.owner.email %} • {{ car.owner.email }}{% endif %}
+</p>
+</div>
+<div class="ui-pill-row">
+{% if car.is_default %}
+<span class="ui-pill ui-tag-good">Default</span>
+{% endif %}
+{% if car.next_service_km and car.current_km and car.current_km >= car.next_service_km %}
+<span class="ui-pill ui-tag-danger">Service due</span>
+{% elif car.next_service_km and car.current_km and 0 <= (car.next_service_km - car.current_km) <= 500 %}
+<span class="ui-pill ui-tag-warn">Due soon</span>
+{% else %}
+<span class="ui-pill">Garage</span>
+{% endif %}
+</div>
+</div>
+
+<div class="admin-car-meta">
+<div><span>Year</span><strong>{{ car.year or "N/A" }}</strong></div>
+<div><span>Fuel</span><strong>{{ car.fuel_type or "N/A" }}</strong></div>
+<div><span>Mileage</span><strong>{{ car.mileage or "N/A" }}</strong></div>
+<div><span>Daily KM</span><strong>{{ car.daily_km or "N/A" }}</strong></div>
+<div><span>Current KM</span><strong>{{ car.current_km or "N/A" }}</strong></div>
+<div><span>Last Service</span><strong>{{ car.last_service_km or "N/A" }}</strong></div>
+<div><span>Next Service</span><strong>{{ car.next_service_km or "N/A" }}</strong></div>
+<div><span>Insurance</span><strong>{{ car.insurance_expiry or "N/A" }}</strong></div>
+<div><span>Pollution</span><strong>{{ car.pollution_expiry or "N/A" }}</strong></div>
+</div>
+</article>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No owner cars have been added yet.</div>
+{% endif %}
 </div>
 
 <div class="ui-card card-spacer">

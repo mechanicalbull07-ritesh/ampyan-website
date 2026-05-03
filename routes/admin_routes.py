@@ -2,7 +2,7 @@ from datetime import datetime, time
 
 from flask import Blueprint, render_template, redirect, flash
 from flask_login import login_required, current_user
-from models.models import db, User, Post, Comment, News, WebsiteVisit, MechanicProfile, MechanicReview
+from models.models import db, User, Post, Comment, News, WebsiteVisit, MechanicProfile, MechanicReview, Car
 from services.garage_network_service import refresh_mechanic_reputation
 
 admin_bp = Blueprint("admin", __name__)
@@ -26,6 +26,7 @@ def admin_dashboard():
         MechanicProfile.id.desc()
     ).all()
     reviews = MechanicReview.query.order_by(MechanicReview.id.desc()).limit(10).all()
+    cars = Car.query.order_by(Car.created_at.desc()).all()
 
     total_ai_usage = db.session.query(db.func.sum(User.ai_uses_today)).scalar() or 0
     today_start = datetime.combine(datetime.utcnow().date(), time.min)
@@ -63,6 +64,25 @@ def admin_dashboard():
     pending_garages_count = MechanicProfile.query.filter_by(is_verified=False).count()
     approved_garages_count = MechanicProfile.query.filter_by(is_verified=True).count()
     featured_garages_count = MechanicProfile.query.filter_by(is_featured=True).count()
+    total_cars = len(cars)
+    car_owner_count = db.session.query(db.func.count(db.func.distinct(Car.owner_id))).scalar() or 0
+    today = datetime.utcnow().date()
+    service_due_cars = [
+        car for car in cars
+        if car.next_service_km and car.current_km and car.current_km >= car.next_service_km
+    ]
+    service_soon_cars = [
+        car for car in cars
+        if car.next_service_km and car.current_km and 0 <= (car.next_service_km - car.current_km) <= 500
+    ]
+    insurance_expired_cars = [
+        car for car in cars
+        if car.insurance_expiry and car.insurance_expiry < today
+    ]
+    pollution_expired_cars = [
+        car for car in cars
+        if car.pollution_expiry and car.pollution_expiry < today
+    ]
 
     for mechanic in mechanics:
         refresh_mechanic_reputation(mechanic)
@@ -71,6 +91,7 @@ def admin_dashboard():
     approved_mechanics = [mechanic for mechanic in mechanics if mechanic.is_verified][:8]
     recent_users = users[:10]
     recent_posts = posts[:8]
+    recent_cars = cars[:12]
     banned_users = [user for user in users if user.is_banned][:8]
 
     return render_template(
@@ -96,10 +117,17 @@ def admin_dashboard():
         pending_garages_count=pending_garages_count,
         approved_garages_count=approved_garages_count,
         featured_garages_count=featured_garages_count,
+        total_cars=total_cars,
+        car_owner_count=car_owner_count,
+        service_due_cars=service_due_cars,
+        service_soon_cars=service_soon_cars,
+        insurance_expired_cars=insurance_expired_cars,
+        pollution_expired_cars=pollution_expired_cars,
         pending_mechanics=pending_mechanics,
         approved_mechanics=approved_mechanics,
         recent_users=recent_users,
         recent_posts=recent_posts,
+        recent_cars=recent_cars,
         banned_users=banned_users
     )
 
