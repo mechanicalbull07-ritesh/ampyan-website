@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">Help & Reports</p>
+<h1 class="page-title">Report wrong information or a feature problem.</h1>
+<p class="page-subtitle">Tell AMPYAN about incorrect diagnosis content, calculator issues, broken features, login problems, or anything that feels confusing.</p>
+</div>
+</div>
+
+{% with messages = get_flashed_messages() %}
+{% if messages %}
+<div class="help-message-stack">
+{% for message in messages %}
+<div class="help-message">{{ message }}</div>
+{% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+<div class="help-layout">
+<form method="POST" class="help-form-card">
+<label class="form-label">Report Type</label>
+<select name="category" class="auth-input" required>
+<option value="">Select issue type</option>
+<option value="Wrong Information">Wrong information</option>
+<option value="Feature Problem">Feature problem</option>
+<option value="Calculator Issue">Calculator issue</option>
+<option value="AI Diagnosis Feedback">AI diagnosis feedback</option>
+<option value="Login / Account Issue">Login / account issue</option>
+<option value="Garage Data Issue">Garage data issue</option>
+<option value="Other">Other</option>
+</select>
+
+<label class="form-label">Page / Feature Link Optional</label>
+<input type="text" name="page_url" class="auth-input" placeholder="Example: /tools/fuel-cost or screenshot context">
+
+<label class="form-label">Your Name Optional</label>
+<input type="text" name="name" class="auth-input" value="{{ current_user.username if current_user.is_authenticated else '' }}" placeholder="Your name">
+
+<label class="form-label">Email Optional</label>
+<input type="email" name="email" class="auth-input" value="{{ current_user.email if current_user.is_authenticated else '' }}" placeholder="your@email.com">
+
+<label class="form-label">Describe the Issue</label>
+<textarea name="message" class="auth-input help-textarea" placeholder="Explain what is wrong, what you expected, and where you saw it." required></textarea>
+
+<button type="submit" class="auth-button help-submit">Submit Report</button>
+</form>
+
+<div class="help-info-card">
+<div class="help-info-icon"><i class="fa-solid fa-headset"></i></div>
+<h2>What can you report?</h2>
+<div class="help-info-list">
+<div><i class="fa-solid fa-circle-exclamation"></i><span>Incorrect or outdated automotive information</span></div>
+<div><i class="fa-solid fa-screwdriver-wrench"></i><span>Broken tools, calculators or garage features</span></div>
+<div><i class="fa-solid fa-robot"></i><span>AI diagnosis answer that seems wrong</span></div>
+<div><i class="fa-solid fa-user-shield"></i><span>Login, profile, account or app sync issues</span></div>
+</div>
+<p>For direct support, email <strong>hiampyan@gmail.com</strong>.</p>
+</div>
+</div>
+</section>
+
+{% endblock %}

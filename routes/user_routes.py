@@ -158,13 +158,14 @@ def update_profile():
 @user_bp.route("/api/session")
 def api_session():
     if not current_user.is_authenticated:
-        return jsonify({"authenticated": False, "user": None, "cars": []})
+        return jsonify({"authenticated": False, "user": None, "cars": [], "support": {"help_report_url": "/api/help-report"}})
 
     cars = Car.query.filter_by(owner_id=current_user.id).order_by(Car.id.desc()).all()
     return jsonify({
         "authenticated": True,
         "user": serialize_user(current_user),
         "cars": [serialize_car(car) for car in cars],
+        "support": {"help_report_url": "/api/help-report"},
     })
 
 

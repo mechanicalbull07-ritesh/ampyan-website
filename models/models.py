@@ -227,6 +227,26 @@ class AIFeedback(db.Model):
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp())
 
 
+# ================= HELP / REPORTS =================
+
+class HelpReport(db.Model):
+    __tablename__ = "help_report"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    name = db.Column(db.String(120))
+    email = db.Column(db.String(150))
+    category = db.Column(db.String(80), nullable=False)
+    page_url = db.Column(db.String(500))
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(30), default="open")
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="help_reports")
+
+
 # ================= USER CARS =================
 
 class Car(db.Model):

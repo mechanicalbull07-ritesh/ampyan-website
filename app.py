@@ -22,7 +22,7 @@ from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
 # ================= MODELS =================
-from models.models import db, User, Post, Comment, Vote, News, Video, DiagnosticLearning, Car, WebsiteVisit
+from models.models import db, User, Post, Comment, Vote, News, Video, DiagnosticLearning, HelpReport, Car, WebsiteVisit
 print("Models loaded")
 
 # ================= SECURITY =================
@@ -979,6 +979,57 @@ def disclaimer():
 @app.route("/contact")
 def contact():
     return render_template("contact.html")
+
+
+@app.route("/help", methods=["GET", "POST"])
+def help_center():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        category = request.form.get("category", "").strip()
+        page_url = request.form.get("page_url", "").strip()
+        message = request.form.get("message", "").strip()
+
+        if not category or not message:
+            flash("Please select a category and describe the issue.")
+            return redirect("/help")
+
+        report = HelpReport(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            name=name or (current_user.username if current_user.is_authenticated else None),
+            email=email or (current_user.email if current_user.is_authenticated else None),
+            category=category,
+            page_url=page_url,
+            message=message,
+        )
+        db.session.add(report)
+        db.session.commit()
+        flash("Thanks. Your report has been submitted to AMPYAN support.")
+        return redirect("/help")
+
+    return render_template("help.html")
+
+
+@app.route("/api/help-report", methods=["POST"])
+def api_help_report():
+    payload = request.get_json(silent=True) or request.form
+    category = (payload.get("category") or "").strip()
+    message = (payload.get("message") or "").strip()
+
+    if not category or not message:
+        return jsonify({"status": "error", "message": "category and message are required"}), 400
+
+    report = HelpReport(
+        user_id=current_user.id if current_user.is_authenticated else None,
+        name=(payload.get("name") or "").strip() or (current_user.username if current_user.is_authenticated else None),
+        email=(payload.get("email") or "").strip() or (current_user.email if current_user.is_authenticated else None),
+        category=category,
+        page_url=(payload.get("page_url") or payload.get("screen") or "").strip(),
+        message=message,
+    )
+    db.session.add(report)
+    db.session.commit()
+    return jsonify({"status": "success", "report_id": report.id})
 # ================= FORGOT PASSWORD =================
 
 @app.route("/forgot-password", methods=["GET", "POST"])
