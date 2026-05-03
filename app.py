@@ -1146,6 +1146,11 @@ def ensure_database_ready():
 def healthz():
     return "ok"
 
+
+@app.route("/version")
+def version():
+    return os.environ.get("RENDER_GIT_COMMIT", "local")
+
 # ================= START SERVER =================
 
 if __name__ == "__main__":

@@ -124,7 +124,7 @@ def register():
             db.session.rollback()
             print("REGISTER ERROR:", str(exc))
             traceback.print_exc()
-            flash("Registration failed. Please try again.")
+            flash(f"Registration failed: {exc.__class__.__name__}")
             return redirect(url_for("auth.register"))
 
     return render_template("register.html")
