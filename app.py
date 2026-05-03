@@ -18,6 +18,7 @@ print("Failure database loaded")
 
 # ================= FLASK =================
 from flask import Flask, render_template, request, redirect, flash, url_for, jsonify
+from sqlalchemy import inspect, text
 print("Flask core loaded")
 
 # ================= MODELS =================
@@ -1030,9 +1031,52 @@ def reset_password(token):
 
 # ================= CREATE DB TABLES =================
 
+def ensure_user_schema():
+    """Add auth/profile columns that older databases may be missing."""
+    inspector = inspect(db.engine)
+    if not inspector.has_table("user"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("user")}
+    dialect = db.engine.dialect.name
+    string_type = "VARCHAR"
+    datetime_type = "TIMESTAMP" if dialect == "postgresql" else "DATETIME"
+    bool_type = "BOOLEAN" if dialect == "postgresql" else "BOOLEAN"
+
+    column_definitions = {
+        "mobile": f"{string_type}(20)",
+        "role": f"{string_type}(20) DEFAULT 'user'",
+        "ai_uses_today": "INTEGER DEFAULT 0",
+        "ai_last_reset": datetime_type,
+        "email_verified": f"{bool_type} DEFAULT FALSE",
+        "is_banned": f"{bool_type} DEFAULT FALSE",
+        "reset_token": f"{string_type}(200)",
+        "reset_token_expiry": datetime_type,
+        "verification_token": f"{string_type}(200)",
+        "verification_token_expiry": datetime_type,
+        "profile_photo": f"{string_type}(200)",
+        "city": f"{string_type}(100)",
+        "state": f"{string_type}(100)",
+        "country": f"{string_type}(100)",
+        "pincode": f"{string_type}(20)",
+        "reputation": "INTEGER DEFAULT 0",
+        "posts_count": "INTEGER DEFAULT 0",
+        "helpful_answers": "INTEGER DEFAULT 0",
+        "contributor_score": "INTEGER DEFAULT 0",
+        "badge": f"{string_type}(50) DEFAULT 'New Member'",
+    }
+
+    for column_name, column_definition in column_definitions.items():
+        if column_name in existing_columns:
+            continue
+        db.session.execute(text(f'ALTER TABLE "user" ADD COLUMN {column_name} {column_definition}'))
+
+    db.session.commit()
+
 try:
     with app.app_context():
         db.create_all()
+        ensure_user_schema()
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
         changed = False
