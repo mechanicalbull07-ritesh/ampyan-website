@@ -18,7 +18,7 @@ print("Failure database loaded")
 
 # ================= FLASK =================
 from flask import Flask, render_template, request, redirect, flash, url_for, jsonify
-from sqlalchemy import inspect, text
+from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
 # ================= MODELS =================
@@ -405,6 +405,23 @@ def build_unique_username(base_username):
 
     return unique_candidate
 
+
+def commit_new_user_with_id_fallback(user):
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return
+    except Exception as exc:
+        db.session.rollback()
+        message = str(exc).lower()
+        if "null value" not in message or "id" not in message:
+            raise
+
+        next_id = (db.session.query(func.max(User.id)).scalar() or 0) + 1
+        user.id = next_id
+        db.session.add(user)
+        db.session.commit()
+
 # ================= LOGIN =================
 
 @login_manager.user_loader
@@ -489,8 +506,7 @@ def google_callback():
                 role="user",
                 email_verified=True,
             )
-            db.session.add(user)
-            db.session.commit()
+            commit_new_user_with_id_fallback(user)
 
         # ✅ Admin assignment after user exists
         if user.email in ADMIN_EMAILS:

@@ -2,10 +2,12 @@ from datetime import datetime, timedelta
 import json
 import os
 import secrets
+import traceback
 from urllib import request as urllib_request
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import login_user, logout_user
+from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from models.models import User, db
@@ -42,56 +44,79 @@ def _sync_profile(name, email, phone=""):
         return False
 
 
+def _commit_new_user_with_id_fallback(user):
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return
+    except Exception as exc:
+        db.session.rollback()
+        message = str(exc).lower()
+        if "null value" not in message or "id" not in message:
+            raise
+
+        next_id = (db.session.query(func.max(User.id)).scalar() or 0) + 1
+        user.id = next_id
+        db.session.add(user)
+        db.session.commit()
+
+
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        username = (request.form.get("username") or "").strip()
-        email = (request.form.get("email") or "").strip().lower()
-        password = request.form.get("password")
+        try:
+            username = (request.form.get("username") or "").strip()
+            email = (request.form.get("email") or "").strip().lower()
+            password = request.form.get("password")
 
-        if not username or not email or not password:
-            flash("Username, email and password are required.")
+            if not username or not email or not password:
+                flash("Username, email and password are required.")
+                return redirect(url_for("auth.register"))
+
+            existing_username = User.query.filter_by(username=username).first()
+            if existing_username:
+                flash("Username already exists.")
+                return redirect(url_for("auth.register"))
+
+            existing_email = User.query.filter_by(email=email).first()
+            if existing_email:
+                flash("Email already registered.")
+                return redirect(url_for("auth.register"))
+
+            hashed_password = generate_password_hash(password)
+            token = secrets.token_urlsafe(32)
+            expiry = datetime.utcnow() + timedelta(minutes=30)
+
+            new_user = User(
+                username=username,
+                email=email,
+                password=hashed_password,
+                role="user",
+                email_verified=False,
+                verification_token=token,
+                verification_token_expiry=expiry,
+            )
+
+            _commit_new_user_with_id_fallback(new_user)
+            _sync_profile(username, email, new_user.mobile or "")
+
+            verification_link = url_for("verify_email", token=token, _external=True)
+            mail = current_app.extensions.get("mail")
+            send_email(
+                mail,
+                email,
+                "Verify your Motrnoix AMPYAN account",
+                f"Click this link to verify your account:\n\n{verification_link}",
+            )
+
+            flash("Account created. Please verify your email.")
+            return redirect(url_for("auth.login"))
+        except Exception as exc:
+            db.session.rollback()
+            print("REGISTER ERROR:", str(exc))
+            traceback.print_exc()
+            flash("Registration failed. Please try again.")
             return redirect(url_for("auth.register"))
-
-        existing_username = User.query.filter_by(username=username).first()
-        if existing_username:
-            flash("Username already exists.")
-            return redirect(url_for("auth.register"))
-
-        existing_email = User.query.filter_by(email=email).first()
-        if existing_email:
-            flash("Email already registered.")
-            return redirect(url_for("auth.register"))
-
-        hashed_password = generate_password_hash(password)
-        token = secrets.token_urlsafe(32)
-        expiry = datetime.utcnow() + timedelta(minutes=30)
-
-        new_user = User(
-            username=username,
-            email=email,
-            password=hashed_password,
-            role="user",
-            email_verified=False,
-            verification_token=token,
-            verification_token_expiry=expiry,
-        )
-
-        db.session.add(new_user)
-        db.session.commit()
-        _sync_profile(username, email, new_user.mobile or "")
-
-        verification_link = url_for("verify_email", token=token, _external=True)
-        mail = current_app.extensions.get("mail")
-        send_email(
-            mail,
-            email,
-            "Verify your Motrnoix AMPYAN account",
-            f"Click this link to verify your account:\n\n{verification_link}",
-        )
-
-        flash("Account created. Please verify your email.")
-        return redirect(url_for("auth.login"))
 
     return render_template("register.html")
 
