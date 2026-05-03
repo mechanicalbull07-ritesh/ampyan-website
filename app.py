@@ -416,6 +416,8 @@ def commit_new_user_with_id_fallback(user):
         return
     except Exception as exc:
         db.session.rollback()
+        print("GOOGLE USER INSERT ERROR:", repr(exc))
+        traceback.print_exc()
         message = str(exc).lower()
         if "null value" not in message or "id" not in message:
             raise
@@ -1096,6 +1098,11 @@ def ensure_user_schema():
         if column_name in existing_columns:
             continue
         db.session.execute(text(f'ALTER TABLE "user" ADD COLUMN {column_name} {column_definition}'))
+
+    if dialect == "postgresql":
+        db.session.execute(text('CREATE SEQUENCE IF NOT EXISTS user_id_seq OWNED BY "user".id'))
+        db.session.execute(text("SELECT setval('user_id_seq', COALESCE((SELECT MAX(id) FROM \"user\"), 0) + 1, false)"))
+        db.session.execute(text("ALTER TABLE \"user\" ALTER COLUMN id SET DEFAULT nextval('user_id_seq')"))
 
     db.session.commit()
 

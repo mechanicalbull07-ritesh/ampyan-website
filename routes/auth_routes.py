@@ -55,6 +55,8 @@ def _commit_new_user_with_id_fallback(user):
         return
     except Exception as exc:
         db.session.rollback()
+        print("USER INSERT ERROR:", repr(exc))
+        traceback.print_exc()
         message = str(exc).lower()
         if "null value" not in message or "id" not in message:
             raise
