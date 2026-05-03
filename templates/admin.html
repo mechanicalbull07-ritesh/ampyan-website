@@ -15,7 +15,14 @@
 <div class="stat-card"><span>Total Users</span><div class="stat-number">{{ total_users }}</div></div>
 <div class="stat-card"><span>Total Posts</span><div class="stat-number">{{ posts|length }}</div></div>
 <div class="stat-card"><span>Total AI Usage</span><div class="stat-number">{{ total_ai_usage }}</div></div>
-<div class="stat-card"><span>Website Visits</span><div class="stat-number">{{ visit_count }}</div></div>
+<div class="stat-card"><span>Total Page Views</span><div class="stat-number">{{ visit_count }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Today Page Views</span><div class="stat-number">{{ today_page_views }}</div></div>
+<div class="stat-card"><span>Today Visitors</span><div class="stat-number">{{ today_unique_visitors }}</div></div>
+<div class="stat-card"><span>Total Visitors</span><div class="stat-number">{{ total_unique_visitors }}</div></div>
+<div class="stat-card"><span>Logged-in Views</span><div class="stat-number">{{ logged_in_views }}</div></div>
 </div>
 
 <div class="admin-priority-grid card-spacer">
@@ -42,6 +49,7 @@
 <p class="page-kicker">Platform Health</p>
 <h2 class="section-heading">Snapshot</h2>
 <div class="ui-meta-list">
+<div class="ui-meta-item"><span class="ui-meta-label">Guest Views</span><span class="ui-meta-value">{{ guest_views }}</span></div>
 <div class="ui-meta-item"><span class="ui-meta-label">Comments</span><span class="ui-meta-value">{{ comments|length }}</span></div>
 <div class="ui-meta-item"><span class="ui-meta-label">News Items</span><span class="ui-meta-value">{{ news|length }}</span></div>
 <div class="ui-meta-item"><span class="ui-meta-label">Garage Profiles</span><span class="ui-meta-value">{{ mechanics|length }}</span></div>
@@ -58,6 +66,36 @@
 <li><strong>Protect community quality</strong>Review suspicious accounts, bans and harmful behavior quickly.</li>
 <li><strong>Track ecosystem growth</strong>Watch how AI usage, content and service supply are growing together.</li>
 </ul>
+</div>
+</div>
+
+<div class="ui-grid ui-grid-2 card-spacer">
+<div class="ui-card">
+<p class="page-kicker">Traffic</p>
+<h2 class="section-heading">Top pages</h2>
+{% if top_pages %}
+<div class="ui-meta-list">
+{% for page in top_pages %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ page.path or "Unknown" }}</span><span class="ui-meta-value">{{ page.views }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No tracked page views yet.</p>
+{% endif %}
+</div>
+
+<div class="ui-card">
+<p class="page-kicker">Traffic</p>
+<h2 class="section-heading">Device split</h2>
+{% if device_breakdown %}
+<div class="admin-mini-stats">
+{% for device in device_breakdown %}
+<div><span>{{ device.device_type|capitalize }}</span><strong>{{ device.views }}</strong></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No device data yet.</p>
+{% endif %}
 </div>
 </div>
 

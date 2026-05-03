@@ -17,7 +17,7 @@ from failure_database import FAILURE_DATABASE
 print("Failure database loaded")
 
 # ================= FLASK =================
-from flask import Flask, render_template, request, redirect, flash, url_for, jsonify
+from flask import Flask, g, render_template, request, redirect, flash, url_for, jsonify
 from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
@@ -572,19 +572,72 @@ def google_callback():
 
 # ================= WEBSITE VISIT TRACKER =================
 
+def should_track_page_visit():
+    if request.method != "GET":
+        return False
+
+    excluded_prefixes = (
+        "/static",
+        "/api",
+        "/admin",
+        "/login",
+        "/logout",
+        "/register",
+        "/google",
+        "/healthz",
+        "/version",
+        "/symptom-suggest",
+        "/favicon",
+    )
+
+    if request.path.startswith(excluded_prefixes):
+        return False
+
+    if "." in request.path.rsplit("/", 1)[-1]:
+        return False
+
+    return True
+
+
+def detect_device_type(user_agent):
+    ua = (user_agent or "").lower()
+    if any(token in ua for token in ["iphone", "android", "mobile"]):
+        return "mobile"
+    if any(token in ua for token in ["ipad", "tablet"]):
+        return "tablet"
+    return "desktop"
+
+
 @app.before_request
 def track_visit():
 
     try:
 
-        if request.path.startswith("/static"):
+        if not should_track_page_visit():
             return
 
-        if request.path.startswith("/login") or request.path.startswith("/google"):
-            return
+        if not database_initialized:
+            initialize_database()
+
+        visitor_id = request.cookies.get("ampyan_visitor_id")
+
+        if not visitor_id:
+            visitor_id = secrets.token_urlsafe(24)
+            g.set_visitor_cookie = visitor_id
+
+        user_agent = request.headers.get("User-Agent", "")
 
         visit = WebsiteVisit(
-            ip_address=request.remote_addr
+            ip_address=request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip(),
+            visitor_id=visitor_id,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            path=request.path,
+            method=request.method,
+            referrer=request.referrer,
+            user_agent=user_agent[:500],
+            device_type=detect_device_type(user_agent),
+            is_authenticated=current_user.is_authenticated,
+            is_page_view=True
         )
 
         db.session.add(visit)
@@ -593,6 +646,21 @@ def track_visit():
     except Exception as e:
 
         db.session.rollback()
+
+
+@app.after_request
+def attach_visitor_cookie(response):
+    visitor_id = getattr(g, "set_visitor_cookie", None)
+    if visitor_id:
+        response.set_cookie(
+            "ampyan_visitor_id",
+            visitor_id,
+            max_age=60 * 60 * 24 * 365,
+            httponly=True,
+            samesite="Lax",
+            secure=request.is_secure,
+        )
+    return response
 
 @app.before_request
 def reset_ai_usage():
@@ -1230,6 +1298,36 @@ def ensure_car_schema():
 
     db.session.commit()
 
+
+def ensure_website_visit_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("website_visit"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("website_visit")}
+    dialect = db.engine.dialect.name
+    string_type = "VARCHAR"
+    bool_type = "BOOLEAN" if dialect == "postgresql" else "BOOLEAN"
+
+    column_definitions = {
+        "visitor_id": f"{string_type}(80)",
+        "user_id": "INTEGER",
+        "path": f"{string_type}(500)",
+        "method": f"{string_type}(10)",
+        "referrer": f"{string_type}(500)",
+        "user_agent": f"{string_type}(500)",
+        "device_type": f"{string_type}(30)",
+        "is_authenticated": f"{bool_type} DEFAULT FALSE",
+        "is_page_view": f"{bool_type} DEFAULT TRUE",
+    }
+
+    for column_name, column_definition in column_definitions.items():
+        if column_name in existing_columns:
+            continue
+        db.session.execute(text(f"ALTER TABLE website_visit ADD COLUMN {column_name} {column_definition}"))
+
+    db.session.commit()
+
 def initialize_database():
     global database_initialized
     if database_initialized:
@@ -1242,6 +1340,7 @@ def initialize_database():
         db.create_all()
         ensure_user_schema()
         ensure_car_schema()
+        ensure_website_visit_schema()
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
         changed = False

@@ -300,3 +300,14 @@ class WebsiteVisit(db.Model):
     )
 
     ip_address = db.Column(db.String(50))
+    visitor_id = db.Column(db.String(80))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    path = db.Column(db.String(500))
+    method = db.Column(db.String(10))
+    referrer = db.Column(db.String(500))
+    user_agent = db.Column(db.String(500))
+    device_type = db.Column(db.String(30))
+    is_authenticated = db.Column(db.Boolean, default=False)
+    is_page_view = db.Column(db.Boolean, default=True)
+
+    user = db.relationship("User", backref="website_visits")

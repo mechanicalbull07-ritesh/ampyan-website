@@ -1,3 +1,5 @@
+from datetime import datetime, time
+
 from flask import Blueprint, render_template, redirect, flash
 from flask_login import login_required, current_user
 from models.models import db, User, Post, Comment, News, WebsiteVisit, MechanicProfile, MechanicReview
@@ -26,7 +28,35 @@ def admin_dashboard():
     reviews = MechanicReview.query.order_by(MechanicReview.id.desc()).limit(10).all()
 
     total_ai_usage = db.session.query(db.func.sum(User.ai_uses_today)).scalar() or 0
-    visit_count = WebsiteVisit.query.count()
+    today_start = datetime.combine(datetime.utcnow().date(), time.min)
+    tracked_visits = WebsiteVisit.query.filter_by(is_page_view=True)
+    visit_count = tracked_visits.count()
+    today_page_views = tracked_visits.filter(WebsiteVisit.visit_time >= today_start).count()
+    total_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
+        WebsiteVisit.is_page_view.is_(True),
+        WebsiteVisit.visitor_id.isnot(None)
+    ).scalar() or 0
+    today_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
+        WebsiteVisit.is_page_view.is_(True),
+        WebsiteVisit.visitor_id.isnot(None),
+        WebsiteVisit.visit_time >= today_start
+    ).scalar() or 0
+    logged_in_views = tracked_visits.filter_by(is_authenticated=True).count()
+    guest_views = tracked_visits.filter_by(is_authenticated=False).count()
+    top_pages = db.session.query(
+        WebsiteVisit.path,
+        db.func.count(WebsiteVisit.id).label("views")
+    ).filter(
+        WebsiteVisit.is_page_view.is_(True),
+        WebsiteVisit.path.isnot(None)
+    ).group_by(WebsiteVisit.path).order_by(db.func.count(WebsiteVisit.id).desc()).limit(8).all()
+    device_breakdown = db.session.query(
+        WebsiteVisit.device_type,
+        db.func.count(WebsiteVisit.id).label("views")
+    ).filter(
+        WebsiteVisit.is_page_view.is_(True),
+        WebsiteVisit.device_type.isnot(None)
+    ).group_by(WebsiteVisit.device_type).order_by(db.func.count(WebsiteVisit.id).desc()).all()
     total_users = User.query.count()
     banned_users_count = User.query.filter_by(is_banned=True).count()
     admin_users_count = User.query.filter_by(role="admin").count()
@@ -54,6 +84,13 @@ def admin_dashboard():
         total_users=total_users,
         total_ai_usage=total_ai_usage,
         visit_count=visit_count,
+        today_page_views=today_page_views,
+        total_unique_visitors=total_unique_visitors,
+        today_unique_visitors=today_unique_visitors,
+        logged_in_views=logged_in_views,
+        guest_views=guest_views,
+        top_pages=top_pages,
+        device_breakdown=device_breakdown,
         banned_users_count=banned_users_count,
         admin_users_count=admin_users_count,
         pending_garages_count=pending_garages_count,
