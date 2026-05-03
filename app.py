@@ -1507,11 +1507,10 @@ def handle_unexpected_error(error):
     if isinstance(error, HTTPException):
         return error
     db.session.rollback()
-    app.logger.error(
-        "Unhandled server error on %s %s: %s",
+    app.logger.exception(
+        "Unhandled server error on %s %s",
         request.method,
         request.path,
-        error.__class__.__name__,
     )
     if wants_json_response():
         return jsonify({"status": "error", "message": "Internal server error"}), 500
