@@ -1,0 +1,278 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Studio</p>
+<h1 class="page-title">Analytics</h1>
+<p class="page-subtitle">Privacy-safe traffic, click, safety and vehicle intelligence for operating AMPYAN.</p>
+</div>
+</div>
+
+<div class="admin-studio-nav card-spacer">
+<a href="/admin"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+<a href="/admin/analytics/overview" class="{% if section == 'overview' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i><span>Overview</span></a>
+<a href="/admin/analytics/traffic" class="{% if section == 'traffic' %}active{% endif %}"><i class="fa-solid fa-signal"></i><span>Traffic</span></a>
+<a href="/admin/analytics/engagement" class="{% if section == 'engagement' %}active{% endif %}"><i class="fa-solid fa-arrow-pointer"></i><span>Engagement</span></a>
+<a href="/admin/analytics/safety" class="{% if section == 'safety' %}active{% endif %}"><i class="fa-solid fa-shield-halved"></i><span>Safety</span></a>
+<a href="/admin/analytics/vehicles" class="{% if section == 'vehicles' %}active{% endif %}"><i class="fa-solid fa-car-side"></i><span>Vehicles</span></a>
+</div>
+
+{% if section == "overview" %}
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Total Views</span><div class="stat-number">{{ visit_count }}</div></div>
+<div class="stat-card"><span>Today Views</span><div class="stat-number">{{ today_page_views }}</div></div>
+<div class="stat-card"><span>Unique Visitors</span><div class="stat-number">{{ total_unique_visitors }}</div></div>
+<div class="stat-card"><span>Tracked Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Last 12 hours</h3>
+<div class="admin-bar-list">
+{% for label, count in hourly_traffic[-12:] %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 8, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Top referrers</h3>
+{% if top_referrers %}
+<div class="ui-meta-list">
+{% for source, count in top_referrers[:8] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ source }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No referrer data yet.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Safety alerts</h3>
+<div class="admin-alert-stack">
+{% for alert in safety_alerts %}
+<div class="admin-alert-row"><span><strong>{{ alert.severity }}</strong> {{ alert.title }}<br><small>{{ alert.detail }}</small></span></div>
+{% endfor %}
+</div>
+</div>
+</div>
+{% endif %}
+
+{% if section == "traffic" %}
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Today</span><div class="stat-number">{{ today_page_views }}</div></div>
+<div class="stat-card"><span>Yesterday</span><div class="stat-number">{{ yesterday_page_views }}</div></div>
+<div class="stat-card"><span>Change</span><div class="stat-number">{{ "+" if traffic_delta_today >= 0 else "" }}{{ traffic_delta_today }}</div></div>
+<div class="stat-card"><span>Today Visitors</span><div class="stat-number">{{ today_unique_visitors }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Hourly traffic</h3>
+<div class="admin-bar-list">
+{% for label, count in hourly_traffic %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 8, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Daily traffic</h3>
+<div class="admin-bar-list">
+{% for label, count in daily_traffic %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 4, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Monthly traffic</h3>
+<div class="admin-bar-list">
+{% for label, count in monthly_traffic %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 2, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+</div>
+
+<div class="admin-analytics-panel admin-wide-panel card-spacer">
+<h3>Page performance</h3>
+{% if page_metrics %}
+<div class="admin-table-wrap">
+<table class="admin-analytics-table">
+<thead><tr><th>Page</th><th>Views</th><th>Unique</th><th>Logged-in</th><th>Guests</th><th>Clicks</th><th>Last Visit</th></tr></thead>
+<tbody>
+{% for page in page_metrics %}
+<tr>
+<td>{{ page.path }}</td><td>{{ page.views }}</td><td>{{ page.unique }}</td><td>{{ page.logged_in }}</td><td>{{ page.guest }}</td><td>{{ page.clicks }}</td>
+<td>{{ page.last_visit.strftime("%d %b %H:%M") if page.last_visit else "N/A" }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% else %}
+<p class="section-copy">No page metrics yet.</p>
+{% endif %}
+</div>
+{% endif %}
+
+{% if section == "engagement" %}
+<div class="ui-grid ui-grid-3 card-spacer">
+<div class="stat-card"><span>Tracked Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
+<div class="stat-card"><span>Logged-in Views</span><div class="stat-number">{{ logged_in_views }}</div></div>
+<div class="stat-card"><span>Guest Views</span><div class="stat-number">{{ guest_views }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Top clicked items</h3>
+{% if top_clicks %}
+<div class="ui-meta-list">
+{% for label, count in top_clicks %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">Clicks will appear after users interact with links and buttons.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Top click pages</h3>
+{% if top_click_pages %}
+<div class="ui-meta-list">
+{% for path, count in top_click_pages %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ path }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No click page data yet.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Device split</h3>
+{% if device_breakdown %}
+<div class="admin-mini-stats">
+{% for device in device_breakdown %}
+<div><span>{{ device.device_type|capitalize }}</span><strong>{{ device.views }}</strong></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No device data yet.</p>
+{% endif %}
+</div>
+</div>
+{% endif %}
+
+{% if section == "safety" %}
+<div class="ui-grid ui-grid-3 card-spacer">
+<div class="stat-card"><span>Events 24h</span><div class="stat-number">{{ security_events_24h|length }}</div></div>
+<div class="stat-card"><span>Events 30d</span><div class="stat-number">{{ security_events|length }}</div></div>
+<div class="stat-card"><span>Suspicious Sources</span><div class="stat-number">{{ suspicious_ips|length }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Safety alerts</h3>
+<div class="admin-alert-stack">
+{% for alert in safety_alerts %}
+<div class="admin-alert-row"><span><strong>{{ alert.severity }}</strong> {{ alert.title }}<br><small>{{ alert.detail }}</small></span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Suspicious sources</h3>
+{% if suspicious_ips %}
+<div class="ui-meta-list">
+{% for ip, count in suspicious_ips %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ ip }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No repeated suspicious source in the last 24 hours.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Recent security events</h3>
+{% if security_events %}
+<div class="ui-meta-list">
+{% for event in security_events[:12] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ event.path }} • {{ event.label }}</span><span class="ui-meta-value">{{ event.severity }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No security events recorded yet.</p>
+{% endif %}
+</div>
+</div>
+{% endif %}
+
+{% if section == "vehicles" %}
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Vehicle Profiles</span><div class="stat-number">{{ total_cars }}</div></div>
+<div class="stat-card"><span>Car Owners</span><div class="stat-number">{{ car_owner_count }}</div></div>
+<div class="stat-card"><span>Service Due</span><div class="stat-number">{{ service_due_cars|length }}</div></div>
+<div class="stat-card"><span>Expired Docs</span><div class="stat-number">{{ insurance_expired_cars|length + pollution_expired_cars|length }}</div></div>
+</div>
+
+<div class="ui-card card-spacer">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Owner Garage Data</p>
+<h2 class="section-heading">Vehicle and service overview</h2>
+<p class="section-copy">Admin-only operational view for support, safety reminders and service troubleshooting. Use only for lawful AMPYAN support and platform operations.</p>
+</div>
+<span class="garage-trust-score">{{ recent_cars|length }} latest</span>
+</div>
+<div class="admin-mini-stats admin-vehicle-stats">
+<div><span>Total Cars</span><strong>{{ total_cars }}</strong></div>
+<div><span>Owners</span><strong>{{ car_owner_count }}</strong></div>
+<div><span>Service Due</span><strong>{{ service_due_cars|length }}</strong></div>
+<div><span>Due Soon</span><strong>{{ service_soon_cars|length }}</strong></div>
+<div><span>Insurance Expired</span><strong>{{ insurance_expired_cars|length }}</strong></div>
+<div><span>Pollution Expired</span><strong>{{ pollution_expired_cars|length }}</strong></div>
+</div>
+
+{% if recent_cars %}
+<div class="admin-car-grid">
+{% for car in recent_cars %}
+<article class="simple-list-card admin-car-card">
+<div class="admin-user-top">
+<div>
+<h3>{{ car.brand or "Unknown" }} {{ car.model or "Vehicle" }}</h3>
+<p class="section-copy">Owner: {{ car.owner.username if car.owner else "Unknown" }}{% if car.owner and car.owner.email %} • {{ car.owner.email }}{% endif %}</p>
+</div>
+<div class="ui-pill-row">
+{% if car.is_default %}<span class="ui-pill ui-tag-good">Default</span>{% endif %}
+{% if car.next_service_km and car.current_km and car.current_km >= car.next_service_km %}
+<span class="ui-pill ui-tag-danger">Service due</span>
+{% elif car.next_service_km and car.current_km and 0 <= (car.next_service_km - car.current_km) <= 500 %}
+<span class="ui-pill ui-tag-warn">Due soon</span>
+{% else %}
+<span class="ui-pill">Garage</span>
+{% endif %}
+</div>
+</div>
+<div class="admin-car-meta">
+<div><span>Year</span><strong>{{ car.year or "N/A" }}</strong></div>
+<div><span>Fuel</span><strong>{{ car.fuel_type or "N/A" }}</strong></div>
+<div><span>Mileage</span><strong>{{ car.mileage or "N/A" }}</strong></div>
+<div><span>Daily KM</span><strong>{{ car.daily_km or "N/A" }}</strong></div>
+<div><span>Current KM</span><strong>{{ car.current_km or "N/A" }}</strong></div>
+<div><span>Last Service</span><strong>{{ car.last_service_km or "N/A" }}</strong></div>
+<div><span>Next Service</span><strong>{{ car.next_service_km or "N/A" }}</strong></div>
+<div><span>Insurance</span><strong>{{ car.insurance_expiry or "N/A" }}</strong></div>
+<div><span>Pollution</span><strong>{{ car.pollution_expiry or "N/A" }}</strong></div>
+</div>
+</article>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No owner cars have been added yet.</div>
+{% endif %}
+</div>
+{% endif %}
+
+</section>
+
+{% endblock %}

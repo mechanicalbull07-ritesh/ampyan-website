@@ -60,6 +60,184 @@ def _referrer_source(referrer):
     return referrer.split("/")[2] if "://" in referrer else referrer[:40]
 
 
+def _require_admin():
+    return current_user.is_authenticated and current_user.role == "admin"
+
+
+def _build_admin_analytics_context(section="overview"):
+    now = datetime.utcnow()
+    today_start = datetime.combine(now.date(), time.min)
+    yesterday_start = today_start - timedelta(days=1)
+    last_24h = now - timedelta(hours=24)
+    last_30d = now - timedelta(days=30)
+    last_365d = now - timedelta(days=365)
+
+    tracked_visits = WebsiteVisit.query.filter_by(is_page_view=True)
+    visit_count = tracked_visits.count()
+    today_page_views = tracked_visits.filter(WebsiteVisit.visit_time >= today_start).count()
+    yesterday_page_views = tracked_visits.filter(
+        WebsiteVisit.visit_time >= yesterday_start,
+        WebsiteVisit.visit_time < today_start
+    ).count()
+    total_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
+        WebsiteVisit.is_page_view.is_(True),
+        WebsiteVisit.visitor_id.isnot(None)
+    ).scalar() or 0
+    today_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
+        WebsiteVisit.is_page_view.is_(True),
+        WebsiteVisit.visitor_id.isnot(None),
+        WebsiteVisit.visit_time >= today_start
+    ).scalar() or 0
+
+    top_pages = db.session.query(
+        WebsiteVisit.path,
+        db.func.count(WebsiteVisit.id).label("views")
+    ).filter(
+        WebsiteVisit.is_page_view.is_(True),
+        WebsiteVisit.path.isnot(None)
+    ).group_by(WebsiteVisit.path).order_by(db.func.count(WebsiteVisit.id).desc()).limit(20).all()
+
+    device_breakdown = db.session.query(
+        WebsiteVisit.device_type,
+        db.func.count(WebsiteVisit.id).label("views")
+    ).filter(
+        WebsiteVisit.is_page_view.is_(True),
+        WebsiteVisit.device_type.isnot(None)
+    ).group_by(WebsiteVisit.device_type).order_by(db.func.count(WebsiteVisit.id).desc()).all()
+
+    recent_visit_rows = tracked_visits.filter(WebsiteVisit.visit_time >= last_365d).all()
+    visits_24h = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_24h]
+    visits_30d = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_30d]
+    hourly_traffic = _count_by_hour(visits_24h)
+    daily_traffic = _count_by_day(visits_30d)
+    monthly_traffic = _count_by_month(recent_visit_rows)
+
+    click_events = WebsiteEvent.query.filter_by(event_type="click").filter(
+        WebsiteEvent.event_time >= last_30d
+    ).order_by(WebsiteEvent.event_time.desc()).all()
+    security_events = WebsiteEvent.query.filter_by(event_type="security").filter(
+        WebsiteEvent.event_time >= last_30d
+    ).order_by(WebsiteEvent.event_time.desc()).all()
+    security_events_24h = [
+        event for event in security_events
+        if event.event_time and event.event_time >= last_24h
+    ]
+
+    click_counter = Counter((event.label or event.target_url or "Click") for event in click_events)
+    top_clicks = click_counter.most_common(20)
+    click_page_counter = Counter((event.path or "Unknown") for event in click_events)
+    top_click_pages = click_page_counter.most_common(20)
+    referrer_counter = Counter(_referrer_source(visit.referrer) for visit in visits_30d)
+    top_referrers = referrer_counter.most_common(20)
+
+    page_metrics = []
+    for page in top_pages:
+        page_visits = [visit for visit in visits_30d if visit.path == page.path]
+        page_clicks = sum(1 for event in click_events if event.path == page.path)
+        page_metrics.append({
+            "path": page.path or "Unknown",
+            "views": page.views,
+            "unique": len({visit.visitor_id for visit in page_visits if visit.visitor_id}),
+            "logged_in": sum(1 for visit in page_visits if visit.is_authenticated),
+            "guest": sum(1 for visit in page_visits if not visit.is_authenticated),
+            "clicks": page_clicks,
+            "last_visit": max((visit.visit_time for visit in page_visits if visit.visit_time), default=None),
+        })
+
+    suspicious_ip_counter = Counter(event.ip_address or "Unknown" for event in security_events_24h)
+    suspicious_ips = suspicious_ip_counter.most_common(10)
+    safety_alerts = []
+    if security_events_24h:
+        safety_alerts.append({
+            "severity": "High",
+            "title": "Sensitive or abusive requests blocked",
+            "detail": f"{len(security_events_24h)} blocked security event(s) in the last 24 hours.",
+        })
+    if suspicious_ips and suspicious_ips[0][1] >= 5:
+        safety_alerts.append({
+            "severity": "Medium",
+            "title": "Repeated requests from one source",
+            "detail": f"{suspicious_ips[0][0]} triggered {suspicious_ips[0][1]} security event(s).",
+        })
+    if yesterday_page_views and today_page_views > yesterday_page_views * 2:
+        safety_alerts.append({
+            "severity": "Info",
+            "title": "Traffic spike",
+            "detail": f"Today has {today_page_views} views vs {yesterday_page_views} yesterday.",
+        })
+    if not safety_alerts:
+        safety_alerts.append({
+            "severity": "Good",
+            "title": "No major safety alerts",
+            "detail": "No unusual security pattern detected from tracked events.",
+        })
+
+    cars = Car.query.order_by(Car.created_at.desc()).all()
+    today = now.date()
+    service_due_cars = [
+        car for car in cars
+        if car.next_service_km and car.current_km and car.current_km >= car.next_service_km
+    ]
+    service_soon_cars = [
+        car for car in cars
+        if car.next_service_km and car.current_km and 0 <= (car.next_service_km - car.current_km) <= 500
+    ]
+    insurance_expired_cars = [
+        car for car in cars
+        if car.insurance_expiry and car.insurance_expiry < today
+    ]
+    pollution_expired_cars = [
+        car for car in cars
+        if car.pollution_expiry and car.pollution_expiry < today
+    ]
+
+    return {
+        "section": section,
+        "visit_count": visit_count,
+        "today_page_views": today_page_views,
+        "yesterday_page_views": yesterday_page_views,
+        "traffic_delta_today": today_page_views - yesterday_page_views,
+        "total_unique_visitors": total_unique_visitors,
+        "today_unique_visitors": today_unique_visitors,
+        "logged_in_views": tracked_visits.filter_by(is_authenticated=True).count(),
+        "guest_views": tracked_visits.filter_by(is_authenticated=False).count(),
+        "page_metrics": page_metrics,
+        "device_breakdown": device_breakdown,
+        "hourly_traffic": hourly_traffic,
+        "daily_traffic": daily_traffic,
+        "monthly_traffic": monthly_traffic,
+        "top_clicks": top_clicks,
+        "top_click_pages": top_click_pages,
+        "top_referrers": top_referrers,
+        "security_events": security_events[:50],
+        "security_events_24h": security_events_24h,
+        "suspicious_ips": suspicious_ips,
+        "safety_alerts": safety_alerts,
+        "click_events_count": len(click_events),
+        "total_cars": len(cars),
+        "car_owner_count": db.session.query(db.func.count(db.func.distinct(Car.owner_id))).scalar() or 0,
+        "service_due_cars": service_due_cars,
+        "service_soon_cars": service_soon_cars,
+        "insurance_expired_cars": insurance_expired_cars,
+        "pollution_expired_cars": pollution_expired_cars,
+        "recent_cars": cars[:30],
+    }
+
+
+@admin_bp.route("/admin/analytics")
+@admin_bp.route("/admin/analytics/<section>")
+@login_required
+def admin_analytics(section="overview"):
+    if not _require_admin():
+        return "Access Denied", 403
+
+    allowed_sections = {"overview", "traffic", "engagement", "safety", "vehicles"}
+    if section not in allowed_sections:
+        return redirect("/admin/analytics/overview")
+
+    return render_template("admin_analytics.html", **_build_admin_analytics_context(section))
+
+
 # ================= ADMIN DASHBOARD =================
 
 @admin_bp.route("/admin")
