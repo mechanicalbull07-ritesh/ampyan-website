@@ -272,8 +272,7 @@ def ai_diagnosis_page():
 
             results, questions = diagnose_vehicle(problem)
 
-            print("RESULTS:", results)
-            print("QUESTIONS:", questions)
+            current_app.logger.info("AI diagnosis completed with %s result(s)", len(results or []))
 
             # 🔥 SAVE TOP RESULT FOR FEEDBACK
             if results:
@@ -344,11 +343,9 @@ def ai_diagnosis_followup():
         if key.startswith("q"):
             answers[key] = request.form.get(key)
 
-    print("USER ANSWERS:", answers)
-
     results, questions = diagnose_vehicle(problem, answers)
 
-    print("UPDATED RESULTS:", results)
+    current_app.logger.info("AI diagnosis follow-up completed with %s result(s)", len(results or []))
 
     final_issue = results[0]["issue"] if results else "Unknown"
 
@@ -388,15 +385,12 @@ def submit_feedback():
 
     issue = session.get("last_result")
 
-    print("USER FEEDBACK:", feedback)
-    print("ISSUE:", issue)
-
     # 🔥 SAVE TO DATABASE (PERMANENT)
     new_feedback = AIFeedback(issue=issue, feedback=feedback)
     db.session.add(new_feedback)
     db.session.commit()
 
-    print("SAVED TO DB")
+    current_app.logger.info("AI feedback saved")
 
     # 🔥 MEMORY UPDATE (IN-RUNTIME)
     for item in FAILURE_DATABASE:
@@ -408,7 +402,6 @@ def submit_feedback():
             elif feedback == "no":
                 item["feedback"]["rejected"] += 1
 
-            print("UPDATED FEEDBACK:", item["feedback"])
             break
 
     return jsonify({"status": "success"})

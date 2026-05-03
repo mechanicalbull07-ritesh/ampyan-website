@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 import json
 import os
 import secrets
-import traceback
+import re
 from urllib import request as urllib_request
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
@@ -14,6 +14,8 @@ from models.models import User, db
 from services.email_service import send_email
 
 auth_bp = Blueprint("auth", __name__)
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MIN_PASSWORD_LENGTH = 8
 
 ADMIN_EMAILS = [
     "dabasdeepak676@gmail.com",
@@ -55,8 +57,7 @@ def _commit_new_user_with_id_fallback(user):
         return
     except Exception as exc:
         db.session.rollback()
-        print("USER INSERT ERROR:", repr(exc))
-        traceback.print_exc()
+        current_app.logger.warning("User insert needed id fallback: %s", exc.__class__.__name__)
         message = str(exc).lower()
         if "null value" not in message or "id" not in message:
             raise
@@ -77,6 +78,12 @@ def register():
 
             if not username or not email or not password:
                 flash("Username, email and password are required.")
+                return redirect(url_for("auth.register"))
+            if not EMAIL_RE.match(email):
+                flash("Please enter a valid email address.")
+                return redirect(url_for("auth.register"))
+            if len(password) < MIN_PASSWORD_LENGTH:
+                flash("Password should be at least 8 characters.")
                 return redirect(url_for("auth.register"))
 
             existing_username = User.query.filter_by(username=username).first()
@@ -129,8 +136,7 @@ def register():
             return redirect(url_for("auth.login"))
         except Exception as exc:
             db.session.rollback()
-            print("REGISTER ERROR:", str(exc))
-            traceback.print_exc()
+            current_app.logger.warning("Registration failed: %s", exc.__class__.__name__)
             flash(f"Registration failed: {exc.__class__.__name__}")
             return redirect(url_for("auth.register"))
 
@@ -142,8 +148,12 @@ def login():
     next_page = request.args.get("next")
 
     if request.method == "POST":
-        username = request.form["username"].strip()
-        password = request.form["password"]
+        username = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
+
+        if not username or not password:
+            flash("Username/email and password are required.")
+            return redirect(url_for("auth.login"))
 
         user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
 

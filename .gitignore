@@ -1,6 +1,12 @@
 __pycache__/
 *.pyc
 .env
+.env.*
+!.env.example
 .DS_Store
 instance/
 *.db
+database.db
+*.sqlite
+*.sqlite3
+*.log

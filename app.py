@@ -27,6 +27,7 @@ print("Models loaded")
 
 # ================= SECURITY =================
 from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.exceptions import HTTPException
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
 print("Security modules loaded")
@@ -51,11 +52,11 @@ print("Email service loaded")
 # ================= OTHER IMPORTS =================
 from flask import session
 import os
-import traceback
 from PIL import Image
-from collections import defaultdict
+from collections import defaultdict, deque
 import re
 import threading
+import time
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, urlparse
 from authlib.integrations.flask_client import OAuth
@@ -156,6 +157,7 @@ def ai_diagnose(problem, car):
     return results
 
 app = Flask(__name__)
+IS_PRODUCTION = os.environ.get("ENV", "").lower() == "production" or os.environ.get("RENDER", "").lower() == "true"
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(community_bp)
@@ -190,8 +192,7 @@ def compress_image(image_path):
         )
 
     except Exception as e:
-
-        print("Image compression error:", e)
+        app.logger.warning("Image compression failed: %s", e.__class__.__name__)
 
 def safe_image_check(file_path):
 
@@ -236,6 +237,8 @@ mail = Mail(app)
 # ===============================
 @app.route("/test-email")
 def test_email():
+    if IS_PRODUCTION:
+        return "Not found", 404
 
     send_email(
         mail,
@@ -251,20 +254,28 @@ database_url = os.environ.get("DATABASE_URL")
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-app.secret_key = os.environ.get("SECRET_KEY", "fallback-secret")
+secret_key = os.environ.get("SECRET_KEY")
+if IS_PRODUCTION and not secret_key:
+    raise RuntimeError("SECRET_KEY is required in production")
+
+app.secret_key = secret_key or "local-dev-secret"
 app.config["SECRET_KEY"] = app.secret_key
-app.config["PREFERRED_URL_SCHEME"] = "https" if os.environ.get("ENV") == "production" else "http"
+app.config["PREFERRED_URL_SCHEME"] = "https" if IS_PRODUCTION else "http"
+app.config["DEBUG"] = False
+app.config["PROPAGATE_EXCEPTIONS"] = False
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db.init_app(app)
 
 # 🔐 Production Security Settings
-if os.environ.get("ENV") == "production":
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["REMEMBER_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
+if IS_PRODUCTION:
     app.config["SESSION_COOKIE_SECURE"] = True
     app.config["REMEMBER_COOKIE_SECURE"] = True
-    app.config["SESSION_COOKIE_HTTPONLY"] = True
-    app.config["REMEMBER_COOKIE_HTTPONLY"] = True
 
 oauth = OAuth(app)
 GOOGLE_PRODUCTION_REDIRECT_URI = "https://ampyan.com/google/callback"
@@ -452,8 +463,7 @@ def commit_new_user_with_id_fallback(user):
         return
     except Exception as exc:
         db.session.rollback()
-        print("GOOGLE USER INSERT ERROR:", repr(exc))
-        traceback.print_exc()
+        app.logger.warning("Google user insert needed id fallback: %s", exc.__class__.__name__)
         message = str(exc).lower()
         if "null value" not in message or "id" not in message:
             raise
@@ -481,7 +491,7 @@ def google_login():
         if not os.environ.get(key)
     ]
     if missing_env:
-        print("Google login missing environment variables:", ", ".join(missing_env))
+        app.logger.error("Google login is missing required environment variables")
         flash("Google login is not configured yet. Please check server configuration.")
         return redirect(url_for("auth.login"))
 
@@ -490,8 +500,7 @@ def google_login():
     try:
         return google.authorize_redirect(redirect_uri)
     except Exception as e:
-        print("Google login redirect error:", e)
-        traceback.print_exc()
+        app.logger.warning("Google login redirect failed: %s", e.__class__.__name__)
         flash("Google login could not start. Please check Google OAuth redirect settings.")
         return redirect(url_for("auth.login"))
 
@@ -528,14 +537,16 @@ def google_callback():
             user_info = google.get("userinfo").json()
 
         if not user_info:
-            print("Google callback missing userinfo. Token keys:", list(token.keys()) if isinstance(token, dict) else type(token))
-            return "Google login failed", 500
+            app.logger.warning("Google callback missing user profile data")
+            flash("Google login failed. Please try again.")
+            return redirect(url_for("auth.login"))
 
         email = (user_info.get("email") or "").strip().lower()
 
         if not email:
-            print("Google callback missing email. User info keys:", list(user_info.keys()))
-            return "Google login failed", 500
+            app.logger.warning("Google callback missing email field")
+            flash("Google login failed. Please try again.")
+            return redirect(url_for("auth.login"))
 
         user = User.query.filter_by(email=email).first()
 
@@ -566,9 +577,90 @@ def google_callback():
         return redirect("/community")
     except Exception as e:
         db.session.rollback()
-        print("GOOGLE CALLBACK ERROR:", str(e))
-        traceback.print_exc()
-        return "Google login failed", 500
+        app.logger.warning("Google callback failed: %s", e.__class__.__name__)
+        flash("Google login failed. Please try again.")
+        return redirect(url_for("auth.login"))
+
+
+# ================= SECURITY BASICS =================
+
+SENSITIVE_PATHS = {
+    "/.env",
+    "/.git",
+    "/.git/config",
+    "/config",
+    "/phpinfo",
+    "/_environment",
+    "/webroot",
+    "/debug",
+    "/console",
+    "/server-status",
+    "/wp-admin",
+    "/wp-login.php",
+    "/vendor",
+    "/composer.json",
+    "/package.json",
+    "/node_modules",
+}
+
+RATE_LIMIT_RULES = {
+    "/login": (20, 60),
+    "/register": (12, 60),
+    "/forgot-password": (8, 60),
+    "/login/google": (20, 60),
+    "/google/callback": (30, 60),
+    "/tools/ai-diagnosis": (30, 60),
+    "/tools/ai-diagnosis-followup": (30, 60),
+    "/api/help-report": (12, 60),
+    "/submit_feedback": (20, 60),
+}
+rate_limit_hits = defaultdict(deque)
+rate_limit_lock = threading.Lock()
+
+
+def client_ip():
+    return request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+
+
+def wants_json_response():
+    return request.path.startswith("/api") or "application/json" in request.headers.get("Accept", "")
+
+
+def security_path_matches(path):
+    normalized = (path or "").rstrip("/") or "/"
+    return normalized in SENSITIVE_PATHS or any(normalized.startswith(f"{prefix}/") for prefix in ("/.git", "/vendor", "/node_modules"))
+
+
+def rate_limited(path):
+    rule = RATE_LIMIT_RULES.get(path)
+    if not rule:
+        return False
+    max_hits, window_seconds = rule
+    key = (client_ip(), path)
+    now = time.time()
+    with rate_limit_lock:
+        hits = rate_limit_hits[key]
+        while hits and now - hits[0] > window_seconds:
+            hits.popleft()
+        if len(hits) >= max_hits:
+            return True
+        hits.append(now)
+    return False
+
+
+@app.before_request
+def security_guard():
+    if security_path_matches(request.path):
+        return "Not found", 404
+
+    content_length = request.content_length or 0
+    if content_length > app.config["MAX_CONTENT_LENGTH"]:
+        return jsonify({"status": "error", "message": "Request too large"}), 413
+
+    if rate_limited(request.path):
+        if wants_json_response():
+            return jsonify({"status": "error", "message": "Too many requests. Please try again soon."}), 429
+        return "Too many requests. Please try again soon.", 429
 
 # ================= WEBSITE VISIT TRACKER =================
 
@@ -650,6 +742,25 @@ def track_visit():
 
 @app.after_request
 def attach_visitor_cookie(response):
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+    )
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.instagram.com; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
+        "img-src 'self' data: https:; "
+        "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.instagram.com; "
+        "connect-src 'self' https://ampyan-api.onrender.com https://api.ampyan.com; "
+        "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+    )
+
     visitor_id = getattr(g, "set_visitor_cookie", None)
     if visitor_id:
         response.set_cookie(
@@ -709,8 +820,7 @@ def diagnose():
         # ✅ AI ENGINE
         results, questions = diagnose_vehicle(problem, car=car)
 
-        print("RESULTS:", results)
-        print("QUESTIONS:", questions)
+        app.logger.info("AI diagnosis completed with %s result(s)", len(results or []))
 
         # ✅ SAVE
         if results:
@@ -760,7 +870,6 @@ def diagnose():
         db.session.add(learning)
         db.session.commit()
 
-    print("🔥 RETURNING RESULT PAGE")
     return render_template(
     "diagnosis_result.html",
     results=results,
@@ -1083,14 +1192,19 @@ def api_help_report():
     payload = request.get_json(silent=True) or request.form
     category = (payload.get("category") or "").strip()
     message = (payload.get("message") or "").strip()
+    email = (payload.get("email") or "").strip()
 
     if not category or not message:
         return jsonify({"status": "error", "message": "category and message are required"}), 400
+    if len(message) > 2000:
+        return jsonify({"status": "error", "message": "message is too long"}), 400
+    if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return jsonify({"status": "error", "message": "valid email is required"}), 400
 
     report = HelpReport(
         user_id=current_user.id if current_user.is_authenticated else None,
         name=(payload.get("name") or "").strip() or (current_user.username if current_user.is_authenticated else None),
-        email=(payload.get("email") or "").strip() or (current_user.email if current_user.is_authenticated else None),
+        email=email or (current_user.email if current_user.is_authenticated else None),
         category=category,
         page_url=(payload.get("page_url") or payload.get("screen") or "").strip(),
         message=message,
@@ -1103,7 +1217,11 @@ def api_help_report():
 @app.route("/forgot-password", methods=["GET", "POST"])
 def forgot_password():
     if request.method == "POST":
-        email = request.form.get("email")
+        email = (request.form.get("email") or "").strip().lower()
+
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            flash("Please enter a valid email address.")
+            return redirect(url_for("forgot_password"))
 
         user = User.query.filter_by(email=email).first()
 
@@ -1205,6 +1323,10 @@ def reset_password(token):
     if request.method == "POST":
 
         new_password = request.form.get("password")
+
+        if not new_password or len(new_password) < 8:
+            flash("Password should be at least 8 characters.")
+            return redirect(request.url)
 
         user.password = generate_password_hash(new_password)
 
@@ -1362,8 +1484,38 @@ def ensure_database_ready():
         initialize_database()
     except Exception as e:
         db.session.rollback()
-        print("Database initialization skipped:", e)
-        traceback.print_exc()
+        app.logger.warning("Database initialization skipped: %s", e.__class__.__name__)
+
+
+@app.errorhandler(404)
+def handle_not_found(error):
+    if wants_json_response():
+        return jsonify({"status": "error", "message": "Not found"}), 404
+    return "Not found", 404
+
+
+@app.errorhandler(500)
+def handle_server_error(error):
+    db.session.rollback()
+    if wants_json_response():
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+    return "Something went wrong. Please try again later.", 500
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    if isinstance(error, HTTPException):
+        return error
+    db.session.rollback()
+    app.logger.error(
+        "Unhandled server error on %s %s: %s",
+        request.method,
+        request.path,
+        error.__class__.__name__,
+    )
+    if wants_json_response():
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+    return "Something went wrong. Please try again later.", 500
 
 
 @app.route("/healthz")
