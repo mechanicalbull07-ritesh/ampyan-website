@@ -28,6 +28,10 @@ def _ampyan_api_base_url():
     return (os.environ.get("AMPYAN_API_BASE_URL") or "https://api.ampyan.com").rstrip("/")
 
 
+def _email_verification_required():
+    return os.environ.get("REQUIRE_EMAIL_VERIFICATION", "").strip().lower() == "true"
+
+
 def _sync_profile(name, email, phone=""):
     payload = json.dumps({"name": name, "email": email, "phone": phone, "user_email": email}).encode("utf-8")
     req = urllib_request.Request(
@@ -84,15 +88,16 @@ def register():
                 return redirect(url_for("auth.register"))
 
             hashed_password = generate_password_hash(password)
-            token = secrets.token_urlsafe(32)
-            expiry = datetime.utcnow() + timedelta(minutes=30)
+            require_verification = _email_verification_required()
+            token = secrets.token_urlsafe(32) if require_verification else None
+            expiry = datetime.utcnow() + timedelta(minutes=30) if require_verification else None
 
             new_user = User(
                 username=username,
                 email=email,
                 password=hashed_password,
                 role="user",
-                email_verified=False,
+                email_verified=not require_verification,
                 verification_token=token,
                 verification_token_expiry=expiry,
             )
@@ -100,16 +105,18 @@ def register():
             _commit_new_user_with_id_fallback(new_user)
             _sync_profile(username, email, new_user.mobile or "")
 
-            verification_link = url_for("verify_email", token=token, _external=True)
-            mail = current_app.extensions.get("mail")
-            send_email(
-                mail,
-                email,
-                "Verify your Motrnoix AMPYAN account",
-                f"Click this link to verify your account:\n\n{verification_link}",
-            )
-
-            flash("Account created. Please verify your email.")
+            if require_verification:
+                verification_link = url_for("verify_email", token=token, _external=True)
+                mail = current_app.extensions.get("mail")
+                send_email(
+                    mail,
+                    email,
+                    "Verify your Motrnoix AMPYAN account",
+                    f"Click this link to verify your account:\n\n{verification_link}",
+                )
+                flash("Account created. Please verify your email.")
+            else:
+                flash("Account created. You can login now.")
             return redirect(url_for("auth.login"))
         except Exception as exc:
             db.session.rollback()
@@ -140,7 +147,7 @@ def login():
                 flash("Your account has been banned.")
                 return redirect(url_for("auth.login"))
 
-            if not user.email_verified:
+            if _email_verification_required() and not user.email_verified:
                 flash("Please verify your email before logging in.")
                 return redirect(url_for("auth.login"))
 
