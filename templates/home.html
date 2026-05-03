@@ -44,6 +44,112 @@
 </div>
 </section>
 
+<section class="home-highlights-section">
+<div class="home-highlights-row top">
+<div class="home-highlight-panel">
+<div class="home-highlight-head">
+<div>
+<p class="page-kicker">NEWS HIGHLIGHTS</p>
+<h2>Latest automotive updates</h2>
+</div>
+<a href="/news">View All</a>
+</div>
+
+{% if latest_news %}
+<div class="home-highlight-list">
+{% for news in latest_news[:3] %}
+<a href="/news/{{ news.id }}" class="home-highlight-item">
+<i class="fa-solid fa-newspaper"></i>
+<span>
+<strong>{{ news.title }}</strong>
+<small>{{ news.content[:90] if news.content else "Read the latest AMPYAN update." }}{% if news.content and news.content|length > 90 %}...{% endif %}</small>
+</span>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<p class="home-empty-note">No news published yet.</p>
+{% endif %}
+</div>
+
+<div class="home-highlight-panel">
+<div class="home-highlight-head">
+<div>
+<p class="page-kicker">COMMUNITY HIGHLIGHTS</p>
+<h2>Recent owner discussions</h2>
+</div>
+<a href="/community">Open</a>
+</div>
+
+{% if recent_posts %}
+<div class="home-highlight-list">
+{% for post in recent_posts[:3] %}
+<a href="/post/{{ post.id }}" class="home-highlight-item">
+<i class="fa-solid fa-comments"></i>
+<span>
+<strong>{{ post.title }}</strong>
+<small>{{ post.author.username if post.author else "Member" }} - {{ post.content[:80] if post.content else "Joined the conversation." }}{% if post.content and post.content|length > 80 %}...{% endif %}</small>
+</span>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<p class="home-empty-note">No discussions yet.</p>
+{% endif %}
+</div>
+</div>
+
+<div class="home-highlights-row bottom">
+<div class="home-highlight-panel video-panel">
+<div class="home-highlight-head">
+<div>
+<p class="page-kicker">VIDEO HIGHLIGHTS</p>
+<h2>Watch AMPYAN explainers</h2>
+</div>
+<a href="/videos">Videos</a>
+</div>
+
+{% if latest_videos %}
+<div class="home-video-strip">
+{% for video in latest_videos[:3] %}
+<a href="/videos" class="home-video-card">
+<iframe src="{{ video.embed_url }}" title="{{ video.title }}" loading="lazy" allowfullscreen></iframe>
+<strong>{{ video.title }}</strong>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<p class="home-empty-note">No videos added yet.</p>
+{% endif %}
+</div>
+
+<div class="home-highlight-panel activity-panel">
+<div class="home-highlight-head">
+<div>
+<p class="page-kicker">RECENT ACTIVITY</p>
+<h2>What users are doing</h2>
+</div>
+</div>
+
+{% if recent_activity %}
+<div class="home-activity-list">
+{% for item in recent_activity %}
+<a href="{{ item.url }}" class="home-activity-item">
+<i class="{{ item.icon }}"></i>
+<span>
+<strong>{{ item.type }}</strong>
+<small>{{ item.meta }} - {{ item.title }}</small>
+</span>
+</a>
+{% endfor %}
+</div>
+{% else %}
+<p class="home-empty-note">No recent activity yet.</p>
+{% endif %}
+</div>
+</div>
+</section>
+
 <section class="hero hero-no-image">
 <div class="hero-container hero-container-wide">
 <div class="hero-left">
@@ -388,46 +494,6 @@ required
 <h3>Automotive News</h3>
 <p>Latest launches and industry updates</p>
 </a>
-</div>
-</section>
-
-<section class="section-grid">
-<div class="widget">
-<h2>Community Discussions</h2>
-{% if recent_posts %}
-<div class="post-grid">
-{% for post in recent_posts[:4] %}
-<div class="post-card">
-<div class="post-header">
-<div class="post-avatar">{{ post.author.username[0]|upper if post.author else "U" }}</div>
-<div class="post-user">{{ post.author.username if post.author else "Member" }}</div>
-</div>
-<h4 class="post-title">{{ post.title }}</h4>
-<p class="post-preview">{{ post.content[:120] if post.content else "" }}...</p>
-<a href="/post/{{ post.id }}" class="widget-btn">View Discussion</a>
-</div>
-{% endfor %}
-</div>
-{% else %}
-<p>No discussions yet</p>
-{% endif %}
-</div>
-
-<div class="widget">
-<h2>Automotive News</h2>
-{% if latest_news %}
-<div class="news-grid">
-{% for news in latest_news[:4] %}
-<div class="news-card">
-<h4 class="news-title">{{ news.title }}</h4>
-<p class="news-preview">{{ news.content[:120] if news.content else "" }}...</p>
-<a href="/news/{{ news.id }}" class="widget-btn">Read Article</a>
-</div>
-{% endfor %}
-</div>
-{% else %}
-<p>No news available</p>
-{% endif %}
 </div>
 </section>
 

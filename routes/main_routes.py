@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, flash, url_for
 from flask_login import current_user, login_required
 
-from models.models import db, Post, News, Car, User, MechanicProfile, MechanicReview
+from models.models import db, Post, News, Car, User, MechanicProfile, MechanicReview, Video
 from services.car_health_engine import calculate_car_health
 from services.garage_network_service import (
     calculate_trust_profile_score,
@@ -38,8 +38,46 @@ def home():
     # NEWS
     latest_news = News.query.order_by(News.id.desc()).limit(5).all()
 
-    # ACTIVITY FEED (community activity)
-    recent_activity = Post.query.order_by(Post.id.desc()).limit(5).all()
+    # VIDEOS
+    latest_videos = Video.query.order_by(Video.created_at.desc()).limit(3).all()
+
+    # ACTIVITY FEED
+    activity_items = []
+    for post in Post.query.order_by(Post.created_at.desc()).limit(4).all():
+        activity_items.append({
+            "type": "Community",
+            "icon": "fa-solid fa-message",
+            "title": post.title,
+            "meta": f"{post.author.username if post.author else 'Member'} started a discussion",
+            "url": f"/post/{post.id}",
+            "created_at": post.created_at,
+        })
+
+    for car in Car.query.order_by(Car.created_at.desc()).limit(3).all():
+        activity_items.append({
+            "type": "Garage",
+            "icon": "fa-solid fa-car-side",
+            "title": f"{car.brand or 'Vehicle'} {car.model or ''}".strip(),
+            "meta": "New vehicle added to AMPYAN garage",
+            "url": "/garage-dashboard",
+            "created_at": car.created_at,
+        })
+
+    for video in latest_videos:
+        activity_items.append({
+            "type": "Video",
+            "icon": "fa-brands fa-youtube",
+            "title": video.title,
+            "meta": "New AMPYAN video available",
+            "url": "/videos",
+            "created_at": video.created_at,
+        })
+
+    recent_activity = sorted(
+        activity_items,
+        key=lambda item: item.get("created_at") or 0,
+        reverse=True
+    )[:6]
 
     # LEADERBOARD
     top_contributors = User.query.order_by(User.reputation.desc()).limit(5).all()
@@ -76,6 +114,7 @@ def home():
         default_car=default_car,
         recent_posts=recent_posts,
         latest_news=latest_news,
+        latest_videos=latest_videos,
         recent_activity=recent_activity,
         top_contributors=top_contributors,
         nearby_mechanics=nearby_mechanics,
