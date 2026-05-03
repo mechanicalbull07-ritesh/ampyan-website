@@ -55,6 +55,7 @@ import traceback
 from PIL import Image
 from collections import defaultdict
 import re
+import threading
 from datetime import datetime, timedelta
 from authlib.integrations.flask_client import OAuth
 from routes.main_routes import main_bp
@@ -312,6 +313,8 @@ if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
 conversation_memory = defaultdict(list)
+database_init_lock = threading.Lock()
+database_initialized = False
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -1096,8 +1099,15 @@ def ensure_user_schema():
 
     db.session.commit()
 
-try:
-    with app.app_context():
+def initialize_database():
+    global database_initialized
+    if database_initialized:
+        return
+
+    with database_init_lock:
+        if database_initialized:
+            return
+
         db.create_all()
         ensure_user_schema()
 
@@ -1111,8 +1121,24 @@ try:
 
         if changed:
             db.session.commit()
-except Exception as e:
-    print("Database initialization skipped:", e)
+
+        database_initialized = True
+
+
+@app.before_request
+def ensure_database_ready():
+    try:
+        initialize_database()
+    except Exception as e:
+        db.session.rollback()
+        print("Database initialization skipped:", e)
+        traceback.print_exc()
+
+
+@app.route("/healthz")
+def healthz():
+    return "ok"
+
 # ================= START SERVER =================
 
 if __name__ == "__main__":
