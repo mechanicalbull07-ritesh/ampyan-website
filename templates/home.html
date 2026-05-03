@@ -4,17 +4,13 @@
 {% macro feature_card(href, color, icon, title, description) -%}
 <a href="{{ href }}" class="feature-nav-card {{ color }}">
 <i class="{{ icon }}"></i>
-<span>
 <strong>{{ title }}</strong>
-<small>{{ description }}</small>
-</span>
 </a>
 {%- endmacro %}
 
 <section class="feature-nav-section">
 <div class="feature-nav-head">
 <p class="page-kicker">EXPLORE AMPYAN</p>
-<h2 class="section-heading">Quick access for every driver.</h2>
 </div>
 
 <div class="feature-nav-grid" aria-label="Explore AMPYAN features">
