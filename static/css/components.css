@@ -8,9 +8,9 @@ margin:auto;
 
 .tools-title{
 font-size:clamp(32px,4vw,44px);
-font-weight:700;
+font-weight:800;
 margin-bottom:10px;
-letter-spacing:-0.03em;
+letter-spacing:0.02em;
 }
 
 .tools-subtitle{
@@ -256,8 +256,8 @@ font-weight:700;
 .page-title{
 margin:0;
 font-size:clamp(34px,4.5vw,52px);
-line-height:1.04;
-letter-spacing:-0.04em;
+line-height:1.06;
+letter-spacing:0.02em;
 }
 
 .page-subtitle{
@@ -296,7 +296,7 @@ grid-template-columns:repeat(4,minmax(0,1fr));
 .section-heading{
 margin:0 0 18px;
 font-size:26px;
-letter-spacing:-0.03em;
+letter-spacing:0.02em;
 }
 
 .section-copy{
@@ -527,7 +527,7 @@ box-shadow:var(--shadow-md);
 .story-block h2,
 .story-block h3{
 margin:0 0 12px;
-letter-spacing:-0.03em;
+letter-spacing:0.02em;
 }
 
 .story-block p{
@@ -630,7 +630,7 @@ margin-bottom:10px;
 .contact-value{
 font-size:22px;
 font-weight:700;
-letter-spacing:-0.03em;
+letter-spacing:0.01em;
 }
 
 .contact-copy{

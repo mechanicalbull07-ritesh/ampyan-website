@@ -24,9 +24,9 @@
 --radius-lg:22px;
 --radius-md:16px;
 --navbar-bg:rgba(7,13,24,0.84);
---font-body:'Space Grotesk',sans-serif;
---font-display:Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
---font-ui:'Rajdhani',sans-serif;
+--font-body:'Inter',sans-serif;
+--font-display:'Inter',sans-serif;
+--font-ui:'Inter',sans-serif;
 }
 
 body.light{
@@ -70,7 +70,7 @@ margin:0;
 padding:0;
 min-height:100vh;
 line-height:1.6;
-letter-spacing:-0.01em;
+letter-spacing:0;
 transition:background .25s,color .25s;
 }
 
@@ -84,12 +84,12 @@ h3,
 .tools-title,
 .profile-name{
 font-family:var(--font-display);
-letter-spacing:-0.02em;
-line-height:0.98;
+letter-spacing:0.02em;
+line-height:1.05;
 text-transform:uppercase;
 text-wrap:balance;
 text-shadow:0 10px 24px rgba(0,0,0,0.18);
-font-weight:700;
+font-weight:800;
 color:var(--text);
 }
 
@@ -102,7 +102,7 @@ body.light .hero-copy-title,
 body.light .hero-title,
 body.light .tools-title,
 body.light .profile-name{
-letter-spacing:-0.01em;
+letter-spacing:0.02em;
 text-shadow:0 6px 14px rgba(255,255,255,0.45);
 }
 
@@ -122,7 +122,7 @@ h6,
 .garage-trust-level,
 .garage-trust-score{
 font-family:var(--font-ui);
-letter-spacing:0.04em;
+letter-spacing:0.06em;
 }
 
 body.light{
@@ -214,8 +214,8 @@ box-shadow:var(--shadow-md);
 font-family:var(--font-display);
 font-size:clamp(32px, 5vw, 52px);
 font-weight:800;
-line-height:1.02;
-letter-spacing:-0.04em;
+line-height:1.06;
+letter-spacing:0.02em;
 background:linear-gradient(120deg,#fff 0%,#ffd2c7 30%,#ff8b5d 68%,#ff5a36 100%);
 -webkit-background-clip:text;
 background-clip:text;

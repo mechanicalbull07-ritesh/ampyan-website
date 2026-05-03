@@ -27,8 +27,8 @@ background:rgba(255,255,255,0.04);
 
 .profile-name{
 font-size:30px;
-font-weight:700;
-letter-spacing:-0.03em;
+font-weight:800;
+letter-spacing:0.02em;
 margin:0 0 8px;
 }
 
@@ -150,7 +150,7 @@ transform:translateY(-3px);
 .profile-car-title{
 margin:16px 0 8px;
 font-size:24px;
-letter-spacing:-0.03em;
+letter-spacing:0.02em;
 }
 
 .profile-car-health{

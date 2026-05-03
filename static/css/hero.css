@@ -123,8 +123,8 @@ color:#ff2d2d;
 .hero-copy-title{
 margin:0;
 font-size:clamp(40px,5vw,66px);
-line-height:1.02;
-letter-spacing:-0.02em;
+line-height:1.05;
+letter-spacing:0.02em;
 max-width:760px;
 }
 
@@ -1353,7 +1353,7 @@ text-align:center;
 .car-health h2,
 .founder h3{
 font-size:32px;
-letter-spacing:-0.02em;
+letter-spacing:0.02em;
 }
 
 .activity-feed ul{
