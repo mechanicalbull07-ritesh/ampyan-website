@@ -19,12 +19,12 @@
 <div class="hero-left">
 <div class="hero-brand-line">
 <span class="hero-pill">AMPYAN</span>
-<span class="hero-pill muted">AI + Community + Garage</span>
-<span class="hero-pill muted">Built for Indian car users</span>
+<span class="hero-pill muted">AI Diagnosis</span>
+<span class="hero-pill muted">Smart Garage</span>
 </div>
 
-<h1 class="hero-copy-title">One place to understand your car, choose better cars, and discover trusted garages.</h1>
-<p class="hero-desc"><span id="aiText"></span></p>
+<h1 class="hero-copy-title">AI Powered Car Diagnosis & Smart Garage for Every Driver</h1>
+<p class="hero-desc">Know your car problems, estimate repair cost, track your garage, and connect with real users & experts.</p>
 
 <form action="/tools/ai-diagnosis" method="POST" class="hero-search">
 <input
@@ -41,33 +41,34 @@ required
 <button type="submit">Diagnose</button>
 </form>
 
+<div class="cta-group launch-cta-group">
+<a href="/tools/ai-diagnosis" class="premium-btn">Start Diagnosis</a>
+<a href="/community" class="outline-btn">Join Community</a>
+</div>
+
 <div class="hero-links">
 <a href="/garage-dashboard">My Garage</a>
 <a href="/community">Community</a>
 <a href="/tools/car-suggestion">Car Suggestion Tool</a>
 <a href="/garage-network">Garage Network</a>
 </div>
-<div class="cta-group">
-<a href="/tools/car-suggestion" class="premium-btn">Find My Next Car</a>
-<a href="/garage-network/register" class="outline-btn">Register A Garage</a>
-</div>
 </div>
 
 <div class="hero-right hero-right-panel">
 <div class="hero-visual-card hero-text-panel">
-<p class="hero-guide-label">AMPYAN Ecosystem Guide</p>
+<p class="hero-guide-label">Smart Ownership Flow</p>
 <div class="hero-side-guide">
 <div class="hero-guide-step">
-<strong>1. Understand your current car</strong>
-<span>Use AI diagnosis, smart garage tracking and service history in one account.</span>
+<strong>1. Describe the symptom</strong>
+<span>Share what you hear, feel or see before a workshop visit.</span>
 </div>
 <div class="hero-guide-step">
-<strong>2. Find what fits your lifestyle</strong>
-<span>Use the car suggestion tool for city, highway, family, solo and occasional needs.</span>
+<strong>2. Review likely causes</strong>
+<span>Get clearer issue direction with repair cost context and next steps.</span>
 </div>
 <div class="hero-guide-step">
-<strong>3. Build a trusted service network</strong>
-<span>Discover workshops, compare trust and keep local mechanics inside the same flow.</span>
+<strong>3. Track your garage</strong>
+<span>Keep vehicles, service history, reminders and trusted support connected.</span>
 </div>
 <div class="hero-highlight-strip">
 <div><span>{{ ecosystem_stats.owners }}</span><small>Owners</small></div>
@@ -80,29 +81,54 @@ required
 </div>
 </section>
 
-<section class="home-stats-strip">
-<div class="home-stat-card">
-<span>AI Support</span>
-<strong>Smart symptom analysis</strong>
-<p>Quick issue understanding before a workshop visit or parts replacement.</p>
+<section class="launch-section">
+<div class="launch-section-head">
+<p class="page-kicker">WHY AMPYAN?</p>
+<h2 class="section-heading">Built for confident car ownership, not generic tech browsing.</h2>
+<p class="section-copy">AMPYAN brings diagnosis, repair awareness, garage tracking and community learning into one automotive-first product.</p>
 </div>
 
-<div class="home-stat-card">
-<span>Car Match</span>
-<strong>Usage-based suggestions</strong>
-<p>Shortlist better cars for city, highway, family, solo and daily run needs.</p>
+<div class="launch-card-grid">
+<div class="launch-card">
+<i class="fa-solid fa-microchip"></i>
+<h3>AI Car Diagnosis</h3>
+<p>Describe symptoms and get structured guidance on likely issues before you make repair decisions.</p>
 </div>
 
-<div class="home-stat-card">
-<span>Community</span>
-<strong>Real owner discussions</strong>
-<p>Practical learning from actual driving, maintenance and purchase experience.</p>
+<div class="launch-card">
+<i class="fa-solid fa-indian-rupee-sign"></i>
+<h3>Repair Cost Insights</h3>
+<p>Understand possible repair direction and cost context so workshop conversations become clearer.</p>
 </div>
 
-<div class="home-stat-card">
-<span>Garage Network</span>
-<strong>{{ ecosystem_stats.mechanics }} listed mechanics</strong>
-<p>Growing local workshop network with trust-based visibility and reviews.</p>
+<div class="launch-card">
+<i class="fa-solid fa-gauge-high"></i>
+<h3>Smart Garage Tracking</h3>
+<p>Track vehicles, service records, reminders and ownership history inside your AMPYAN garage.</p>
+</div>
+
+<div class="launch-card">
+<i class="fa-solid fa-users-gear"></i>
+<h3>Automotive Community</h3>
+<p>Connect with real users, enthusiasts and experts for practical ownership knowledge.</p>
+</div>
+</div>
+</section>
+
+<section class="coming-soon-section">
+<div class="coming-soon-card">
+<div class="coming-soon-copy">
+<p class="page-kicker">PLANNED FEATURES</p>
+<h2 class="section-heading">Coming soon on the AMPYAN roadmap</h2>
+<p class="section-copy">These features are planned for future releases as AMPYAN grows toward a richer driver safety and ownership platform.</p>
+</div>
+
+<div class="coming-soon-grid">
+<div><i class="fa-solid fa-video"></i><span>Dashcam integration</span><small>Coming soon</small></div>
+<div><i class="fa-solid fa-triangle-exclamation"></i><span>AI safety alerts</span><small>Coming soon</small></div>
+<div><i class="fa-solid fa-calendar-check"></i><span>Maintenance prediction</span><small>Coming soon</small></div>
+<div><i class="fa-solid fa-location-dot"></i><span>Emergency/parking connect features</span><small>Coming soon</small></div>
+</div>
 </div>
 </section>
 
@@ -395,12 +421,13 @@ required
 </section>
 
 <script>
-const text = "Diagnose current issues, compare what kind of car fits your routine, and discover trusted service support in one AMPYAN flow.";
+const text = "Know your car problems, estimate repair cost, track your garage, and connect with real users & experts.";
 let index = 0;
 
 function typeAI(){
-if(index < text.length){
-document.getElementById("aiText").innerHTML += text.charAt(index);
+const target = document.getElementById("aiText");
+if(target && index < text.length){
+target.innerHTML += text.charAt(index);
 index++;
 setTimeout(typeAI, 24);
 }
