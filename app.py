@@ -51,6 +51,7 @@ print("Email service loaded")
 # ================= OTHER IMPORTS =================
 from flask import session
 import os
+import traceback
 from PIL import Image
 from collections import defaultdict
 import re
@@ -248,7 +249,8 @@ database_url = os.environ.get("DATABASE_URL")
 if database_url and database_url.startswith("postgres://"):
     database_url = database_url.replace("postgres://", "postgresql://", 1)
 
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or "ampyan-local-dev-secret"
+app.secret_key = os.environ.get("SECRET_KEY", "fallback-secret")
+app.config["SECRET_KEY"] = app.secret_key
 app.config["PREFERRED_URL_SCHEME"] = "https" if os.environ.get("ENV") == "production" else "http"
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///database.db"
@@ -263,6 +265,7 @@ if os.environ.get("ENV") == "production":
     app.config["REMEMBER_COOKIE_HTTPONLY"] = True
 
 oauth = OAuth(app)
+GOOGLE_PRODUCTION_REDIRECT_URI = "https://ampyan.com/google/callback"
 google = oauth.register(
     name='google',
     client_id=os.environ.get("GOOGLE_CLIENT_ID"),
@@ -415,16 +418,22 @@ def load_user(user_id):
 
 @app.route("/login/google")
 def google_login():
-    if not os.environ.get("GOOGLE_CLIENT_ID") or not os.environ.get("GOOGLE_CLIENT_SECRET"):
-        flash("Google login is not configured yet. Add GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.")
+    missing_env = [
+        key for key in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "SECRET_KEY")
+        if not os.environ.get(key)
+    ]
+    if missing_env:
+        print("Google login missing environment variables:", ", ".join(missing_env))
+        flash("Google login is not configured yet. Please check server configuration.")
         return redirect(url_for("auth.login"))
 
-    redirect_uri = os.environ.get("GOOGLE_REDIRECT_URI") or url_for("google_callback", _external=True)
+    redirect_uri = GOOGLE_PRODUCTION_REDIRECT_URI
 
     try:
         return google.authorize_redirect(redirect_uri)
     except Exception as e:
         print("Google login redirect error:", e)
+        traceback.print_exc()
         flash("Google login could not start. Please check Google OAuth redirect settings.")
         return redirect(url_for("auth.login"))
 
@@ -454,50 +463,48 @@ def platform():
 def google_callback():
     try:
         token = google.authorize_access_token()
-    except Exception as e:
-        print("Google authorize_access_token error:", e)
-        flash("Google login failed during callback. Make sure the redirect URI is allowed in Google Cloud.")
-        return redirect(url_for("auth.login"))
 
-    user_info = token.get("userinfo") if isinstance(token, dict) else None
+        user_info = token.get("userinfo") if isinstance(token, dict) else None
 
-    if not user_info:
-        try:
+        if not user_info:
             user_info = google.get("userinfo").json()
-        except Exception as e:
-            print("Google userinfo fetch error:", e)
-            user_info = None
 
-    if not user_info:
-        flash("Google login failed because profile information could not be loaded.")
-        return redirect(url_for("auth.login"))
+        if not user_info:
+            print("Google callback missing userinfo. Token keys:", list(token.keys()) if isinstance(token, dict) else type(token))
+            return "Google login failed", 500
 
-    email = (user_info.get("email") or "").strip().lower()
+        email = (user_info.get("email") or "").strip().lower()
 
-    if not email:
-        flash("Google login failed because the email address was not provided.")
-        return redirect(url_for("auth.login"))
+        if not email:
+            print("Google callback missing email. User info keys:", list(user_info.keys()))
+            return "Google login failed", 500
 
-    user = User.query.filter_by(email=email).first()
+        user = User.query.filter_by(email=email).first()
 
-    if not user:
-        user = User(
-            username=build_unique_username(email.split("@")[0]),
-            email=email,
-            password=generate_password_hash(secrets.token_urlsafe(16)),
-            email_verified=True
-        )
-        db.session.add(user)
-        db.session.commit()
+        if not user:
+            user = User(
+                username=build_unique_username(email.split("@")[0]),
+                email=email,
+                password=generate_password_hash(secrets.token_urlsafe(16)),
+                role="user",
+                email_verified=True,
+            )
+            db.session.add(user)
+            db.session.commit()
 
-    # ✅ Admin assignment after user exists
-    if user.email in ADMIN_EMAILS:
-        user.role = "admin"
-        db.session.commit()
+        # ✅ Admin assignment after user exists
+        if user.email in ADMIN_EMAILS:
+            user.role = "admin"
+            db.session.commit()
 
-    login_user(user)
+        login_user(user)
 
-    return redirect("/community")
+        return redirect("/community")
+    except Exception as e:
+        db.session.rollback()
+        print("GOOGLE CALLBACK ERROR:", str(e))
+        traceback.print_exc()
+        return "Google login failed", 500
 
 # ================= WEBSITE VISIT TRACKER =================
 
