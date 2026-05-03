@@ -911,6 +911,51 @@ justify-content:center;
 text-align:center;
 }
 
+.app-store-panel{
+display:grid;
+gap:14px;
+align-content:center;
+}
+
+.app-store-badge{
+display:flex;
+align-items:center;
+gap:16px;
+min-height:86px;
+padding:18px 20px;
+border-radius:18px;
+border:1px solid rgba(255,255,255,0.08);
+background:rgba(255,255,255,0.04);
+}
+
+.app-store-badge i{
+width:46px;
+height:46px;
+display:inline-flex;
+align-items:center;
+justify-content:center;
+border-radius:14px;
+background:rgba(255,45,45,0.14);
+color:#fff;
+font-size:24px;
+flex-shrink:0;
+}
+
+.app-store-badge span{
+display:block;
+margin-bottom:4px;
+font-size:12px;
+letter-spacing:0.16em;
+text-transform:uppercase;
+color:#ff9a9a;
+}
+
+.app-store-badge strong{
+display:block;
+font-size:22px;
+color:#fff;
+}
+
 .qr-dummy{
 width:220px;
 height:220px;
