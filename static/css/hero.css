@@ -75,14 +75,16 @@ margin-bottom:24px;
 ================================ */
 
 .feature-nav-section{
-max-width:1200px;
+max-width:none;
+width:100%;
 margin:18px auto 0;
-padding:0 20px;
+padding:0;
 }
 
 .feature-nav-head{
+width:min(1200px, calc(100% - 40px));
 max-width:760px;
-margin-bottom:12px;
+margin:0 auto 12px;
 }
 
 .feature-nav-head .section-heading{
@@ -92,6 +94,7 @@ margin-bottom:0;
 
 .feature-nav-grid{
 position:relative;
+width:100%;
 overflow:hidden;
 padding:3px 0 10px;
 mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);
@@ -99,10 +102,13 @@ mask-image:linear-gradient(90deg,transparent,#000 7%,#000 93%,transparent);
 }
 
 .feature-nav-track{
-display:flex;
+display:flex !important;
+flex-direction:row !important;
+flex-wrap:nowrap !important;
 width:max-content;
 gap:14px;
 animation:feature-marquee 58s linear infinite;
+will-change:transform;
 }
 
 .feature-nav-grid:hover .feature-nav-track{
@@ -110,27 +116,32 @@ animation-play-state:paused;
 }
 
 .feature-nav-group{
-display:flex;
+display:flex !important;
+flex-direction:row !important;
+flex-wrap:nowrap !important;
 gap:14px;
+min-width:max-content;
 }
 
 @keyframes feature-marquee{
 from{
-transform:translateX(0);
+transform:translateX(calc(-50% - 7px));
 }
 to{
-transform:translateX(calc(-50% - 7px));
+transform:translateX(0);
 }
 }
 
 .feature-nav-card{
 position:relative;
-display:grid;
+display:grid !important;
 grid-template-columns:auto minmax(0,1fr);
 align-items:center;
 gap:10px;
 flex:0 0 250px;
+width:250px;
 min-height:68px;
+max-height:68px;
 padding:10px 12px;
 border-radius:16px;
 border:1px solid rgba(255,255,255,0.08);
@@ -1700,6 +1711,7 @@ grid-template-columns:none;
 
 .feature-nav-card{
 flex-basis:225px;
+width:225px;
 }
 
 .launch-section,
@@ -1750,6 +1762,7 @@ grid-template-columns:1fr;
 @media(max-width:460px){
 .feature-nav-card{
 flex-basis:205px;
+width:205px;
 }
 }
 
