@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="calculator-page">
+<div class="calculator-header">
+<p class="page-kicker">MAINTENANCE</p>
+<h1 class="page-title">Maintenance Cost Estimator</h1>
+<p class="page-subtitle">Estimate a planning range for routine service, major service or repair preparation.</p>
+</div>
+
+<div class="calculator-layout">
+<form method="POST" class="calculator-card">
+{% if error %}<div class="calc-error">{{ error }}</div>{% endif %}
+
+<label class="form-label">Vehicle Age (Years)</label>
+<input type="number" step="0.1" min="0" name="vehicle_age" value="{{ form_data.vehicle_age }}" placeholder="Example: 5" required class="auth-input">
+
+<label class="form-label">Current Odometer (KM)</label>
+<input type="number" step="1" min="0" name="current_km" value="{{ form_data.current_km }}" placeholder="Example: 65000" required class="auth-input">
+
+<label class="form-label">Fuel Type</label>
+<select name="fuel_type" class="auth-input">
+<option value="Petrol" {% if form_data.fuel_type == "Petrol" %}selected{% endif %}>Petrol</option>
+<option value="Diesel" {% if form_data.fuel_type == "Diesel" %}selected{% endif %}>Diesel</option>
+<option value="CNG" {% if form_data.fuel_type == "CNG" %}selected{% endif %}>CNG</option>
+<option value="Electric" {% if form_data.fuel_type == "Electric" %}selected{% endif %}>Electric</option>
+</select>
+
+<label class="form-label">Service Type</label>
+<select name="service_type" class="auth-input">
+<option value="routine" {% if form_data.service_type == "routine" %}selected{% endif %}>Routine Service</option>
+<option value="major" {% if form_data.service_type == "major" %}selected{% endif %}>Major Service</option>
+<option value="repair" {% if form_data.service_type == "repair" %}selected{% endif %}>Repair Planning</option>
+</select>
+
+<button type="submit" class="auth-button calc-submit">Estimate Cost</button>
+</form>
+
+<div class="calculator-result-card">
+{% if result %}
+<p class="calc-label">Estimated Range</p>
+<h2>₹{{ result.estimated_min }} - ₹{{ result.estimated_max }}</h2>
+<p class="calc-muted">{{ result.note }}</p>
+{% else %}
+<p class="calc-label">Ready</p>
+<h2>Plan service budget</h2>
+<p class="calc-muted">Enter age, odometer and service type to estimate a maintenance cost range.</p>
+{% endif %}
+</div>
+</div>
+</section>
+
+{% endblock %}

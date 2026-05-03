@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="calculator-page">
+<div class="calculator-header">
+<p class="page-kicker">CAR FINANCE</p>
+<h1 class="page-title">EMI Calculator</h1>
+<p class="page-subtitle">Estimate monthly EMI, total interest and total payable for a car loan.</p>
+</div>
+
+<div class="calculator-layout">
+<form method="POST" class="calculator-card">
+{% if error %}<div class="calc-error">{{ error }}</div>{% endif %}
+
+<label class="form-label">Loan Amount</label>
+<input type="number" step="1" min="0" name="loan_amount" value="{{ form_data.loan_amount }}" placeholder="Example: 800000" required class="auth-input">
+
+<label class="form-label">Interest Rate (%)</label>
+<input type="number" step="0.01" min="0" name="interest_rate" value="{{ form_data.interest_rate }}" placeholder="Example: 9.5" required class="auth-input">
+
+<label class="form-label">Tenure</label>
+<div class="calc-inline">
+<input type="number" step="1" min="1" name="tenure" value="{{ form_data.tenure }}" placeholder="Example: 60" required class="auth-input">
+<select name="tenure_type" class="auth-input">
+<option value="months" {% if form_data.tenure_type == "months" %}selected{% endif %}>Months</option>
+<option value="years" {% if form_data.tenure_type == "years" %}selected{% endif %}>Years</option>
+</select>
+</div>
+
+<label class="form-label">Down Payment Optional</label>
+<input type="number" step="1" min="0" name="down_payment" value="{{ form_data.down_payment }}" placeholder="Example: 100000" class="auth-input">
+
+<button type="submit" class="auth-button calc-submit">Calculate EMI</button>
+</form>
+
+<div class="calculator-result-card">
+{% if result %}
+<p class="calc-label">Monthly EMI</p>
+<h2>₹{{ result.monthly_emi }}</h2>
+<div class="calc-result-grid">
+<div><span>Principal</span><strong>₹{{ result.principal }}</strong></div>
+<div><span>Tenure</span><strong>{{ result.months }} months</strong></div>
+<div><span>Total Interest</span><strong>₹{{ result.total_interest }}</strong></div>
+<div><span>Total Payable</span><strong>₹{{ result.total_payable }}</strong></div>
+</div>
+{% else %}
+<p class="calc-label">Ready</p>
+<h2>Know your EMI</h2>
+<p class="calc-muted">Enter loan amount, interest rate and tenure to estimate your monthly payment.</p>
+{% endif %}
+</div>
+</div>
+</section>
+
+{% endblock %}

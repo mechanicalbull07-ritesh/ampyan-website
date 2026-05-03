@@ -1,65 +1,49 @@
 {% extends "base.html" %}
-
 {% block content %}
 
-<div class="tools-page">
+<section class="calculator-page">
+<div class="calculator-header">
+<p class="page-kicker">FUEL COST</p>
+<h1 class="page-title">Fuel Cost Calculator</h1>
+<p class="page-subtitle">Calculate trip cost using fuel cost = (distance / mileage) * fuel price, with daily and monthly estimates.</p>
+</div>
 
-<h2 class="tools-title">Fuel Cost Calculator</h2>
+<div class="calculator-layout">
+<form method="POST" class="calculator-card">
+{% if error %}<div class="calc-error">{{ error }}</div>{% endif %}
 
-<p class="tools-subtitle">
-Estimate your daily, monthly and yearly fuel expenses.
-</p>
+<label class="form-label">Trip Distance (KM)</label>
+<input type="number" step="0.1" min="0" name="distance" value="{{ form_data.distance }}" placeholder="Example: 120" class="auth-input">
 
-<form method="POST" class="auth-form">
+<label class="form-label">Daily Running (KM)</label>
+<input type="number" step="0.1" min="0" name="daily_km" value="{{ form_data.daily_km }}" placeholder="Example: 35" class="auth-input">
 
-<input
-type="number"
-name="daily_km"
-placeholder="Daily Driving KM"
-required
-class="auth-input"
-/>
+<label class="form-label">Mileage (KM/L)</label>
+<input type="number" step="0.1" min="0" name="mileage" value="{{ form_data.mileage }}" placeholder="Example: 18" required class="auth-input">
 
-<input
-type="number"
-name="mileage"
-placeholder="Car Mileage (km/l)"
-required
-class="auth-input"
-/>
+<label class="form-label">Fuel Price (₹/L)</label>
+<input type="number" step="0.1" min="0" name="fuel_price" value="{{ form_data.fuel_price }}" placeholder="Example: 105" required class="auth-input">
 
-<input
-type="number"
-name="fuel_price"
-placeholder="Fuel Price (₹/L)"
-required
-class="auth-input"
-/>
-
-<button type="submit" class="auth-button">
-Calculate
-</button>
-
+<button type="submit" class="auth-button calc-submit">Calculate Fuel Cost</button>
 </form>
 
+<div class="calculator-result-card">
 {% if result %}
-
-<div class="profile-card" style="margin-top:30px;">
-
-<h3>Fuel Usage</h3>
-
-<p>Daily Fuel Used : {{ result.daily_fuel }} L</p>
-
-<h3>Cost</h3>
-
-<p>Daily Cost : ₹ {{ result.daily_cost }}</p>
-<p>Monthly Cost : ₹ {{ result.monthly_cost }}</p>
-<p>Yearly Cost : ₹ {{ result.yearly_cost }}</p>
-
+<p class="calc-label">Estimated Fuel Cost</p>
+<h2>₹{{ result.trip_cost }}</h2>
+<div class="calc-result-grid">
+<div><span>Fuel Used</span><strong>{{ result.fuel_used }} L</strong></div>
+<div><span>Daily</span><strong>₹{{ result.daily_cost }}</strong></div>
+<div><span>Monthly</span><strong>₹{{ result.monthly_cost }}</strong></div>
+<div><span>Yearly</span><strong>₹{{ result.yearly_cost }}</strong></div>
 </div>
-
+{% else %}
+<p class="calc-label">Ready</p>
+<h2>Plan every drive</h2>
+<p class="calc-muted">Enter distance, mileage and fuel price to see trip, daily, monthly and yearly cost.</p>
 {% endif %}
-
 </div>
+</div>
+</section>
 
 {% endblock %}

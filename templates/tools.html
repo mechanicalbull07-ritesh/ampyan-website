@@ -1,68 +1,58 @@
 {% extends "base.html" %}
-
 {% block content %}
 
 <section class="page-shell tools-page">
-
 <div class="page-header">
 <div class="page-header-copy">
 <p class="page-kicker">AMPYAN Toolkit</p>
 <h1 class="page-title">Automotive Tools</h1>
-<p class="page-subtitle">Smart tools to understand, maintain and manage your car with one consistent AMPYAN experience.</p>
+<p class="page-subtitle">Premium calculators and diagnostics for fuel, finance, ownership cost and garage health.</p>
 </div>
 </div>
 
-<div class="explore-grid">
-<a href="/tools/ai-diagnosis" class="explore-card">
-<div class="tool-icon">🧠</div>
-<h3>AI Diagnosis</h3>
-<p>Identify possible car problems using intelligent diagnostics.</p>
-<span class="tool-button">Open Tool</span>
-</a>
-
-<a href="/tools/fuel-cost" class="explore-card">
-<div class="tool-icon">⛽</div>
+<div class="tools-premium-grid">
+<a href="/tools/fuel-cost" class="tools-premium-card fuel">
+<i class="fa-solid fa-gas-pump"></i>
 <h3>Fuel Cost Calculator</h3>
-<p>Calculate daily, monthly and yearly fuel expense for your usage.</p>
-<span class="tool-button">Open Tool</span>
+<p>Calculate trip, daily, monthly and yearly fuel spend.</p>
+<span>Open Calculator</span>
 </a>
 
-<a href="/tools/car-suggestion" class="explore-card">
-<div class="tool-icon">🚘</div>
-<h3>Car Suggestion Tool</h3>
-<p>Get a better-fit car shortlist based on city, highway, family and running needs.</p>
-<span class="tool-button">Open Tool</span>
+<a href="/tools/emi-calculator" class="tools-premium-card finance">
+<i class="fa-solid fa-chart-line"></i>
+<h3>EMI Calculator</h3>
+<p>Estimate EMI, total interest and total payable.</p>
+<span>Calculate EMI</span>
 </a>
 
-<div class="explore-card disabled">
-<div class="tool-icon">💰</div>
-<h3>Service Cost Calculator</h3>
-<p>Estimate car service cost before visiting a workshop.</p>
-<span class="coming">Coming Soon</span>
-</div>
+<a href="/tools/depreciation-calculator" class="tools-premium-card value">
+<i class="fa-solid fa-car-burst"></i>
+<h3>Car Depreciation Calculator</h3>
+<p>Estimate current value and depreciation percentage.</p>
+<span>Estimate Value</span>
+</a>
 
-<div class="explore-card disabled">
-<div class="tool-icon">📅</div>
-<h3>Maintenance Planner</h3>
-<p>Plan service schedules based on mileage, driving pattern and reminders.</p>
-<span class="coming">Coming Soon</span>
-</div>
+<a href="/tools/maintenance-cost" class="tools-premium-card maintenance">
+<i class="fa-solid fa-screwdriver-wrench"></i>
+<h3>Maintenance Cost Estimator</h3>
+<p>Plan a safe service or repair cost range.</p>
+<span>Estimate Cost</span>
+</a>
 
-<div class="explore-card disabled">
-<div class="tool-icon">🚗</div>
-<h3>Used Car Checker</h3>
-<p>Check used car reliability, ownership risks and hidden issues.</p>
-<span class="coming">Coming Soon</span>
-</div>
+<a href="/tools/ai-diagnosis" class="tools-premium-card diagnosis">
+<i class="fa-solid fa-brain"></i>
+<h3>AI Diagnosis</h3>
+<p>Understand symptoms, causes and repair direction.</p>
+<span>Start Diagnosis</span>
+</a>
 
-<div class="explore-card disabled">
-<div class="tool-icon">🛡</div>
-<h3>Insurance Estimator</h3>
-<p>Estimate insurance cost before buying or renewing a policy.</p>
-<span class="coming">Coming Soon</span>
+<a href="/garage-dashboard" class="tools-premium-card health">
+<i class="fa-solid fa-heart-pulse"></i>
+<h3>Garage Health</h3>
+<p>Open your car health score, service and usage insights.</p>
+<span>Open Garage</span>
+</a>
 </div>
-</div>
-
 </section>
 
 {% endblock %}

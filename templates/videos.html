@@ -10,40 +10,51 @@
 </div>
 </div>
 
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="video-alert-stack">
+{% for category, message in messages %}
+<div class="video-alert {{ category }}">{{ message }}</div>
+{% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% if is_admin %}
+<form action="/videos" method="POST" class="video-add-form">
+<div class="video-form-grid">
+<div>
+<label class="form-label" for="video-title">Video Title</label>
+<input id="video-title" type="text" name="title" placeholder="Example: Engine overheating explained" required>
+</div>
+
+<div>
+<label class="form-label" for="youtube-url">YouTube Video Link</label>
+<input id="youtube-url" type="url" name="youtube_url" placeholder="https://www.youtube.com/watch?v=..." required>
+</div>
+</div>
+
+<button type="submit" class="auth-button video-submit-btn">Add YouTube Video</button>
+</form>
+{% endif %}
+
+{% if videos %}
 <div class="video-grid">
+{% for video in videos %}
 <div class="video-card">
 <iframe class="video-frame"
-src="https://www.youtube.com/embed/YOUTUBE_VIDEO_ID"
-title="AMPYAN YouTube video"
+src="{{ video.embed_url }}"
+title="{{ video.title }}"
 allowfullscreen>
 </iframe>
-<h3>Deep-dive explainer</h3>
-<p>Use this block for long-form diagnosis explainers, feature walkthroughs or garage education content.</p>
+<h3>{{ video.title }}</h3>
+<p>AMPYAN YouTube video</p>
 </div>
-
-<div class="video-card">
-<iframe class="video-frame"
-src="https://www.youtube.com/embed/YOUTUBE_VIDEO_ID"
-title="AMPYAN YouTube video"
-allowfullscreen>
-</iframe>
-<h3>Community highlight</h3>
-<p>Use this card for owner stories, service case studies or platform update videos.</p>
+{% endfor %}
 </div>
-
-<div class="video-card">
-<blockquote
-class="instagram-media video-frame"
-data-instgrm-permalink="INSTAGRAM_POST_LINK"
-data-instgrm-version="14"
-style="width:100%">
-</blockquote>
-<h3>Short-form social clip</h3>
-<p>Add Instagram reels or short clips here to make the video hub feel active and creator-led.</p>
-</div>
-</div>
+{% else %}
+<div class="empty-state">No videos added yet. Admin can add YouTube videos from this page.</div>
+{% endif %}
 </section>
-
-<script async src="//www.instagram.com/embed.js"></script>
 
 {% endblock %}

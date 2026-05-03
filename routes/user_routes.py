@@ -16,6 +16,7 @@ from services.service_timeline_engine import generate_service_timeline
 from services.driving_pattern_engine import analyze_driving_pattern
 from services.service_schedule_engine import get_service_schedule
 from services.component_health_engine import get_component_health
+from services.garage_summary import enrich_car_for_garage, serialize_garage_car
 import os
 
 user_bp = Blueprint("user", __name__)
@@ -103,20 +104,7 @@ def serialize_user(user):
 
 
 def serialize_car(car):
-    return {
-        "id": car.id,
-        "brand": car.brand,
-        "model": car.model,
-        "year": car.year,
-        "fuel_type": car.fuel_type,
-        "mileage": car.mileage,
-        "current_km": car.current_km,
-        "last_service_km": car.last_service_km,
-        "next_service_km": car.next_service_km,
-        "daily_km": car.daily_km,
-        "is_default": car.is_default,
-        "created_at": car.created_at.isoformat() if car.created_at else None,
-    }
+    return serialize_garage_car(enrich_car_for_garage(car))
 
 
 @user_bp.route("/profile")
@@ -125,14 +113,7 @@ def profile():
     cars = Car.query.filter_by(owner_id=current_user.id).all()
 
     for car in cars:
-        car.health = calculate_car_health(car)
-        car.analysis = analyze_vehicle(car)
-        car.maintenance = get_maintenance_suggestions(car)
-        car.failure_prediction = predict_component_failure(car)
-        car.timeline = generate_service_timeline(car)
-        car.driving_pattern = analyze_driving_pattern(car)
-        car.service_schedule = get_service_schedule(car)
-        car.components = get_component_health(car)
+        enrich_car_for_garage(car)
 
     local_posts = Post.query.filter_by(user_id=current_user.id).order_by(Post.id.desc()).all()
     remote_posts = _load_remote_profile_posts()

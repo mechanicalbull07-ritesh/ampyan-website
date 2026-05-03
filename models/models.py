@@ -181,6 +181,19 @@ class News(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+# ================= VIDEOS =================
+
+class Video(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    title = db.Column(db.String(200), nullable=False)
+    youtube_url = db.Column(db.String(500), nullable=False)
+    embed_url = db.Column(db.String(500), nullable=False)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+
 # =============================
 # 🔥 DIAGNOSTIC LEARNING MODEL
 # =============================
@@ -243,6 +256,8 @@ class Car(db.Model):
 
     last_service_date = db.Column(db.DateTime)
     next_service_date = db.Column(db.DateTime)
+    insurance_expiry = db.Column(db.Date)
+    pollution_expiry = db.Column(db.Date)
     
     daily_km = db.Column(db.Integer)
 

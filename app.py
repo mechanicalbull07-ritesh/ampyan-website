@@ -22,7 +22,7 @@ from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
 # ================= MODELS =================
-from models.models import db, User, Post, Comment, Vote, News, DiagnosticLearning, Car, WebsiteVisit
+from models.models import db, User, Post, Comment, Vote, News, Video, DiagnosticLearning, Car, WebsiteVisit
 print("Models loaded")
 
 # ================= SECURITY =================
@@ -57,6 +57,7 @@ from collections import defaultdict
 import re
 import threading
 from datetime import datetime, timedelta
+from urllib.parse import parse_qs, urlparse
 from authlib.integrations.flask_client import OAuth
 from routes.main_routes import main_bp
 from routes.garage_routes import garage_bp
@@ -322,26 +323,61 @@ login_manager.login_view = "auth.login"
 
 from email.header import Header
 
-        # ================= VIDEOS =================
+# ================= VIDEOS =================
 
-@app.route("/videos")
+def get_youtube_embed_url(youtube_url):
+    parsed_url = urlparse(youtube_url.strip())
+    host = parsed_url.netloc.lower().replace("www.", "")
+    path_parts = [part for part in parsed_url.path.split("/") if part]
+
+    video_id = None
+
+    if host == "youtu.be" and path_parts:
+        video_id = path_parts[0]
+    elif host in {"youtube.com", "m.youtube.com"}:
+        if parsed_url.path == "/watch":
+            video_id = parse_qs(parsed_url.query).get("v", [None])[0]
+        elif path_parts and path_parts[0] in {"shorts", "embed"} and len(path_parts) > 1:
+            video_id = path_parts[1]
+
+    if not video_id or not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
+        return None
+
+    return f"https://www.youtube.com/embed/{video_id}"
+
+@app.route("/videos", methods=["GET", "POST"])
 def videos():
+    is_admin = current_user.is_authenticated and current_user.role == "admin"
 
-    youtube_videos = [
-        "https://www.youtube.com/embed/VIDEO_ID_1",
-        "https://www.youtube.com/embed/VIDEO_ID_2",
-        "https://www.youtube.com/embed/VIDEO_ID_3"
-    ]
+    if request.method == "POST":
+        if not is_admin:
+            flash("Only admin can add videos.", "error")
+            return redirect(url_for("videos"))
 
-    instagram_posts = [
-        "https://www.instagram.com/p/POST_ID_1/embed",
-        "https://www.instagram.com/p/POST_ID_2/embed"
-    ]
+        title = request.form.get("title", "").strip()
+        youtube_url = request.form.get("youtube_url", "").strip()
+        embed_url = get_youtube_embed_url(youtube_url)
+
+        if not title or not youtube_url:
+            flash("Please enter both video title and YouTube link.", "error")
+            return redirect(url_for("videos"))
+
+        if not embed_url:
+            flash("Please enter a valid YouTube video link.", "error")
+            return redirect(url_for("videos"))
+
+        video = Video(title=title, youtube_url=youtube_url, embed_url=embed_url)
+        db.session.add(video)
+        db.session.commit()
+        flash("Video added successfully.", "success")
+        return redirect(url_for("videos"))
+
+    videos = Video.query.order_by(Video.created_at.desc()).all()
 
     return render_template(
         "videos.html",
-        youtube_videos=youtube_videos,
-        instagram_posts=instagram_posts
+        videos=videos,
+        is_admin=is_admin
     )
 
 # ================= AUTOHIVE KNOWLEDGE BASE =================
@@ -1121,6 +1157,28 @@ def ensure_user_schema():
 
     db.session.commit()
 
+
+def ensure_car_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("car"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("car")}
+    dialect = db.engine.dialect.name
+    date_type = "DATE"
+
+    column_definitions = {
+        "insurance_expiry": date_type,
+        "pollution_expiry": date_type,
+    }
+
+    for column_name, column_definition in column_definitions.items():
+        if column_name in existing_columns:
+            continue
+        db.session.execute(text(f"ALTER TABLE car ADD COLUMN {column_name} {column_definition}"))
+
+    db.session.commit()
+
 def initialize_database():
     global database_initialized
     if database_initialized:
@@ -1132,6 +1190,7 @@ def initialize_database():
 
         db.create_all()
         ensure_user_schema()
+        ensure_car_schema()
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
         changed = False

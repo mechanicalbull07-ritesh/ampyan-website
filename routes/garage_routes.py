@@ -1,19 +1,29 @@
+from datetime import datetime
+
 from flask import Blueprint, render_template, request, redirect
 from flask_login import login_required, current_user
 from models.models import db, Car, DiagnosticLearning
-from ai_engine.garage_intelligence import analyze_vehicle_health
-
-# ===== AI ENGINES =====
-from services.car_health_engine import calculate_car_health
-from services.maintenance_engine import get_maintenance_suggestions
-from services.automotive_knowledge_engine import analyze_vehicle
-from services.failure_prediction_engine import predict_component_failure
-from services.service_timeline_engine import generate_service_timeline
-from services.driving_pattern_engine import analyze_driving_pattern
-from services.service_schedule_engine import get_service_schedule
-from services.component_health_engine import get_component_health, predict_component_life
+from services.garage_summary import enrich_car_for_garage
 
 garage_bp = Blueprint("garage", __name__)
+
+
+def _safe_int(value, default=None):
+    try:
+        if value in [None, ""]:
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_date(value):
+    try:
+        if not value:
+            return None
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
 
 
 # ================= GARAGE =================
@@ -26,21 +36,7 @@ def garage():
 
     for car in cars:
 
-        car.health = calculate_car_health(car)
-        car.analysis = analyze_vehicle(car)
-        car.maintenance = get_maintenance_suggestions(car)
-        car.failure_prediction = predict_component_failure(car)
-        car.timeline = generate_service_timeline(car)
-        car.driving_pattern = analyze_driving_pattern(car)
-        car.service_schedule = get_service_schedule(car)
-        car.components = get_component_health(car)
-        car.insights = analyze_vehicle_health(car)
-
-        # AI LIFE PREDICTION
-        try:
-            car.life_prediction = predict_component_life(car)
-        except:
-            car.life_prediction = None
+        enrich_car_for_garage(car)
 
     return render_template("garage.html", cars=cars)
 
@@ -55,21 +51,7 @@ def garage_dashboard():
 
     for car in cars:
 
-        car.health = calculate_car_health(car)
-        car.analysis = analyze_vehicle(car)
-        car.maintenance = get_maintenance_suggestions(car)
-        car.failure_prediction = predict_component_failure(car)
-        car.timeline = generate_service_timeline(car)
-        car.driving_pattern = analyze_driving_pattern(car)
-        car.service_schedule = get_service_schedule(car)
-        car.components = get_component_health(car)
-        car.insights = analyze_vehicle_health(car)
-
-        # FIX FOR TEMPLATE ERROR
-        try:
-            car.life_prediction = predict_component_life(car)
-        except:
-            car.life_prediction = None
+        enrich_car_for_garage(car)
 
     diagnostics = DiagnosticLearning.query.filter_by(
         user_id=current_user.id
@@ -99,12 +81,14 @@ def add_car():
         last_service_km = request.form.get("last_service_km")
         daily_km = request.form.get("daily_km")
         current_km = request.form.get("current_km")
+        insurance_expiry = request.form.get("insurance_expiry")
+        pollution_expiry = request.form.get("pollution_expiry")
 
-        year = int(year) if year else None
-        mileage = int(mileage) if mileage else None
-        current_km = int(current_km) if current_km else 0
-        last_service_km = int(last_service_km) if last_service_km else None
-        daily_km = int(daily_km) if daily_km else None
+        year = _safe_int(year)
+        mileage = _safe_int(mileage)
+        current_km = _safe_int(current_km, 0)
+        last_service_km = _safe_int(last_service_km)
+        daily_km = _safe_int(daily_km)
 
         SERVICE_INTERVAL = 10000
         next_service_km = None
@@ -129,6 +113,8 @@ def add_car():
             last_service_km=last_service_km,
             next_service_km=next_service_km,
             daily_km=daily_km,
+            insurance_expiry=_safe_date(insurance_expiry),
+            pollution_expiry=_safe_date(pollution_expiry),
 
             is_default=True if not existing_car else False
         )
@@ -198,15 +184,25 @@ def edit_car(car_id):
         current_km = request.form.get("current_km")
         daily_km = request.form.get("daily_km")
         last_service_km = request.form.get("last_service_km")
+        year = request.form.get("year")
+        mileage = request.form.get("mileage")
 
-        car.brake_replaced_km = request.form.get("brake_replaced_km")
-        car.tyre_replaced_km = request.form.get("tyre_replaced_km")
-        car.clutch_replaced_km = request.form.get("clutch_replaced_km")
-        car.battery_replaced_year = request.form.get("battery_replaced_year")
+        car.brand = request.form.get("brand")
+        car.model = request.form.get("model")
+        car.year = _safe_int(year)
+        car.fuel_type = request.form.get("fuel")
+        car.mileage = _safe_int(mileage)
 
-        car.current_km = int(current_km) if current_km else 0
-        car.daily_km = int(daily_km) if daily_km else None
-        car.last_service_km = int(last_service_km) if last_service_km else None
+        car.brake_replaced_km = _safe_int(request.form.get("brake_replaced_km"))
+        car.tyre_replaced_km = _safe_int(request.form.get("tyre_replaced_km"))
+        car.clutch_replaced_km = _safe_int(request.form.get("clutch_replaced_km"))
+        car.battery_replaced_year = _safe_int(request.form.get("battery_replaced_year"))
+
+        car.current_km = _safe_int(current_km, 0)
+        car.daily_km = _safe_int(daily_km)
+        car.last_service_km = _safe_int(last_service_km)
+        car.insurance_expiry = _safe_date(request.form.get("insurance_expiry"))
+        car.pollution_expiry = _safe_date(request.form.get("pollution_expiry"))
 
         if car.last_service_km:
             car.next_service_km = car.last_service_km + SERVICE_INTERVAL

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="calculator-page">
+<div class="calculator-header">
+<p class="page-kicker">USED CAR VALUE</p>
+<h1 class="page-title">Car Depreciation Calculator</h1>
+<p class="page-subtitle">Estimate current value using safe depreciation logic for learning and planning.</p>
+</div>
+
+<div class="calculator-layout">
+<form method="POST" class="calculator-card">
+{% if error %}<div class="calc-error">{{ error }}</div>{% endif %}
+
+<label class="form-label">Purchase Price</label>
+<input type="number" step="1" min="0" name="purchase_price" value="{{ form_data.purchase_price }}" placeholder="Example: 900000" required class="auth-input">
+
+<label class="form-label">Vehicle Age (Years)</label>
+<input type="number" step="0.1" min="0" name="vehicle_age" value="{{ form_data.vehicle_age }}" placeholder="Example: 4" required class="auth-input">
+
+<label class="form-label">Current Odometer Optional</label>
+<input type="number" step="1" min="0" name="odometer" value="{{ form_data.odometer }}" placeholder="Example: 52000" class="auth-input">
+
+<label class="form-label">Fuel Type</label>
+<select name="fuel_type" class="auth-input">
+<option value="Petrol" {% if form_data.fuel_type == "Petrol" %}selected{% endif %}>Petrol</option>
+<option value="Diesel" {% if form_data.fuel_type == "Diesel" %}selected{% endif %}>Diesel</option>
+<option value="CNG" {% if form_data.fuel_type == "CNG" %}selected{% endif %}>CNG</option>
+<option value="Electric" {% if form_data.fuel_type == "Electric" %}selected{% endif %}>Electric</option>
+</select>
+
+<label class="form-label">Condition</label>
+<select name="condition" class="auth-input">
+<option value="excellent" {% if form_data.condition == "excellent" %}selected{% endif %}>Excellent</option>
+<option value="good" {% if form_data.condition == "good" %}selected{% endif %}>Good</option>
+<option value="average" {% if form_data.condition == "average" %}selected{% endif %}>Average</option>
+<option value="poor" {% if form_data.condition == "poor" %}selected{% endif %}>Poor</option>
+</select>
+
+<button type="submit" class="auth-button calc-submit">Estimate Value</button>
+</form>
+
+<div class="calculator-result-card">
+{% if result %}
+<p class="calc-label">Estimated Current Value</p>
+<h2>₹{{ result.current_value }}</h2>
+<div class="calc-result-grid">
+<div><span>Depreciation</span><strong>₹{{ result.depreciation_amount }}</strong></div>
+<div><span>Percentage</span><strong>{{ result.depreciation_percentage }}%</strong></div>
+</div>
+<p class="calc-muted">This is an estimated value for knowledge only. Actual market value may vary.</p>
+{% else %}
+<p class="calc-label">Ready</p>
+<h2>Estimate resale value</h2>
+<p class="calc-muted">Use age, odometer, fuel type and condition to get a safe knowledge-only estimate.</p>
+{% endif %}
+</div>
+</div>
+</section>
+
+{% endblock %}
