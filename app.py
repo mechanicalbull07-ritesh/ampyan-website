@@ -22,7 +22,7 @@ from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
 # ================= MODELS =================
-from models.models import db, User, Post, Comment, Vote, News, Video, DiagnosticLearning, HelpReport, Car, WebsiteVisit, WebsiteEvent
+from models.models import db, User, Post, Comment, Vote, News, NewsReply, Video, VideoReply, DiagnosticLearning, HelpReport, Car, WebsiteVisit, WebsiteEvent
 print("Models loaded")
 
 # ================= SECURITY =================
@@ -176,20 +176,31 @@ app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
 # ================= ALLOWED IMAGE TYPES =================
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+IMAGE_FORMATS = {
+    "jpg": "JPEG",
+    "jpeg": "JPEG",
+    "png": "PNG",
+    "webp": "WEBP",
+}
+
 def compress_image(image_path):
 
     try:
 
-        img = Image.open(image_path)
+        with Image.open(image_path) as img:
+            image_format = IMAGE_FORMATS.get(image_path.rsplit(".", 1)[-1].lower(), img.format)
+            if image_format == "JPEG":
+                img = img.convert("RGB")
+            elif image_format == "PNG" and img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGBA")
 
-        img = img.convert("RGB")
+            img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
 
-        img.save(
-            image_path,
-            format="JPEG",
-            quality=70,
-            optimize=True
-        )
+            save_options = {"optimize": True}
+            if image_format in {"JPEG", "WEBP"}:
+                save_options["quality"] = 78
+
+            img.save(image_path, format=image_format, **save_options)
 
     except Exception as e:
         app.logger.warning("Image compression failed: %s", e.__class__.__name__)
@@ -207,6 +218,29 @@ def safe_image_check(file_path):
 
     except:
         return False
+
+def save_uploaded_image(image_file, folder, prefix):
+    if not image_file or image_file.filename == "":
+        return None
+
+    original_filename = secure_filename(image_file.filename)
+    if not allowed_file(original_filename):
+        return None
+
+    extension = original_filename.rsplit(".", 1)[1].lower()
+    filename = f"{prefix}_{secrets.token_hex(8)}.{extension}"
+    upload_path = os.path.join(folder, filename)
+    image_file.save(upload_path)
+
+    if not safe_image_check(upload_path):
+        try:
+            os.remove(upload_path)
+        except OSError:
+            pass
+        return None
+
+    compress_image(upload_path)
+    return filename
 ADMIN_EMAILS = [
 "dabasdeepak676@gmail.com",
 "riteshsingh1609@gmail.com",
@@ -384,12 +418,38 @@ def videos():
         return redirect(url_for("videos"))
 
     videos = Video.query.order_by(Video.created_at.desc()).all()
+    for video in videos:
+        video.reply_threads = [reply for reply in video.replies if reply.parent_id is None]
+        video.reply_count = len(video.replies)
 
     return render_template(
         "videos.html",
         videos=videos,
         is_admin=is_admin
     )
+
+
+@app.route("/videos/<int:video_id>/reply", methods=["POST"])
+@login_required
+def add_video_reply(video_id):
+    video = Video.query.get_or_404(video_id)
+    content = (request.form.get("content") or "").strip()
+    parent_id = request.form.get("parent_id") or None
+
+    if content:
+        if parent_id and not VideoReply.query.filter_by(id=parent_id, video_id=video.id).first():
+            parent_id = None
+        db.session.add(
+            VideoReply(
+                content=content,
+                user_id=current_user.id,
+                video_id=video.id,
+                parent_id=parent_id,
+            )
+        )
+        db.session.commit()
+
+    return redirect(f"{url_for('videos')}#video-{video.id}")
 
 # ================= AUTOHIVE KNOWLEDGE BASE =================
 
@@ -1112,7 +1172,32 @@ def news_list():
 @app.route("/news/<int:news_id>")
 def news_detail(news_id):
     news = News.query.get_or_404(news_id)
+    news.reply_threads = [reply for reply in news.replies if reply.parent_id is None]
+    news.reply_count = len(news.replies)
     return render_template("news_detail.html", news=news)
+
+
+@app.route("/news/<int:news_id>/reply", methods=["POST"])
+@login_required
+def add_news_reply(news_id):
+    news = News.query.get_or_404(news_id)
+    content = (request.form.get("content") or "").strip()
+    parent_id = request.form.get("parent_id") or None
+
+    if content:
+        if parent_id and not NewsReply.query.filter_by(id=parent_id, news_id=news.id).first():
+            parent_id = None
+        db.session.add(
+            NewsReply(
+                content=content,
+                user_id=current_user.id,
+                news_id=news.id,
+                parent_id=parent_id,
+            )
+        )
+        db.session.commit()
+
+    return redirect(url_for("news_detail", news_id=news.id))
 
 
 @app.route("/admin/news/create", methods=["GET", "POST"])
@@ -1127,11 +1212,10 @@ def create_news():
         filename = None
 
         if image_file and image_file.filename != "":
-            filename = secure_filename(image_file.filename)
-
-            image_file.save(
-                os.path.join(app.config["UPLOAD_FOLDER"], filename)
-            )
+            filename = save_uploaded_image(image_file, app.config["UPLOAD_FOLDER"], "news")
+            if not filename:
+                flash("Please upload a valid PNG, JPG, JPEG or WebP image.", "error")
+                return redirect(url_for("create_news"))
 
         news = News(
             title=request.form["title"],
@@ -1167,8 +1251,10 @@ def edit_news(news_id):
         image_file = request.files.get("image")
 
         if image_file and image_file.filename != "":
-            filename = secure_filename(image_file.filename)
-            image_file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
+            filename = save_uploaded_image(image_file, app.config["UPLOAD_FOLDER"], f"news_{news.id}")
+            if not filename:
+                flash("Please upload a valid PNG, JPG, JPEG or WebP image.", "error")
+                return redirect(url_for("edit_news", news_id=news.id))
             news.image = filename
 
         db.session.commit()
@@ -1527,6 +1613,104 @@ def ensure_website_visit_schema():
 
     db.session.commit()
 
+
+def ensure_reply_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("comment"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("comment")}
+    if "parent_id" not in existing_columns:
+        db.session.execute(text("ALTER TABLE comment ADD COLUMN parent_id INTEGER"))
+
+    db.session.commit()
+
+
+def ensure_demo_community_seed():
+    demo_posts = [
+        {
+            "user": ("AmanService", "demo.aman.service@example.com", "Service Guide", 84),
+            "title": "Morning start ke time engine thoda rough idle karta hai",
+            "content": "Petrol car cold start par 30-40 second RPM fluctuate karta hai. Warm hone ke baad normal ho jata hai. Kya injector cleaning karani chahiye?",
+            "replies": [
+                ("NehaAuto", "demo.neha.auto@example.com", "Pehle throttle body aur air filter check karao. Agar sirf cold start par hai to battery voltage aur spark plugs bhi scan me dekhna useful hoga."),
+                ("RaviGarage", "demo.ravi.garage@example.com", "Injector cleaning tabhi karana jab misfire code ya fuel trim abnormal aaye. Basic scan se start karo."),
+            ],
+        },
+        {
+            "user": ("CityDriver", "demo.city.driver@example.com", "Daily Driver", 62),
+            "title": "Mileage achanak 16 se 11 kmpl ho gaya",
+            "content": "Same route aur same fuel pump hai. Tyre pressure normal lag raha hai. Service 2 mahine pehle hui thi.",
+            "replies": [
+                ("AmanService", "demo.aman.service@example.com", "Tyre pressure gauge se verify karo, air filter box properly locked hai ya nahi dekho, aur brake drag test karao."),
+                ("MechVikas", "demo.mech.vikas@example.com", "Agar AC zyada use hua ya city traffic badha hai to drop normal ho sakta hai, but OBD fuel trim check best rahega."),
+            ],
+        },
+        {
+            "user": ("HighwayRaj", "demo.highway.raj@example.com", "Road Tripper", 71),
+            "title": "Long trip se pehle kya maintenance checklist follow karu?",
+            "content": "800 km highway run plan hai. Car 48,000 km par hai aur last service ko 6 months ho gaye.",
+            "replies": [
+                ("NehaAuto", "demo.neha.auto@example.com", "Engine oil level, coolant, brake fluid, spare tyre, jack, wiper blades aur all lights check karo."),
+                ("RaviGarage", "demo.ravi.garage@example.com", "48k par brake pads aur tyres ka visual inspection zaroor karao. Wheel alignment bhi highway trip se pehle helpful hota hai."),
+            ],
+        },
+    ]
+
+    created_users = {}
+    for post_data in demo_posts:
+        people = [post_data["user"]] + [(name, email, "Helpful Member", 50) for name, email, _ in post_data["replies"]]
+        for username, email, badge, reputation in people:
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                user = User(
+                    username=build_unique_username(username),
+                    email=email,
+                    password=generate_password_hash(secrets.token_urlsafe(16)),
+                    role="user",
+                    email_verified=True,
+                    badge=badge,
+                    reputation=reputation,
+                    posts_count=0,
+                )
+                db.session.add(user)
+                db.session.flush()
+            created_users[email] = user
+
+    for post_data in demo_posts:
+        _, author_email, _, _ = post_data["user"]
+        existing_post = Post.query.filter_by(title=post_data["title"]).first()
+        if existing_post:
+            continue
+
+        author = created_users[author_email]
+        post = Post(title=post_data["title"], content=post_data["content"], user_id=author.id)
+        db.session.add(post)
+        db.session.flush()
+
+        parent_comment = None
+        for index, reply_data in enumerate(post_data["replies"]):
+            _, reply_email, content = reply_data
+            comment = Comment(
+                content=content,
+                user_id=created_users[reply_email].id,
+                post_id=post.id,
+                parent_id=parent_comment.id if index == 1 and parent_comment else None,
+            )
+            db.session.add(comment)
+            db.session.flush()
+            if parent_comment is None:
+                parent_comment = comment
+
+    for user in created_users.values():
+        posts_count = Post.query.filter_by(user_id=user.id).count()
+        comments_count = Comment.query.filter_by(user_id=user.id).count()
+        user.posts_count = posts_count
+        user.reputation = max(user.reputation or 0, (posts_count * 5) + (comments_count * 2))
+
+    db.session.commit()
+
+
 def initialize_database():
     global database_initialized
     if database_initialized:
@@ -1540,6 +1724,8 @@ def initialize_database():
         ensure_user_schema()
         ensure_car_schema()
         ensure_website_visit_schema()
+        ensure_reply_schema()
+        ensure_demo_community_seed()
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
         changed = False

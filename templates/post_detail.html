@@ -1,5 +1,34 @@
 {% extends "base.html" %}
 {% block content %}
+{% macro render_comment(comment, post) %}
+<div class="simple-list-card reply-card {% if comment.parent_id %}nested-reply{% endif %}">
+<p class="body-copy-lg" style="margin-top:0;">{{ comment.content }}</p>
+<div class="post-actions">
+<small class="page-subtitle" style="margin:0;">{{ comment.author_name }}</small>
+
+{% if comment.can_edit %}
+<div class="ui-button-row">
+<a href="{{ comment.edit_url }}" class="ui-button-secondary">Edit</a>
+<form method="POST" action="{{ comment.delete_url }}" class="inline-form">
+<button type="submit" class="ui-button-danger" onclick="return confirm('Delete this reply?')">Delete</button>
+</form>
+</div>
+{% endif %}
+</div>
+
+{% if current_user.is_authenticated and not post.is_remote %}
+<form method="POST" action="{{ post.reply_url }}" class="inline-reply-form">
+<input type="hidden" name="parent_id" value="{{ comment.id }}">
+<textarea name="content" placeholder="Reply to {{ comment.author_name }}..." required class="profile-input"></textarea>
+<button type="submit" class="ui-button-secondary">Reply</button>
+</form>
+{% endif %}
+
+{% for child in comment.replies|sort(attribute='id') %}
+{{ render_comment(child, post) }}
+{% endfor %}
+</div>
+{% endmacro %}
 
 <section class="page-shell">
 
@@ -46,24 +75,10 @@
 <div class="ui-card narrow-card">
 <h2 class="section-heading">Replies ({{ post.reply_count }})</h2>
 
-{% if post.comments %}
+{% if post.reply_threads %}
 <div class="ui-grid">
-{% for comment in post.comments %}
-<div class="simple-list-card">
-<p class="body-copy-lg" style="margin-top:0;">{{ comment.content }}</p>
-<div class="post-actions">
-<small class="page-subtitle" style="margin:0;">{{ comment.author_name }}</small>
-
-{% if comment.can_edit %}
-<div class="ui-button-row">
-<a href="{{ comment.edit_url }}" class="ui-button-secondary">Edit</a>
-<form method="POST" action="{{ comment.delete_url }}" class="inline-form">
-<button type="submit" class="ui-button-danger" onclick="return confirm('Delete this reply?')">Delete</button>
-</form>
-</div>
-{% endif %}
-</div>
-</div>
+{% for comment in post.reply_threads %}
+{{ render_comment(comment, post) }}
 {% endfor %}
 </div>
 {% else %}

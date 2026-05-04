@@ -1,5 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
+{% macro render_video_reply(reply, video) %}
+<div class="simple-list-card reply-card {% if reply.parent_id %}nested-reply{% endif %}">
+<p class="body-copy-lg" style="margin-top:0;">{{ reply.content }}</p>
+<small class="page-subtitle" style="margin:0;">{{ reply.user.username }} • {{ reply.created_at.strftime('%d %b %Y') }}</small>
+
+{% if current_user.is_authenticated %}
+<form method="POST" action="{{ url_for('add_video_reply', video_id=video.id) }}" class="inline-reply-form">
+<input type="hidden" name="parent_id" value="{{ reply.id }}">
+<textarea name="content" placeholder="Reply to {{ reply.user.username }}..." required class="profile-input"></textarea>
+<button type="submit" class="ui-button-secondary">Reply</button>
+</form>
+{% endif %}
+
+{% for child in reply.replies|sort(attribute='id') %}
+{{ render_video_reply(child, video) }}
+{% endfor %}
+</div>
+{% endmacro %}
 
 <section class="page-shell">
 <div class="page-header">
@@ -41,14 +59,31 @@
 {% if videos %}
 <div class="video-grid">
 {% for video in videos %}
-<div class="video-card">
+<div class="video-card" id="video-{{ video.id }}">
 <iframe class="video-frame"
 src="{{ video.embed_url }}"
 title="{{ video.title }}"
 allowfullscreen>
 </iframe>
 <h3>{{ video.title }}</h3>
-<p>AMPYAN YouTube video</p>
+<p>{{ video.reply_count }} replies</p>
+
+{% if video.reply_threads %}
+<div class="video-reply-stack">
+{% for reply in video.reply_threads %}
+{{ render_video_reply(reply, video) }}
+{% endfor %}
+</div>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+<form method="POST" action="{{ url_for('add_video_reply', video_id=video.id) }}" class="inline-reply-form">
+<textarea name="content" placeholder="Write your reply..." required class="profile-input"></textarea>
+<button type="submit" class="auth-button">Post Reply</button>
+</form>
+{% else %}
+<p>Please <a href="{{ url_for('auth.login') }}" style="color:#ff3b3b;">login</a> to reply.</p>
+{% endif %}
 </div>
 {% endfor %}
 </div>

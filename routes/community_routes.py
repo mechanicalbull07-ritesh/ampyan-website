@@ -98,7 +98,11 @@ def _decorate_local_post(post):
     post.author_avatar_url = _author_avatar_url(getattr(post.author, "profile_photo", None))
     post.author_avatar_letter = (post.author.username[:1] or "U").upper()
     post.preview_text = post.content[:180] + ("..." if len(post.content) > 180 else "")
-    sorted_comments = sorted(post.comments, key=lambda item: item.id, reverse=True)
+    sorted_comments = sorted(
+        [comment for comment in post.comments if comment.parent_id is None],
+        key=lambda item: item.id,
+        reverse=True,
+    )
     post.top_comments = [_decorate_local_comment(comment) for comment in sorted_comments[:2]]
     post.can_edit = bool(
         current_user.is_authenticated
@@ -106,6 +110,7 @@ def _decorate_local_post(post):
     )
     post.can_vote = True
     post.comments = [_decorate_local_comment(comment) for comment in post.comments]
+    post.reply_threads = [comment for comment in post.comments if comment.parent_id is None]
     return post
 
 
@@ -129,6 +134,7 @@ def _build_remote_comment(reply):
         can_edit=False,
         edit_url=None,
         delete_url=None,
+        replies=[],
         user=SimpleNamespace(username=author_name),
     )
 
@@ -157,6 +163,7 @@ def _build_remote_post(post):
         vote_count=0,
         reply_count=len(replies),
         comments=replies,
+        reply_threads=replies,
         top_comments=replies[:2],
         can_edit=False,
         can_vote=False,
@@ -449,8 +456,11 @@ def delete_post(post_id):
 @login_required
 def add_comment(post_id):
     content = (request.form.get("content") or "").strip()
+    parent_id = request.form.get("parent_id") or None
     if content:
-        new_comment = Comment(content=content, user_id=current_user.id, post_id=post_id)
+        if parent_id and not Comment.query.filter_by(id=parent_id, post_id=post_id).first():
+            parent_id = None
+        new_comment = Comment(content=content, user_id=current_user.id, post_id=post_id, parent_id=parent_id)
         db.session.add(new_comment)
         db.session.flush()
         _sync_user_profile(current_user)

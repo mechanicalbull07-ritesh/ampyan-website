@@ -162,9 +162,17 @@ class Comment(db.Model):
 
     post_id = db.Column(db.Integer, db.ForeignKey("post.id"), nullable=False)
 
+    parent_id = db.Column(db.Integer, db.ForeignKey("comment.id"), nullable=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship("User", backref="comments")
+    replies = db.relationship(
+        "Comment",
+        backref=db.backref("parent", remote_side=[id]),
+        cascade="all, delete",
+        lazy=True,
+    )
 
 
 # ================= NEWS =================
@@ -180,6 +188,34 @@ class News(db.Model):
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
+    replies = db.relationship(
+        "NewsReply",
+        backref="news",
+        cascade="all, delete",
+        lazy=True,
+    )
+
+
+class NewsReply(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    content = db.Column(db.Text, nullable=False)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    news_id = db.Column(db.Integer, db.ForeignKey("news.id"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("news_reply.id"), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="news_replies")
+    replies = db.relationship(
+        "NewsReply",
+        backref=db.backref("parent", remote_side=[id]),
+        cascade="all, delete",
+        lazy=True,
+    )
+
 
 # ================= VIDEOS =================
 
@@ -192,6 +228,34 @@ class Video(db.Model):
     embed_url = db.Column(db.String(500), nullable=False)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    replies = db.relationship(
+        "VideoReply",
+        backref="video",
+        cascade="all, delete",
+        lazy=True,
+    )
+
+
+class VideoReply(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    content = db.Column(db.Text, nullable=False)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    video_id = db.Column(db.Integer, db.ForeignKey("video.id"), nullable=False)
+    parent_id = db.Column(db.Integer, db.ForeignKey("video_reply.id"), nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship("User", backref="video_replies")
+    replies = db.relationship(
+        "VideoReply",
+        backref=db.backref("parent", remote_side=[id]),
+        cascade="all, delete",
+        lazy=True,
+    )
 
 
 # =============================

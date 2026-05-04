@@ -1,5 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
+{% macro render_news_reply(reply, news) %}
+<div class="simple-list-card reply-card {% if reply.parent_id %}nested-reply{% endif %}">
+<p class="body-copy-lg" style="margin-top:0;">{{ reply.content }}</p>
+<small class="page-subtitle" style="margin:0;">{{ reply.user.username }} • {{ reply.created_at.strftime('%d %b %Y') }}</small>
+
+{% if current_user.is_authenticated %}
+<form method="POST" action="{{ url_for('add_news_reply', news_id=news.id) }}" class="inline-reply-form">
+<input type="hidden" name="parent_id" value="{{ reply.id }}">
+<textarea name="content" placeholder="Reply to {{ reply.user.username }}..." required class="profile-input"></textarea>
+<button type="submit" class="ui-button-secondary">Reply</button>
+</form>
+{% endif %}
+
+{% for child in reply.replies|sort(attribute='id') %}
+{{ render_news_reply(child, news) }}
+{% endfor %}
+</div>
+{% endmacro %}
 
 <section class="page-shell">
 <div class="ui-card narrow-card">
@@ -14,6 +32,31 @@
 <div class="body-copy-lg">
 {{ news.content }}
 </div>
+</div>
+
+<div class="ui-card narrow-card">
+<h2 class="section-heading">Replies ({{ news.reply_count }})</h2>
+
+{% if news.reply_threads %}
+<div class="ui-grid">
+{% for reply in news.reply_threads %}
+{{ render_news_reply(reply, news) }}
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No replies yet.</div>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+<div class="comment-form">
+<form method="POST" action="{{ url_for('add_news_reply', news_id=news.id) }}">
+<textarea name="content" placeholder="Write your reply..." required class="profile-input" style="min-height:120px;resize:vertical;"></textarea>
+<button type="submit" class="auth-button">Post Reply</button>
+</form>
+</div>
+{% else %}
+<p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" style="color:#ff3b3b;">login</a> to reply.</p>
+{% endif %}
 </div>
 </section>
 
