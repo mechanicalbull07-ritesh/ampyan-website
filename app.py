@@ -1627,6 +1627,21 @@ def ensure_reply_schema():
 
 
 def ensure_demo_community_seed():
+    demo_authors = [
+        ("AmanService", "demo.aman.service@example.com", "Service Guide", 84),
+        ("CityDriver", "demo.city.driver@example.com", "Daily Driver", 62),
+        ("HighwayRaj", "demo.highway.raj@example.com", "Road Tripper", 71),
+        ("NehaAuto", "demo.neha.auto@example.com", "Helpful Member", 58),
+        ("RaviGarage", "demo.ravi.garage@example.com", "Garage Expert", 92),
+        ("MechVikas", "demo.mech.vikas@example.com", "Helpful Member", 56),
+        ("MileageManoj", "demo.mileage.manoj@example.com", "Mileage Tracker", 64),
+        ("BatteryBhai", "demo.battery.bhai@example.com", "Electrical Helper", 67),
+        ("TyreTalks", "demo.tyre.talks@example.com", "Tyre Advisor", 59),
+        ("FamilyCarNisha", "demo.family.nisha@example.com", "Family Driver", 61),
+        ("DieselDev", "demo.diesel.dev@example.com", "Diesel Owner", 69),
+        ("EVKaran", "demo.ev.karan@example.com", "EV Learner", 53),
+    ]
+
     demo_posts = [
         {
             "user": ("AmanService", "demo.aman.service@example.com", "Service Guide", 84),
@@ -1657,10 +1672,52 @@ def ensure_demo_community_seed():
         },
     ]
 
+    topics = [
+        ("engine", "Engine light blink kar rahi hai aur pickup low lag raha hai", "Check engine light kabhi kabhi blink karti hai. Acceleration par car heavy feel hoti hai. Pehle scanner lagwana chahiye ya service center jana chahiye?"),
+        ("mileage", "City mileage suddenly drop ho gaya", "Same route par mileage kam aa raha hai. Fuel pump same hai aur tyre pressure normal hai. Common checks kya honge?"),
+        ("battery", "Battery morning me weak feel hoti hai", "Self start slow ho gaya hai, din me car normal start hoti hai. Battery test karwana better hai ya alternator check?"),
+        ("brake", "Brake dabane par halka vibration aa raha hai", "High speed braking par steering me vibration feel hota hai. Disc skimming, pad replacement ya wheel balancing me se kya pehle check karu?"),
+        ("tyre", "Tyre wear one side zyada ho raha hai", "Front tyre ka inner side zyada ghis raha hai. Alignment regular karata hu phir bhi issue repeat hota hai."),
+        ("ac", "AC cooling traffic me weak ho jati hai", "Highway par AC thik hai but traffic me cooling low ho jati hai. Fan, gas ya condenser cleaning kya check karna chahiye?"),
+        ("service", "Service bill me extra items add ho rahe hain", "Workshop throttle body cleaning, injector cleaning aur AC disinfectant add kar raha hai. Kaun se items avoid kar sakta hu?"),
+        ("suspension", "Bad road par khatak sound aa raha hai", "Left side se khatak khatak sound aata hai. Speed breaker par zyada clear hota hai. Link rod ya shocker issue ho sakta hai?"),
+        ("clutch", "Clutch pedal heavy ho gaya hai", "Traffic me clutch heavy lagta hai aur gear shift bhi thoda hard hai. Cable, hydraulic ya clutch plate ka sign hai?"),
+        ("buying", "Daily city use ke liye used car advice chahiye", "Budget limited hai aur daily 35 km city run hai. Petrol automatic lena sahi rahega ya CNG manual?"),
+    ]
+
+    reply_bank = [
+        "Basic scan se start karo. Error code milne ke baad unnecessary part replacement avoid ho jayega.",
+        "Pehle simple checks karo: fluid level, tyre pressure, battery voltage aur recent service history.",
+        "Agar issue safety related hai to long drive avoid karo aur trusted mechanic se inspection karao.",
+        "Same symptom ke multiple reasons ho sakte hain. Video ya exact condition mention karoge to diagnosis better hoga.",
+        "Workshop se old parts wapas maango aur estimate written me lo. Isse extra billing control hoti hai.",
+        "Agar warning light aa rahi hai to OBD scan ka screenshot community me share karo.",
+    ]
+
+    while len(demo_posts) < 100:
+        index = len(demo_posts)
+        topic, title, content = topics[index % len(topics)]
+        author = demo_authors[index % len(demo_authors)]
+        responder_one = demo_authors[(index + 3) % len(demo_authors)]
+        responder_two = demo_authors[(index + 5) % len(demo_authors)]
+        demo_posts.append(
+            {
+                "user": author,
+                "title": f"{title} #{index + 1}",
+                "content": f"{content} Context: {topic} issue, car daily use me hai aur owner practical advice chahta hai.",
+                "replies": [
+                    (responder_one[0], responder_one[1], reply_bank[index % len(reply_bank)]),
+                    (responder_two[0], responder_two[1], reply_bank[(index + 2) % len(reply_bank)]),
+                ],
+            }
+        )
+
     created_users = {}
     for post_data in demo_posts:
         people = [post_data["user"]] + [(name, email, "Helpful Member", 50) for name, email, _ in post_data["replies"]]
         for username, email, badge, reputation in people:
+            if email in created_users:
+                continue
             user = User.query.filter_by(email=email).first()
             if not user:
                 user = User(

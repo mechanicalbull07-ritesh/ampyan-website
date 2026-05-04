@@ -9,17 +9,32 @@ from ai_engine.diagnostic_engine import diagnose_vehicle
 ai_bp = Blueprint("ai", __name__)
 
 
+def local_ai_fallback(message):
+    text = (message or "").lower()
+    if any(word in text for word in ["battery", "start", "starting", "self"]):
+        return "AMPYAN local AI: Battery voltage, terminal corrosion, starter motor and alternator charging should be checked first. If the car starts slow only in the morning, begin with a battery load test."
+    if any(word in text for word in ["brake", "vibration", "disc", "pad"]):
+        return "AMPYAN local AI: Brake vibration usually needs brake disc runout check, pad condition check and wheel balancing inspection. Avoid high-speed driving until brakes are inspected."
+    if any(word in text for word in ["mileage", "fuel", "average"]):
+        return "AMPYAN local AI: Mileage drop commonly comes from tyre pressure, clogged air filter, brake drag, old spark plugs, traffic change or fuel quality. Start with tyre pressure and OBD fuel-trim scan."
+    if any(word in text for word in ["ac", "cooling", "compressor"]):
+        return "AMPYAN local AI: Weak AC cooling can come from low refrigerant, condenser dust, radiator fan weakness or cabin filter blockage. In traffic, fan and condenser airflow are important checks."
+    if any(word in text for word in ["engine", "noise", "pickup", "power"]):
+        return "AMPYAN local AI: Engine power/noise issues need OBD scan, engine oil level check, air filter check and misfire/fuel pressure inspection. Share warning lights or when it happens for a sharper answer."
+    return "AMPYAN local AI: Please mention the symptom, when it happens, car fuel type, warning lights and recent service history. I can guide likely checks from AMPYAN's local automotive knowledge."
+
+
 # ================= AI ROUTE =================
 
 @ai_bp.route("/ask-ai", methods=["POST"])
 def ask_ai():
 
-    data = request.get_json()
+    data = request.get_json(silent=True) or request.form
 
     if not data:
         return jsonify({"reply": "Invalid request."})
 
-    user_message = data.get("message")
+    user_message = (data.get("message") or data.get("problem") or data.get("q") or "").strip()
 
     if not user_message:
         return jsonify({"reply": "Please explain your issue clearly."})
@@ -47,9 +62,7 @@ def ask_ai():
         db.session.commit()
 
     if not top_results:
-        return jsonify({
-            "reply": "AMPYAN local AI needs a little more detail. Please mention the symptom, when it happens, and any warning light or sound."
-        })
+        return jsonify({"reply": local_ai_fallback(user_message)})
 
     lines = ["AMPYAN local AI diagnosis:"]
     for index, result in enumerate(top_results, start=1):

@@ -360,6 +360,53 @@ const box=document.getElementById("aiBox");
 box.classList.toggle("show-ai");
 }
 
+function appendAIMessage(text, className){
+const messages=document.getElementById("aiMessages");
+if(!messages) return;
+const bubble=document.createElement("div");
+bubble.className=className;
+bubble.textContent=text;
+messages.appendChild(bubble);
+messages.scrollTop=messages.scrollHeight;
+}
+
+async function sendAI(){
+const input=document.getElementById("aiInput");
+if(!input) return;
+const message=input.value.trim();
+if(!message) return;
+
+appendAIMessage(message,"ai-user-message");
+input.value="";
+appendAIMessage("Thinking...","ai-message");
+
+const messages=document.getElementById("aiMessages");
+const loading=messages ? messages.lastElementChild : null;
+
+try{
+const response=await fetch("/ask-ai",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({message:message})
+});
+const data=await response.json();
+if(loading) loading.textContent=data.reply || "AMPYAN AI could not answer right now.";
+}catch(error){
+if(loading) loading.textContent="AMPYAN AI connection failed. Please try again.";
+}
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+const input=document.getElementById("aiInput");
+if(!input) return;
+input.addEventListener("keydown",function(event){
+if(event.key==="Enter"){
+event.preventDefault();
+sendAI();
+}
+});
+});
+
 function toggleUserMenu(){
 
 const menu=document.getElementById("userMenu");
