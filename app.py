@@ -1901,6 +1901,9 @@ def initialize_database():
 
 @app.before_request
 def ensure_database_ready():
+    if request.endpoint in {"healthz", "version"} or request.path in {"/healthz", "/version"}:
+        return
+
     try:
         initialize_database()
     except Exception as e:
