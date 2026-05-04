@@ -1956,6 +1956,6 @@ if __name__ == "__main__":
 
     port = int(os.environ.get("PORT", 10000))
 
-    print("Starting Motrnoix AMPYAN server on port:", port)
+    print(f"Starting Motrnoix AMPYAN server on 0.0.0.0:{port}", flush=True)
 
     app.run(host="0.0.0.0", port=port)
