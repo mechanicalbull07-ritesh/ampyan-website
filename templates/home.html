@@ -8,6 +8,65 @@
 </a>
 {%- endmacro %}
 
+<section class="ampyan-command-hero">
+<div class="ampyan-hero-bg"></div>
+<div class="ampyan-hero-shell">
+<div class="ampyan-hero-copy">
+<div class="ampyan-live-row">
+<span>AMPYAN Live</span>
+<span>{{ ecosystem_stats.owners }} owners</span>
+<span>{{ ecosystem_stats.mechanics }} garages</span>
+</div>
+
+<h1>Know the problem. Find the fix. Join the car community.</h1>
+<p>AI diagnosis, smart garage tracking, repair cost tools, local garage discovery and real owner discussions in one automotive platform.</p>
+
+<form action="/tools/ai-diagnosis" method="POST" class="ampyan-hero-search">
+<i class="fa-solid fa-car-burst"></i>
+<input type="text" id="problem-input" name="problem" placeholder="Type your car problem, example: engine vibration..." autocomplete="off" required>
+<button type="submit">Diagnose</button>
+</form>
+<div id="suggestions-box"></div>
+
+<div class="ampyan-hero-actions">
+<a href="/tools/ai-diagnosis" class="ampyan-primary-action"><i class="fa-solid fa-wand-magic-sparkles"></i> Start AI Diagnosis</a>
+<a href="/community" class="ampyan-secondary-action"><i class="fa-solid fa-comments"></i> Ask Community</a>
+<a href="/garage-dashboard" class="ampyan-secondary-action"><i class="fa-solid fa-car-side"></i> Open Garage</a>
+</div>
+</div>
+
+<div class="ampyan-hero-console">
+<div class="console-top">
+<span>Ownership Command Center</span>
+<strong>Today</strong>
+</div>
+<div class="console-diagnosis">
+<i class="fa-solid fa-microchip"></i>
+<div>
+<span>AI Diagnosis</span>
+<strong>Symptoms to likely causes</strong>
+</div>
+</div>
+<div class="console-grid">
+<a href="/tools/maintenance-cost"><span>Repair Cost</span><strong>Estimate</strong></a>
+<a href="/tools/car-suggestion"><span>Next Car</span><strong>Match</strong></a>
+<a href="/garage-network"><span>Garages</span><strong>Find</strong></a>
+<a href="/videos"><span>Videos</span><strong>Learn</strong></a>
+</div>
+<div class="console-community">
+<span>Community Pulse</span>
+{% if recent_posts %}
+<strong>{{ recent_posts[0].title }}</strong>
+<small>{{ recent_posts[0].content[:92] }}{% if recent_posts[0].content|length > 92 %}...{% endif %}</small>
+{% else %}
+<strong>Ask your first ownership question</strong>
+<small>Real owners and experts can help with practical checks.</small>
+{% endif %}
+</div>
+</div>
+</div>
+</section>
+
 <section class="feature-nav-section">
 <div class="feature-nav-head">
 <p class="page-kicker">EXPLORE AMPYAN</p>
@@ -142,73 +201,6 @@
 {% else %}
 <p class="home-empty-note">No recent activity yet.</p>
 {% endif %}
-</div>
-</div>
-</section>
-
-<section class="hero hero-no-image">
-<div class="hero-container hero-container-wide">
-<div class="hero-left">
-<div class="hero-brand-line">
-<span class="hero-pill">AMPYAN</span>
-<span class="hero-pill muted">AI Diagnosis</span>
-<span class="hero-pill muted">Smart Garage</span>
-</div>
-
-<h1 class="hero-copy-title">AI Powered Car Diagnosis & Smart Garage for Every Driver</h1>
-<p class="hero-desc">Know your car problems, estimate repair cost, track your garage, and connect with real users & experts.</p>
-
-<form action="/tools/ai-diagnosis" method="POST" class="hero-search">
-<input
-type="text"
-id="problem-input"
-name="problem"
-placeholder="Describe your car problem..."
-autocomplete="off"
-required
->
-
-<div id="suggestions-box"></div>
-
-<button type="submit">Diagnose</button>
-</form>
-
-<div class="cta-group launch-cta-group">
-<a href="/tools/ai-diagnosis" class="premium-btn">Start Diagnosis</a>
-<a href="/community" class="outline-btn">Join Community</a>
-</div>
-
-<div class="hero-links">
-<a href="/garage-dashboard">My Garage</a>
-<a href="/community">Community</a>
-<a href="/tools/car-suggestion">Car Suggestion Tool</a>
-<a href="/garage-network">Garage Network</a>
-</div>
-</div>
-
-<div class="hero-right hero-right-panel">
-<div class="hero-visual-card hero-text-panel">
-<p class="hero-guide-label">Smart Ownership Flow</p>
-<div class="hero-side-guide">
-<div class="hero-guide-step">
-<strong>1. Describe the symptom</strong>
-<span>Share what you hear, feel or see before a workshop visit.</span>
-</div>
-<div class="hero-guide-step">
-<strong>2. Review likely causes</strong>
-<span>Get clearer issue direction with repair cost context and next steps.</span>
-</div>
-<div class="hero-guide-step">
-<strong>3. Track your garage</strong>
-<span>Keep vehicles, service history, reminders and trusted support connected.</span>
-</div>
-<div class="hero-highlight-strip">
-<div><span>{{ ecosystem_stats.owners }}</span><small>Owners</small></div>
-<div><span>{{ ecosystem_stats.mechanics }}</span><small>Garages</small></div>
-<div><span>{{ ecosystem_stats.car_profiles }}</span><small>Car Profiles</small></div>
-</div>
-</div>
-</div>
 </div>
 </div>
 </section>
