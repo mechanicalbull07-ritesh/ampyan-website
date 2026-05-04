@@ -8,8 +8,39 @@
 </a>
 {%- endmacro %}
 
+<section class="feature-nav-section feature-nav-section-top">
+<div class="feature-nav-head">
+<p class="page-kicker">EXPLORE AMPYAN</p>
+</div>
+
+<div class="feature-nav-grid" aria-label="Explore AMPYAN features">
+<div class="feature-nav-track">
+{% for repeat in range(2) %}
+<div class="feature-nav-group" {% if repeat == 1 %}aria-hidden="true"{% endif %}>
+{{ feature_card("/tools/ai-diagnosis", "feature-red", "fa-solid fa-car-burst", "Vehicle Check", "Find likely car issues") }}
+{{ feature_card("/garage-dashboard", "feature-blue", "fa-solid fa-car-side", "My Garage", "Health, service, records") }}
+{{ feature_card("/tools/fuel-cost", "feature-green", "fa-solid fa-gas-pump", "Fuel Cost", "Trip and monthly spend") }}
+{{ feature_card("/tools/emi-calculator", "feature-blue", "fa-solid fa-file-invoice-dollar", "EMI Calculator", "Loan EMI and interest") }}
+{{ feature_card("/tools/depreciation-calculator", "feature-yellow", "fa-solid fa-chart-line", "Depreciation", "Estimate used-car value") }}
+{{ feature_card("/tools/maintenance-cost", "feature-orange", "fa-solid fa-screwdriver-wrench", "Cost Estimator", "Service budget range") }}
+{{ feature_card("/tools/car-suggestion", "feature-purple", "fa-solid fa-route", "Car Suggestion", "Match car to usage") }}
+{{ feature_card("/garage-network", "feature-green", "fa-solid fa-shop", "Garage Network", "Find local workshops") }}
+{{ feature_card("/community", "feature-blue", "fa-solid fa-people-group", "Community", "Ask owners and experts") }}
+{{ feature_card("/tools", "feature-orange", "fa-solid fa-toolbox", "Tools", "All ownership utilities") }}
+{{ feature_card("/platform", "feature-purple", "fa-solid fa-compass", "Explore", "AMPYAN platform map") }}
+{{ feature_card("/garage-dashboard", "feature-yellow", "fa-solid fa-calendar-check", "Maintenance", "Service reminders") }}
+{{ feature_card("/news", "feature-red", "fa-solid fa-newspaper", "News", "Automotive updates") }}
+{{ feature_card("/videos", "feature-red", "fa-brands fa-youtube", "Videos", "Watch explainers") }}
+{{ feature_card("/leaderboard", "feature-yellow", "fa-solid fa-trophy", "Leaderboard", "Top contributors") }}
+{{ feature_card("/profile", "feature-blue", "fa-solid fa-user-gear", "Profile", "Manage account") }}
+{{ feature_card("/help", "feature-green", "fa-solid fa-headset", "Help", "Report issue") }}
+</div>
+{% endfor %}
+</div>
+</div>
+</section>
+
 <section class="ampyan-command-hero">
-<div class="ampyan-hero-bg"></div>
 <div class="ampyan-hero-shell">
 <div class="ampyan-hero-copy">
 <div class="ampyan-live-row">
@@ -18,8 +49,9 @@
 <span>{{ ecosystem_stats.mechanics }} garages</span>
 </div>
 
-<h1>Know the problem. Find the fix. Join the car community.</h1>
-<p>AI diagnosis, smart garage tracking, repair cost tools, local garage discovery and real owner discussions in one automotive platform.</p>
+<p class="ampyan-hero-kicker">India's First</p>
+<h1>Automotive Intelligence Ecosystem</h1>
+<p>Vehicle intelligence checks, smart garage tracking, repair cost tools, local garage discovery and real owner discussions in one automotive platform.</p>
 
 <form action="/tools/ai-diagnosis" method="POST" class="ampyan-hero-search">
 <i class="fa-solid fa-car-burst"></i>
@@ -29,7 +61,7 @@
 <div id="suggestions-box"></div>
 
 <div class="ampyan-hero-actions">
-<a href="/tools/ai-diagnosis" class="ampyan-primary-action"><i class="fa-solid fa-wand-magic-sparkles"></i> Start AI Diagnosis</a>
+<a href="/tools/ai-diagnosis" class="ampyan-primary-action"><i class="fa-solid fa-wand-magic-sparkles"></i> Start Vehicle Check</a>
 <a href="/community" class="ampyan-secondary-action"><i class="fa-solid fa-comments"></i> Ask Community</a>
 <a href="/garage-dashboard" class="ampyan-secondary-action"><i class="fa-solid fa-car-side"></i> Open Garage</a>
 </div>
@@ -43,7 +75,7 @@
 <div class="console-diagnosis">
 <i class="fa-solid fa-microchip"></i>
 <div>
-<span>AI Diagnosis</span>
+<span>Vehicle Intelligence Check</span>
 <strong>Symptoms to likely causes</strong>
 </div>
 </div>
@@ -63,38 +95,6 @@
 <small>Real owners and experts can help with practical checks.</small>
 {% endif %}
 </div>
-</div>
-</div>
-</section>
-
-<section class="feature-nav-section">
-<div class="feature-nav-head">
-<p class="page-kicker">EXPLORE AMPYAN</p>
-</div>
-
-<div class="feature-nav-grid" aria-label="Explore AMPYAN features">
-<div class="feature-nav-track">
-{% for repeat in range(2) %}
-<div class="feature-nav-group" {% if repeat == 1 %}aria-hidden="true"{% endif %}>
-{{ feature_card("/tools/ai-diagnosis", "feature-red", "fa-solid fa-car-burst", "AI Diagnosis", "Find likely car issues") }}
-{{ feature_card("/garage-dashboard", "feature-blue", "fa-solid fa-car-side", "My Garage", "Health, service, records") }}
-{{ feature_card("/tools/fuel-cost", "feature-green", "fa-solid fa-gas-pump", "Fuel Cost", "Trip and monthly spend") }}
-{{ feature_card("/tools/emi-calculator", "feature-blue", "fa-solid fa-file-invoice-dollar", "EMI Calculator", "Loan EMI and interest") }}
-{{ feature_card("/tools/depreciation-calculator", "feature-yellow", "fa-solid fa-chart-line", "Depreciation", "Estimate used-car value") }}
-{{ feature_card("/tools/maintenance-cost", "feature-orange", "fa-solid fa-screwdriver-wrench", "Cost Estimator", "Service budget range") }}
-{{ feature_card("/tools/car-suggestion", "feature-purple", "fa-solid fa-route", "Car Suggestion", "Match car to usage") }}
-{{ feature_card("/garage-network", "feature-green", "fa-solid fa-shop", "Garage Network", "Find local workshops") }}
-{{ feature_card("/community", "feature-blue", "fa-solid fa-people-group", "Community", "Ask owners and experts") }}
-{{ feature_card("/tools", "feature-orange", "fa-solid fa-toolbox", "Tools", "All ownership utilities") }}
-{{ feature_card("/platform", "feature-purple", "fa-solid fa-compass", "Explore", "AMPYAN platform map") }}
-{{ feature_card("/garage-dashboard", "feature-yellow", "fa-solid fa-calendar-check", "Maintenance", "Service reminders") }}
-{{ feature_card("/news", "feature-red", "fa-solid fa-newspaper", "News", "Automotive updates") }}
-{{ feature_card("/videos", "feature-red", "fa-brands fa-youtube", "Videos", "Watch explainers") }}
-{{ feature_card("/leaderboard", "feature-yellow", "fa-solid fa-trophy", "Leaderboard", "Top contributors") }}
-{{ feature_card("/profile", "feature-blue", "fa-solid fa-user-gear", "Profile", "Manage account") }}
-{{ feature_card("/help", "feature-green", "fa-solid fa-headset", "Help", "Report issue") }}
-</div>
-{% endfor %}
 </div>
 </div>
 </section>
@@ -215,7 +215,7 @@
 <div class="launch-card-grid">
 <div class="launch-card">
 <i class="fa-solid fa-microchip"></i>
-<h3>AI Car Diagnosis</h3>
+<h3>Vehicle Intelligence Check</h3>
 <p>Describe symptoms and get structured guidance on likely issues before you make repair decisions.</p>
 </div>
 
@@ -249,7 +249,7 @@
 
 <div class="coming-soon-grid">
 <div><i class="fa-solid fa-video"></i><span>Dashcam integration</span><small>Coming soon</small></div>
-<div><i class="fa-solid fa-triangle-exclamation"></i><span>AI safety alerts</span><small>Coming soon</small></div>
+<div><i class="fa-solid fa-triangle-exclamation"></i><span>Smart safety alerts</span><small>Coming soon</small></div>
 <div><i class="fa-solid fa-calendar-check"></i><span>Maintenance prediction</span><small>Coming soon</small></div>
 <div><i class="fa-solid fa-location-dot"></i><span>Emergency/parking connect features</span><small>Coming soon</small></div>
 </div>
@@ -363,7 +363,7 @@
 <div class="ownership-step">
 <span>03</span>
 <h3>Understand problems</h3>
-<p>Use AI diagnosis and community patterns to narrow likely causes with better explanations.</p>
+<p>Use vehicle intelligence checks and community patterns to narrow likely causes with better explanations.</p>
 </div>
 <div class="ownership-step">
 <span>04</span>
@@ -449,8 +449,8 @@
 <div class="platform-grid">
 <a href="/tools/ai-diagnosis" class="platform-card">
 <i class="fa-solid fa-robot"></i>
-<h3>AI Diagnosis</h3>
-<p>Analyze car problems using AMPYAN AI</p>
+<h3>Vehicle Intelligence</h3>
+<p>Analyze car problems using AMPYAN intelligence</p>
 </a>
 
 <a href="/tools/car-suggestion" class="platform-card">
@@ -489,7 +489,7 @@
 <div class="audience-card owner-card">
 <p class="page-kicker">USER SIDE</p>
 <h3>Owners, Drivers, Enthusiasts</h3>
-<p>Use AMPYAN like a high-trust automotive Reddit + Quora + AI garage assistant built around your own car profile and buying decisions.</p>
+<p>Use AMPYAN like a high-trust automotive Reddit + Quora + smart garage assistant built around your own car profile and buying decisions.</p>
 </div>
 
 <div class="audience-card mechanic-card">

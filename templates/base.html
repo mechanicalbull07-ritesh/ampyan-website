@@ -116,7 +116,7 @@
 
 <div class="nav-dropdown-content">
 
-<a href="/tools/ai-diagnosis">AI Diagnosis</a>
+<a href="/tools/ai-diagnosis">Vehicle Check</a>
 <a href="/tools/fuel-cost">Fuel Cost Calculator</a>
 <a href="/tools/emi-calculator">EMI Calculator</a>
 <a href="/tools/depreciation-calculator">Depreciation Calculator</a>
@@ -289,18 +289,18 @@ Founded by Ritesh, Engineer & Automotive Creator
 
 </section>
 
-<!-- AI FLOATING BUTTON -->
+<!-- INTELLIGENCE FLOATING BUTTON -->
 
 {% if current_user.is_authenticated %}
 
 <div class="ai-orb" onclick="toggleAI()">
-<span class="ai-text">AI</span>
+<span class="ai-text">VI</span>
 </div>
 
 <div class="ai-chatbox" id="aiBox">
 
 <div class="ai-header">
-AMPYAN AI
+AMPYAN Intelligence
 <span style="cursor:pointer;" onclick="toggleAI()">✖</span>
 </div>
 
@@ -323,7 +323,7 @@ Ask anything about buying, service, engine, EV or scams.
 {% else %}
 
 <div class="ai-orb disabled-ai" onclick="redirectToLogin()">
-<span class="ai-text">AI</span>
+<span class="ai-text">VI</span>
 </div>
 
 {% endif %}
@@ -351,7 +351,7 @@ Ask anything about buying, service, engine, EV or scams.
 <script>
 
 function redirectToLogin(){
-alert("Login to unlock AMPYAN AI 🚗");
+alert("Login to unlock AMPYAN Intelligence.");
 window.location.href="{{ url_for('auth.login') }}";
 }
 
@@ -390,9 +390,9 @@ headers:{"Content-Type":"application/json"},
 body:JSON.stringify({message:message})
 });
 const data=await response.json();
-if(loading) loading.textContent=data.reply || "AMPYAN AI could not answer right now.";
+if(loading) loading.textContent=data.reply || "AMPYAN Intelligence could not answer right now.";
 }catch(error){
-if(loading) loading.textContent="AMPYAN AI connection failed. Please try again.";
+if(loading) loading.textContent="AMPYAN Intelligence connection failed. Please try again.";
 }
 }
 

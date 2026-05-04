@@ -12,19 +12,19 @@ ai_bp = Blueprint("ai", __name__)
 def local_ai_fallback(message):
     text = (message or "").lower()
     if any(word in text for word in ["battery", "start", "starting", "self"]):
-        return "AMPYAN local AI: Battery voltage, terminal corrosion, starter motor and alternator charging should be checked first. If the car starts slow only in the morning, begin with a battery load test."
+        return "AMPYAN Vehicle Intelligence: Battery voltage, terminal corrosion, starter motor and alternator charging should be checked first. If the car starts slow only in the morning, begin with a battery load test."
     if any(word in text for word in ["brake", "vibration", "disc", "pad"]):
-        return "AMPYAN local AI: Brake vibration usually needs brake disc runout check, pad condition check and wheel balancing inspection. Avoid high-speed driving until brakes are inspected."
+        return "AMPYAN Vehicle Intelligence: Brake vibration usually needs brake disc runout check, pad condition check and wheel balancing inspection. Avoid high-speed driving until brakes are inspected."
     if any(word in text for word in ["mileage", "fuel", "average"]):
-        return "AMPYAN local AI: Mileage drop commonly comes from tyre pressure, clogged air filter, brake drag, old spark plugs, traffic change or fuel quality. Start with tyre pressure and OBD fuel-trim scan."
+        return "AMPYAN Vehicle Intelligence: Mileage drop commonly comes from tyre pressure, clogged air filter, brake drag, old spark plugs, traffic change or fuel quality. Start with tyre pressure and OBD fuel-trim scan."
     if any(word in text for word in ["ac", "cooling", "compressor"]):
-        return "AMPYAN local AI: Weak AC cooling can come from low refrigerant, condenser dust, radiator fan weakness or cabin filter blockage. In traffic, fan and condenser airflow are important checks."
+        return "AMPYAN Vehicle Intelligence: Weak AC cooling can come from low refrigerant, condenser dust, radiator fan weakness or cabin filter blockage. In traffic, fan and condenser airflow are important checks."
     if any(word in text for word in ["engine", "noise", "pickup", "power"]):
-        return "AMPYAN local AI: Engine power/noise issues need OBD scan, engine oil level check, air filter check and misfire/fuel pressure inspection. Share warning lights or when it happens for a sharper answer."
-    return "AMPYAN local AI: Please mention the symptom, when it happens, car fuel type, warning lights and recent service history. I can guide likely checks from AMPYAN's local automotive knowledge."
+        return "AMPYAN Vehicle Intelligence: Engine power/noise issues need OBD scan, engine oil level check, air filter check and misfire/fuel pressure inspection. Share warning lights or when it happens for a sharper answer."
+    return "AMPYAN Vehicle Intelligence: Please mention the symptom, when it happens, car fuel type, warning lights and recent service history. I can guide likely checks from AMPYAN's local automotive knowledge."
 
 
-# ================= AI ROUTE =================
+# ================= INTELLIGENCE ROUTE =================
 
 @ai_bp.route("/ask-ai", methods=["POST"])
 def ask_ai():
@@ -48,7 +48,7 @@ def ask_ai():
             db.session.commit()
 
         if current_user.role != "premium" and current_user.ai_uses_today >= 5:
-            return jsonify({"reply": "Free AI limit reached (5 per day)."})
+            return jsonify({"reply": "Free intelligence limit reached (5 per day)."})
 
     try:
         results, questions = diagnose_vehicle(user_message)
@@ -64,7 +64,7 @@ def ask_ai():
     if not top_results:
         return jsonify({"reply": local_ai_fallback(user_message)})
 
-    lines = ["AMPYAN local AI diagnosis:"]
+    lines = ["AMPYAN Vehicle Intelligence report:"]
     for index, result in enumerate(top_results, start=1):
         lines.append(
             f"{index}. {result.get('issue', 'Possible issue')} - {result.get('confidence', 0)}% confidence"
