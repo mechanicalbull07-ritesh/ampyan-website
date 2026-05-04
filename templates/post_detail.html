@@ -39,14 +39,15 @@
 <h1 class="page-title">{{ post.title }}</h1>
 </div>
 
-{% if post.can_edit %}
 <div class="ui-button-row">
+<button type="button" class="ui-button-secondary share-btn" data-share-url="{{ post.share_url }}" data-share-title="{{ post.title }}">Share</button>
+{% if post.can_edit %}
 <a href="{{ post.edit_url }}" class="ui-button-secondary">Edit</a>
 <form method="POST" action="{{ post.delete_url }}" class="inline-form">
 <button type="submit" class="ui-button-danger" onclick="return confirm('Are you sure you want to delete this post?')">Delete</button>
 </form>
-</div>
 {% endif %}
+</div>
 </div>
 
 <div class="author-left card-spacer">

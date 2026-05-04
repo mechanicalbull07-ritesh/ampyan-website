@@ -135,6 +135,15 @@ Community Member
 <a href="{{ post.detail_url }}" class="reply-count">
 💬 {{ post.reply_count }} replies
 </a>
+
+<button type="button" class="ui-button-secondary share-btn" data-share-url="{{ post.share_url }}" data-share-title="{{ post.title }}">Share</button>
+
+{% if post.can_edit %}
+<a href="{{ post.edit_url }}" class="ui-button-secondary">Edit</a>
+<form method="POST" action="{{ post.delete_url }}" class="inline-form">
+<button type="submit" class="ui-button-danger" onclick="return confirm('Delete this post?')">Delete</button>
+</form>
+{% endif %}
 </div>
 </div>
 {% endfor %}

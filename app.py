@@ -429,6 +429,50 @@ def videos():
     )
 
 
+@app.route("/videos/<int:video_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_video(video_id):
+    if current_user.role != "admin":
+        return "Access Denied"
+
+    video = Video.query.get_or_404(video_id)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        youtube_url = request.form.get("youtube_url", "").strip()
+        embed_url = get_youtube_embed_url(youtube_url)
+
+        if not title or not youtube_url:
+            flash("Please enter both video title and YouTube link.", "error")
+            return redirect(url_for("edit_video", video_id=video.id))
+
+        if not embed_url:
+            flash("Please enter a valid YouTube video link.", "error")
+            return redirect(url_for("edit_video", video_id=video.id))
+
+        video.title = title
+        video.youtube_url = youtube_url
+        video.embed_url = embed_url
+        db.session.commit()
+        flash("Video updated successfully.", "success")
+        return redirect(url_for("videos"))
+
+    return render_template("edit_video.html", video=video)
+
+
+@app.route("/videos/<int:video_id>/delete", methods=["POST"])
+@login_required
+def delete_video(video_id):
+    if current_user.role != "admin":
+        return "Access Denied"
+
+    video = Video.query.get_or_404(video_id)
+    db.session.delete(video)
+    db.session.commit()
+    flash("Video deleted successfully.", "success")
+    return redirect(url_for("videos"))
+
+
 @app.route("/videos/<int:video_id>/reply", methods=["POST"])
 @login_required
 def add_video_reply(video_id):
@@ -450,6 +494,35 @@ def add_video_reply(video_id):
         db.session.commit()
 
     return redirect(f"{url_for('videos')}#video-{video.id}")
+
+
+@app.route("/videos/reply/<int:reply_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_video_reply(reply_id):
+    reply = VideoReply.query.get_or_404(reply_id)
+    if reply.user_id != current_user.id and current_user.role != "admin":
+        return "Unauthorized"
+
+    if request.method == "POST":
+        reply.content = (request.form.get("content") or "").strip()
+        db.session.commit()
+        return redirect(f"{url_for('videos')}#video-{reply.video_id}")
+
+    return render_template("edit_comment.html", comment=reply)
+
+
+@app.route("/videos/reply/<int:reply_id>/delete", methods=["POST"])
+@login_required
+def delete_video_reply(reply_id):
+    reply = VideoReply.query.get_or_404(reply_id)
+    if reply.user_id != current_user.id and current_user.role != "admin":
+        return "Unauthorized"
+
+    video_id = reply.video_id
+    db.session.delete(reply)
+    db.session.commit()
+    return redirect(f"{url_for('videos')}#video-{video_id}")
+
 
 # ================= AUTOHIVE KNOWLEDGE BASE =================
 
@@ -1198,6 +1271,34 @@ def add_news_reply(news_id):
         db.session.commit()
 
     return redirect(url_for("news_detail", news_id=news.id))
+
+
+@app.route("/news/reply/<int:reply_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_news_reply(reply_id):
+    reply = NewsReply.query.get_or_404(reply_id)
+    if reply.user_id != current_user.id and current_user.role != "admin":
+        return "Unauthorized"
+
+    if request.method == "POST":
+        reply.content = (request.form.get("content") or "").strip()
+        db.session.commit()
+        return redirect(url_for("news_detail", news_id=reply.news_id))
+
+    return render_template("edit_comment.html", comment=reply)
+
+
+@app.route("/news/reply/<int:reply_id>/delete", methods=["POST"])
+@login_required
+def delete_news_reply(reply_id):
+    reply = NewsReply.query.get_or_404(reply_id)
+    if reply.user_id != current_user.id and current_user.role != "admin":
+        return "Unauthorized"
+
+    news_id = reply.news_id
+    db.session.delete(reply)
+    db.session.commit()
+    return redirect(url_for("news_detail", news_id=news_id))
 
 
 @app.route("/admin/news/create", methods=["GET", "POST"])

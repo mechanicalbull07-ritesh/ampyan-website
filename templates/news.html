@@ -30,12 +30,13 @@
 </div>
 </a>
 
-{% if current_user.is_authenticated and current_user.role == "admin" %}
 <div class="news-card-actions">
+<button type="button" class="ui-button-secondary share-btn" data-share-url="{{ url_for('news_detail', news_id=news.id, _external=True) }}" data-share-title="{{ news.title }}">Share</button>
+{% if current_user.is_authenticated and current_user.role == "admin" %}
 <a href="/admin/news/edit/{{ news.id }}" class="ui-button-secondary">Edit</a>
 <a href="/admin/news/delete/{{ news.id }}" class="ui-button-danger" onclick="return confirm('Delete this news?')">Delete</a>
-</div>
 {% endif %}
+</div>
 </article>
 {% endfor %}
 </div>

@@ -3,7 +3,17 @@
 {% macro render_news_reply(reply, news) %}
 <div class="simple-list-card reply-card {% if reply.parent_id %}nested-reply{% endif %}">
 <p class="body-copy-lg" style="margin-top:0;">{{ reply.content }}</p>
+<div class="post-actions">
 <small class="page-subtitle" style="margin:0;">{{ reply.user.username }} • {{ reply.created_at.strftime('%d %b %Y') }}</small>
+{% if current_user.is_authenticated and (current_user.id == reply.user_id or current_user.role == "admin") %}
+<div class="ui-button-row">
+<a href="{{ url_for('edit_news_reply', reply_id=reply.id) }}" class="ui-button-secondary">Edit</a>
+<form method="POST" action="{{ url_for('delete_news_reply', reply_id=reply.id) }}" class="inline-form">
+<button type="submit" class="ui-button-danger" onclick="return confirm('Delete this reply?')">Delete</button>
+</form>
+</div>
+{% endif %}
+</div>
 
 {% if current_user.is_authenticated %}
 <form method="POST" action="{{ url_for('add_news_reply', news_id=news.id) }}" class="inline-reply-form">
@@ -21,9 +31,21 @@
 
 <section class="page-shell">
 <div class="ui-card narrow-card">
+<div class="page-header">
+<div class="page-header-copy">
 <p class="page-kicker">AMPYAN News</p>
 <h1 class="page-title">{{ news.title }}</h1>
 <p class="page-subtitle">{{ news.created_at.strftime('%d %B %Y') }}</p>
+</div>
+
+<div class="ui-button-row">
+<button type="button" class="ui-button-secondary share-btn" data-share-url="{{ url_for('news_detail', news_id=news.id, _external=True) }}" data-share-title="{{ news.title }}">Share</button>
+{% if current_user.is_authenticated and current_user.role == "admin" %}
+<a href="/admin/news/edit/{{ news.id }}" class="ui-button-secondary">Edit</a>
+<a href="/admin/news/delete/{{ news.id }}" class="ui-button-danger" onclick="return confirm('Delete this news?')">Delete</a>
+{% endif %}
+</div>
+</div>
 
 {% if news.image %}
 <img src="{{ url_for('static', filename='news_images/' + news.image) }}" class="news-detail-image">

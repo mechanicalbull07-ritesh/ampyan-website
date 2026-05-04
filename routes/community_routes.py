@@ -84,6 +84,7 @@ def _decorate_local_post(post):
     post.is_remote = False
     post.remote_id = None
     post.detail_url = url_for("community.post_detail", post_id=post.id)
+    post.share_url = url_for("community.post_detail", post_id=post.id, _external=True)
     post.reply_url = url_for("community.add_comment", post_id=post.id)
     post.vote_url = url_for("community.upvote", post_id=post.id)
     post.delete_url = url_for("community.delete_post", post_id=post.id)
@@ -156,6 +157,7 @@ def _build_remote_post(post):
         image_url=image_url,
         created_at=post.get("created_at"),
         detail_url=url_for("community.remote_post_detail", remote_post_id=post.get("id")),
+        share_url=url_for("community.remote_post_detail", remote_post_id=post.get("id"), _external=True),
         reply_url=url_for("community.remote_add_comment", remote_post_id=post.get("id")),
         vote_url=None,
         delete_url=None,

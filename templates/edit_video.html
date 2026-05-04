@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-shell">
+<div class="ui-card narrow-card">
+<h1 class="section-heading">Edit Video</h1>
+
+<form method="POST" class="video-add-form">
+<div class="video-form-grid">
+<div>
+<label class="form-label" for="video-title">Video Title</label>
+<input id="video-title" type="text" name="title" value="{{ video.title }}" required>
+</div>
+
+<div>
+<label class="form-label" for="youtube-url">YouTube Video Link</label>
+<input id="youtube-url" type="url" name="youtube_url" value="{{ video.youtube_url }}" required>
+</div>
+</div>
+
+<button type="submit" class="auth-button video-submit-btn">Update Video</button>
+</form>
+</div>
+</section>
+
+{% endblock %}
