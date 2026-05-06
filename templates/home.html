@@ -26,6 +26,8 @@
 {{ feature_card("/tools/car-suggestion", "feature-purple", "fa-solid fa-route", "Car Suggestion", "Match car to usage") }}
 {{ feature_card("/garage-network", "feature-green", "fa-solid fa-shop", "Garage Network", "Find local workshops") }}
 {{ feature_card("/community", "feature-blue", "fa-solid fa-people-group", "Community", "Ask owners and experts") }}
+{{ feature_card("/marketplace?type=buy", "feature-green", "fa-solid fa-cart-shopping", "Car Buy", "Find owner listings") }}
+{{ feature_card("/marketplace?type=sell", "feature-red", "fa-solid fa-tags", "Car Sell", "List your car") }}
 {{ feature_card("/tools", "feature-orange", "fa-solid fa-toolbox", "Tools", "All ownership utilities") }}
 {{ feature_card("/platform", "feature-purple", "fa-solid fa-compass", "Explore", "AMPYAN platform map") }}
 {{ feature_card("/garage-dashboard", "feature-yellow", "fa-solid fa-calendar-check", "Maintenance", "Service reminders") }}
@@ -36,6 +38,24 @@
 {{ feature_card("/help", "feature-green", "fa-solid fa-headset", "Help", "Report issue") }}
 </div>
 {% endfor %}
+</div>
+</div>
+</section>
+
+<section class="home-news-ticker" aria-label="Latest news ticker">
+<div class="ticker-label"><i class="fa-solid fa-newspaper"></i> AMPYAN NEWS</div>
+<div class="ticker-window">
+<div class="ticker-track">
+{% if latest_news %}
+{% for repeat in range(2) %}
+{% for news in latest_news %}
+<a href="/news/{{ news.id }}">{{ news.title }}</a>
+{% endfor %}
+{% endfor %}
+{% else %}
+<span>Latest automotive updates will run here.</span>
+<span>Follow AMPYAN News for launches, recalls and ownership alerts.</span>
+{% endif %}
 </div>
 </div>
 </section>
@@ -52,6 +72,29 @@
 <p class="ampyan-hero-kicker">India's First</p>
 <h1>Automotive Intelligence Ecosystem</h1>
 <p>Vehicle intelligence checks, smart garage tracking, repair cost tools, local garage discovery and real owner discussions in one automotive platform.</p>
+
+<div class="hero-attention-grid">
+<a href="/news" class="hero-attention-card attention-news">
+<i class="fa-solid fa-newspaper"></i>
+<span>News</span>
+<strong>Live updates</strong>
+</a>
+<a href="/community" class="hero-attention-card attention-community">
+<i class="fa-solid fa-people-group"></i>
+<span>Community</span>
+<strong>Ask owners</strong>
+</a>
+<a href="/tools/ai-diagnosis" class="hero-attention-card attention-check">
+<i class="fa-solid fa-car-burst"></i>
+<span>Car Check</span>
+<strong>Diagnose now</strong>
+</a>
+<a href="/garage-dashboard" class="hero-attention-card attention-garage">
+<i class="fa-solid fa-car-side"></i>
+<span>My Garage</span>
+<strong>Track service</strong>
+</a>
+</div>
 
 <form action="/tools/ai-diagnosis" method="POST" class="ampyan-hero-search">
 <i class="fa-solid fa-car-burst"></i>
@@ -139,11 +182,12 @@
 {% if recent_posts %}
 <div class="home-highlight-list">
 {% for post in recent_posts[:3] %}
-<a href="/post/{{ post.id }}" class="home-highlight-item">
-<i class="fa-solid fa-comments"></i>
+<a href="/post/{{ post.id }}" class="home-highlight-item community-highlight-item">
+<i class="fa-solid fa-bolt-lightning"></i>
 <span>
 <strong>{{ post.title }}</strong>
-<small>{{ post.author.username if post.author else "Member" }} - {{ post.content[:80] if post.content else "Joined the conversation." }}{% if post.content and post.content|length > 80 %}...{% endif %}</small>
+<small>{{ post.author.username if post.author else "Member" }} - {{ post.comments|length }} replies - {{ post.votes|length }} boosts</small>
+<em>{{ post.content[:82] if post.content else "Joined the conversation." }}{% if post.content and post.content|length > 82 %}...{% endif %}</em>
 </span>
 </a>
 {% endfor %}
@@ -200,6 +244,72 @@
 </div>
 {% else %}
 <p class="home-empty-note">No recent activity yet.</p>
+{% endif %}
+</div>
+</div>
+</section>
+
+<section class="tool-graphics-section">
+<div class="launch-section-head">
+<p class="page-kicker">OWNERSHIP CALCULATORS</p>
+<h2 class="section-heading">Quick visual checks for cost, EMI and depreciation.</h2>
+<p class="section-copy">Graph-style cards help users jump into the right calculator without scrolling through menus.</p>
+</div>
+
+<div class="tool-graphics-grid">
+<a href="/tools/fuel-cost" class="tool-graphic-card fuel-graphic">
+<div class="tool-graphic-icon"><i class="fa-solid fa-gas-pump"></i></div>
+<div>
+<span>Fuel Cost</span>
+<strong>Daily / Monthly Spend</strong>
+</div>
+<div class="mini-bar-chart"><i style="height:36%;"></i><i style="height:62%;"></i><i style="height:82%;"></i><i style="height:48%;"></i></div>
+</a>
+<a href="/tools/emi-calculator" class="tool-graphic-card emi-graphic">
+<div class="tool-graphic-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+<div>
+<span>Car EMI Check</span>
+<strong>Loan and interest view</strong>
+</div>
+<div class="emi-ring"><b>EMI</b></div>
+</a>
+<a href="/tools/depreciation-calculator" class="tool-graphic-card depreciation-graphic">
+<div class="tool-graphic-icon"><i class="fa-solid fa-chart-line"></i></div>
+<div>
+<span>Depreciation</span>
+<strong>Used car value drop</strong>
+</div>
+<div class="mini-line-chart"><i></i></div>
+</a>
+</div>
+</section>
+
+<section class="marketplace-home-section">
+<div class="marketplace-home-card">
+<div class="marketplace-home-copy">
+<p class="page-kicker">CAR BUY & SELL</p>
+<h2 class="section-heading">Connect directly with owners for used car buying and selling.</h2>
+<p class="section-copy">Create a listing with your name, location and contact option. Interested users can message through AMPYAN inbox.</p>
+<div class="app-actions">
+<a href="/marketplace?type=buy" class="widget-btn">Browse Buy Requests</a>
+<a href="/marketplace/create" class="app-secondary-btn">Sell or Request Car</a>
+</div>
+</div>
+<div class="marketplace-list-preview">
+{% if marketplace_listings %}
+{% for listing in marketplace_listings[:3] %}
+<a href="/marketplace/{{ listing.id }}" class="marketplace-mini-card">
+<span>{{ listing.listing_type|upper }}</span>
+<strong>{{ listing.title }}</strong>
+<small>{{ listing.user.username if listing.user else "Owner" }} - {{ listing.location or "Location N/A" }}</small>
+</a>
+{% endfor %}
+{% else %}
+<a href="/marketplace/create" class="marketplace-mini-card">
+<span>START</span>
+<strong>Create the first buy/sell listing</strong>
+<small>Owner-to-owner connection begins here.</small>
+</a>
 {% endif %}
 </div>
 </div>

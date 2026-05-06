@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, flash, url_for
 from flask_login import current_user, login_required
 
-from models.models import db, Post, News, Car, User, MechanicProfile, MechanicReview, Video
+from models.models import db, Post, News, Car, User, MechanicProfile, MechanicReview, MarketplaceListing, MarketplaceMessage, Video
 from services.car_health_engine import calculate_car_health
 from services.garage_network_service import (
     calculate_trust_profile_score,
@@ -10,6 +10,14 @@ from services.garage_network_service import (
 )
 
 main_bp = Blueprint("main", __name__)
+
+
+def _safe_int(value):
+    try:
+        parsed = int(value or 0)
+        return parsed or None
+    except (TypeError, ValueError):
+        return None
 
 
 # ================= HOME PAGE =================
@@ -40,6 +48,15 @@ def home():
 
     # VIDEOS
     latest_videos = Video.query.order_by(Video.created_at.desc()).limit(3).all()
+
+    # MARKETPLACE
+    marketplace_listings = (
+        MarketplaceListing.query
+        .filter_by(is_active=True)
+        .order_by(MarketplaceListing.created_at.desc())
+        .limit(4)
+        .all()
+    )
 
     # ACTIVITY FEED
     activity_items = []
@@ -115,11 +132,101 @@ def home():
         recent_posts=recent_posts,
         latest_news=latest_news,
         latest_videos=latest_videos,
+        marketplace_listings=marketplace_listings,
         recent_activity=recent_activity,
         top_contributors=top_contributors,
         nearby_mechanics=nearby_mechanics,
         ecosystem_stats=ecosystem_stats
     )
+
+
+@main_bp.route("/marketplace")
+def marketplace():
+    listing_type = (request.args.get("type") or "all").strip().lower()
+    query = MarketplaceListing.query.filter_by(is_active=True).order_by(MarketplaceListing.created_at.desc())
+    if listing_type in {"buy", "sell"}:
+        query = query.filter_by(listing_type=listing_type)
+
+    return render_template(
+        "marketplace.html",
+        listings=query.all(),
+        listing_type=listing_type,
+    )
+
+
+@main_bp.route("/marketplace/create", methods=["GET", "POST"])
+@login_required
+def create_marketplace_listing():
+    if request.method == "POST":
+        listing_type = (request.form.get("listing_type") or "sell").strip().lower()
+        if listing_type not in {"buy", "sell"}:
+            listing_type = "sell"
+
+        title = (request.form.get("title") or "").strip()
+        if not title:
+            flash("Listing title is required.")
+            return redirect(url_for("main.create_marketplace_listing"))
+
+        listing = MarketplaceListing(
+            listing_type=listing_type,
+            title=title,
+            description=(request.form.get("description") or "").strip(),
+            brand=(request.form.get("brand") or "").strip(),
+            model=(request.form.get("model") or "").strip(),
+            year=_safe_int(request.form.get("year")),
+            price=_safe_int(request.form.get("price")),
+            location=(request.form.get("location") or current_user.city or "").strip(),
+            contact_phone=(request.form.get("contact_phone") or current_user.mobile or "").strip(),
+            user_id=current_user.id,
+        )
+        db.session.add(listing)
+        db.session.commit()
+        flash("Marketplace listing created.")
+        return redirect(url_for("main.marketplace_listing_detail", listing_id=listing.id))
+
+    return render_template("marketplace_create.html")
+
+
+@main_bp.route("/marketplace/<int:listing_id>")
+def marketplace_listing_detail(listing_id):
+    listing = MarketplaceListing.query.get_or_404(listing_id)
+    return render_template("marketplace_detail.html", listing=listing)
+
+
+@main_bp.route("/marketplace/<int:listing_id>/message", methods=["POST"])
+@login_required
+def send_marketplace_message(listing_id):
+    listing = MarketplaceListing.query.get_or_404(listing_id)
+    if listing.user_id == current_user.id:
+        flash("This is your own listing.")
+        return redirect(url_for("main.marketplace_listing_detail", listing_id=listing.id))
+
+    message_text = (request.form.get("message") or "").strip()
+    if not message_text:
+        flash("Message is required.")
+        return redirect(url_for("main.marketplace_listing_detail", listing_id=listing.id))
+
+    db.session.add(MarketplaceMessage(
+        listing_id=listing.id,
+        sender_id=current_user.id,
+        receiver_id=listing.user_id,
+        message=message_text,
+    ))
+    db.session.commit()
+    flash("Message sent to the listing owner.")
+    return redirect(url_for("main.marketplace_listing_detail", listing_id=listing.id))
+
+
+@main_bp.route("/marketplace/inbox")
+@login_required
+def marketplace_inbox():
+    messages = (
+        MarketplaceMessage.query
+        .filter((MarketplaceMessage.receiver_id == current_user.id) | (MarketplaceMessage.sender_id == current_user.id))
+        .order_by(MarketplaceMessage.created_at.desc())
+        .all()
+    )
+    return render_template("marketplace_inbox.html", messages=messages)
 
 
 @main_bp.route("/leaderboard")

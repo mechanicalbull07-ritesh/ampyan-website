@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN MARKETPLACE</p>
+<h1 class="page-title">Car Buy & Sell</h1>
+<p class="page-subtitle">Connect with owners, buyers and sellers through AMPYAN inbox.</p>
+</div>
+<div class="ui-button-row">
+<a href="/marketplace/inbox" class="ui-button-secondary"><i class="fa-solid fa-inbox"></i> Inbox</a>
+<a href="/marketplace/create" class="auth-button"><i class="fa-solid fa-plus"></i> Create Listing</a>
+</div>
+</div>
+
+<div class="community-quick-row card-spacer">
+<a href="/marketplace" class="community-quick-chip {% if listing_type == 'all' %}active-community-chip{% endif %}"><i class="fa-solid fa-layer-group"></i> All</a>
+<a href="/marketplace?type=buy" class="community-quick-chip {% if listing_type == 'buy' %}active-community-chip{% endif %}"><i class="fa-solid fa-cart-shopping"></i> Buy Requests</a>
+<a href="/marketplace?type=sell" class="community-quick-chip {% if listing_type == 'sell' %}active-community-chip{% endif %}"><i class="fa-solid fa-tags"></i> Sell Listings</a>
+</div>
+
+{% if listings %}
+<div class="marketplace-grid">
+{% for listing in listings %}
+<article class="marketplace-card">
+<div class="garage-trust-top">
+<span class="garage-trust-level">{{ listing.listing_type|upper }}</span>
+<span class="garage-trust-score">{{ listing.created_at.strftime("%d %b") }}</span>
+</div>
+<h2>{{ listing.title }}</h2>
+<p>{{ listing.description[:130] if listing.description else "Owner-to-owner marketplace listing." }}{% if listing.description and listing.description|length > 130 %}...{% endif %}</p>
+<div class="admin-car-meta">
+<div><span>Car</span><strong>{{ listing.brand or "N/A" }} {{ listing.model or "" }}</strong></div>
+<div><span>Year</span><strong>{{ listing.year or "N/A" }}</strong></div>
+<div><span>Price</span><strong>{% if listing.price %}₹{{ listing.price }}{% else %}Discuss{% endif %}</strong></div>
+<div><span>Location</span><strong>{{ listing.location or "N/A" }}</strong></div>
+</div>
+<div class="marketplace-owner-row">
+<span><i class="fa-solid fa-user"></i> {{ listing.user.username if listing.user else "Owner" }}</span>
+<span><i class="fa-solid fa-phone"></i> {{ listing.contact_phone or "Inbox" }}</span>
+</div>
+<a href="/marketplace/{{ listing.id }}" class="auth-button">Open Listing</a>
+</article>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No marketplace listings yet.</div>
+{% endif %}
+</section>
+
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="ui-card narrow-card">
+<div class="garage-trust-top">
+<span class="garage-trust-level">{{ listing.listing_type|upper }}</span>
+<span class="garage-trust-score">{{ listing.created_at.strftime("%d %b %Y") }}</span>
+</div>
+<h1 class="page-title">{{ listing.title }}</h1>
+<p class="page-subtitle">{{ listing.description or "Owner-to-owner marketplace listing." }}</p>
+
+<div class="admin-car-meta card-spacer">
+<div><span>Owner</span><strong>{{ listing.user.username if listing.user else "Owner" }}</strong></div>
+<div><span>Location</span><strong>{{ listing.location or "N/A" }}</strong></div>
+<div><span>Contact</span><strong>{{ listing.contact_phone or "Inbox only" }}</strong></div>
+<div><span>Brand</span><strong>{{ listing.brand or "N/A" }}</strong></div>
+<div><span>Model</span><strong>{{ listing.model or "N/A" }}</strong></div>
+<div><span>Year</span><strong>{{ listing.year or "N/A" }}</strong></div>
+<div><span>Price/Budget</span><strong>{% if listing.price %}₹{{ listing.price }}{% else %}Discuss{% endif %}</strong></div>
+</div>
+
+{% if current_user.is_authenticated and current_user.id != listing.user_id %}
+<div class="comment-form">
+<form method="POST" action="/marketplace/{{ listing.id }}/message">
+<textarea name="message" class="profile-input" placeholder="Write a message to {{ listing.user.username if listing.user else 'owner' }}..." required></textarea>
+<button type="submit" class="auth-button"><i class="fa-solid fa-paper-plane"></i> Send Inbox Message</button>
+</form>
+</div>
+{% elif current_user.is_authenticated %}
+<p class="section-copy">This is your listing.</p>
+{% else %}
+<p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" style="color:#ff5a36;">login</a> to message this user.</p>
+{% endif %}
+</div>
+</section>
+
+{% endblock %}

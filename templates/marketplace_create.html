@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="create-wrapper">
+<div class="create-card">
+<h2>Create Buy/Sell Listing</h2>
+<p class="create-sub">Add your name, location and contact option through your AMPYAN account.</p>
+
+<form method="POST">
+<label class="create-label">Listing type</label>
+<select name="listing_type">
+<option value="sell">I want to sell my car</option>
+<option value="buy">I want to buy a car</option>
+</select>
+
+<input type="text" name="title" placeholder="Example: Selling 2019 Swift VXI / Looking for used Creta" required>
+<textarea name="description" rows="5" placeholder="Condition, ownership, budget, requirement or extra details"></textarea>
+
+<div class="marketplace-form-grid">
+<input type="text" name="brand" placeholder="Brand">
+<input type="text" name="model" placeholder="Model">
+<input type="number" name="year" placeholder="Year">
+<input type="number" name="price" placeholder="Expected price / budget">
+<input type="text" name="location" placeholder="Location">
+<input type="text" name="contact_phone" placeholder="Contact number">
+</div>
+
+<button type="submit" class="publish-btn">
+<i class="fa-solid fa-paper-plane"></i> Publish Listing
+</button>
+</form>
+</div>
+</div>
+
+{% endblock %}

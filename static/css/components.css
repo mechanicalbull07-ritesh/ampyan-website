@@ -1,3 +1,58 @@
+.marketplace-grid{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+gap:22px;
+}
+
+.marketplace-card{
+display:grid;
+gap:14px;
+padding:22px;
+border-radius:22px;
+border:1px solid var(--border);
+background:var(--card);
+box-shadow:var(--shadow-md);
+}
+
+.marketplace-card h2{
+margin:0;
+font-size:22px;
+line-height:1.25;
+}
+
+.marketplace-card p{
+margin:0;
+color:var(--text-secondary);
+line-height:1.65;
+}
+
+.marketplace-owner-row{
+display:flex;
+gap:12px;
+flex-wrap:wrap;
+color:var(--text-secondary);
+font-size:13px;
+}
+
+.marketplace-owner-row span{
+display:inline-flex;
+align-items:center;
+gap:7px;
+}
+
+.marketplace-form-grid{
+display:grid;
+grid-template-columns:repeat(2,minmax(0,1fr));
+gap:12px;
+}
+
+@media(max-width:768px){
+.marketplace-form-grid{
+grid-template-columns:1fr;
+gap:0;
+}
+}
+
 /* ================= SHARED PAGE SYSTEM ================= */
 
 .tools-page{

@@ -231,6 +231,42 @@ class NewsReply(db.Model):
     )
 
 
+# ================= MARKETPLACE =================
+
+class MarketplaceListing(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    listing_type = db.Column(db.String(20), nullable=False, default="sell")
+    title = db.Column(db.String(180), nullable=False)
+    description = db.Column(db.Text)
+    brand = db.Column(db.String(100))
+    model = db.Column(db.String(100))
+    year = db.Column(db.Integer)
+    price = db.Column(db.Integer)
+    location = db.Column(db.String(140))
+    contact_phone = db.Column(db.String(30))
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    user = db.relationship("User", backref="marketplace_listings")
+
+
+class MarketplaceMessage(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    listing_id = db.Column(db.Integer, db.ForeignKey("marketplace_listing.id"), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    receiver_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    is_read = db.Column(db.Boolean, default=False)
+
+    listing = db.relationship("MarketplaceListing", backref="messages")
+    sender = db.relationship("User", foreign_keys=[sender_id], backref="sent_marketplace_messages")
+    receiver = db.relationship("User", foreign_keys=[receiver_id], backref="received_marketplace_messages")
+
+
 # ================= VIDEOS =================
 
 class Video(db.Model):

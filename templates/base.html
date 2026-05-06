@@ -142,6 +142,9 @@
 <a href="/news">News</a>
 <a href="/videos">Videos</a>
 <a href="/garage-network">Garage Network</a>
+<a href="/marketplace?type=buy">Car Buy</a>
+<a href="/marketplace?type=sell">Car Sell</a>
+<a href="/marketplace/inbox">Marketplace Inbox</a>
 <a href="/help">Help / Report</a>
 
 </div>
@@ -181,7 +184,11 @@
 <div class="nav-profile">
 
 <div class="profile-badge">
+{% if current_user.profile_photo %}
+<img src="{{ url_for('static', filename='profile_images/' + current_user.profile_photo) }}" alt="{{ current_user.username }}">
+{% else %}
 {{ current_user.username[0] | upper }}
+{% endif %}
 </div>
 
 <button class="user-button" onclick="toggleUserMenu()">
