@@ -18,10 +18,11 @@
 {% if news_items %}
 <div class="news-grid">
 {% for news in news_items %}
+{% set image_url = news_image_url(news.image) %}
 <article class="ui-card news-card-ui">
 <a href="/news/{{ news.id }}">
-{% if news.image %}
-<img src="{{ url_for('static', filename='news_images/' + news.image) }}" class="news-card-image">
+{% if image_url %}
+<img src="{{ image_url }}" class="news-card-image" alt="{{ news.title }}">
 {% endif %}
 
 <div class="news-card-body">

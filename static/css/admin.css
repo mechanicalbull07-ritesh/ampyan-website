@@ -1,0 +1,70 @@
+.stat-card-link{
+display:block;
+text-decoration:none;
+color:inherit;
+}
+
+.stat-card-link:hover{
+transform:translateY(-2px);
+border-color:rgba(255,90,54,0.45);
+}
+
+.stat-number-sm{
+font-size:20px;
+line-height:1.2;
+}
+
+.admin-filter-row{
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+margin-top:18px;
+}
+
+.admin-filter-row button{
+border:1px solid rgba(255,255,255,0.12);
+background:rgba(255,255,255,0.04);
+color:#e8e8e8;
+border-radius:999px;
+padding:10px 14px;
+font-weight:800;
+cursor:pointer;
+}
+
+.admin-filter-row button:hover,
+.admin-filter-row button.active{
+border-color:rgba(255,90,54,0.74);
+background:rgba(255,90,54,0.14);
+color:#fff;
+}
+
+.admin-user-table td{
+vertical-align:top;
+min-width:130px;
+}
+
+.admin-user-table td:first-child{
+min-width:160px;
+}
+
+.admin-user-table strong,
+.admin-user-table small{
+display:block;
+}
+
+.admin-user-table small{
+margin-top:5px;
+color:#aaa;
+line-height:1.45;
+}
+
+@media(max-width:768px){
+.admin-filter-row{
+display:grid;
+grid-template-columns:1fr;
+}
+
+.admin-filter-row button{
+width:100%;
+}
+}

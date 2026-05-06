@@ -6,7 +6,7 @@ from urllib import error, parse, request as urllib_request
 
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
-from models.models import Comment, Post, User, Vote, db
+from models.models import CarCommunity, Comment, Post, User, Vote, db
 from werkzeug.utils import secure_filename
 
 community_bp = Blueprint("community", __name__)
@@ -66,6 +66,35 @@ def _author_avatar_url(profile_photo):
     return url_for("static", filename=f"profile_images/{profile_photo}")
 
 
+def _slugify(text):
+    slug = "".join(char.lower() if char.isalnum() else "-" for char in (text or ""))
+    return "-".join(part for part in slug.split("-") if part)
+
+
+def _get_or_create_car_community(name, description="", user=None):
+    name = (name or "").strip()
+    if not name:
+        return None
+
+    slug = _slugify(name)
+    if not slug:
+        return None
+
+    community = CarCommunity.query.filter_by(slug=slug).first()
+    if community:
+        return community
+
+    community = CarCommunity(
+        name=name[:120],
+        slug=slug[:140],
+        description=(description or f"{name} owners and enthusiasts community.")[:255],
+        created_by=user.id if user and user.is_authenticated else None,
+    )
+    db.session.add(community)
+    db.session.flush()
+    return community
+
+
 def _decorate_local_comment(comment):
     comment.author_name = comment.user.username
     comment.author_badge = getattr(comment.user, "badge", "Member")
@@ -92,6 +121,13 @@ def _decorate_local_post(post):
     post.vote_count = len(post.votes)
     post.reply_count = len(post.comments)
     post.image_url = url_for("static", filename=f"post_images/{post.image}") if post.image else None
+    post.community_name = post.car_community.name if post.car_community else "General Community"
+    post.community_slug = post.car_community.slug if post.car_community else None
+    post.community_url = (
+        url_for("community.community", car_community=post.community_slug)
+        if post.community_slug
+        else url_for("community.community")
+    )
     post.author_display_name = post.author.username
     post.author_badge = getattr(post.author, "badge", "Member")
     post.author_reputation = getattr(post.author, "reputation", 0)
@@ -104,7 +140,7 @@ def _decorate_local_post(post):
         key=lambda item: item.id,
         reverse=True,
     )
-    post.top_comments = [_decorate_local_comment(comment) for comment in sorted_comments[:2]]
+    post.top_comments = [_decorate_local_comment(comment) for comment in sorted_comments[:4]]
     post.can_edit = bool(
         current_user.is_authenticated
         and (current_user.id == post.user_id or current_user.role == "admin")
@@ -163,6 +199,9 @@ def _build_remote_post(post):
         delete_url=None,
         edit_url=None,
         vote_count=0,
+        community_name="Phone/App Feed",
+        community_slug=None,
+        community_url=url_for("community.community"),
         reply_count=len(replies),
         comments=replies,
         reply_threads=replies,
@@ -240,15 +279,29 @@ def refresh_author_stats(user):
 def community():
     query = (request.args.get("q") or "").strip().lower()
     sort = (request.args.get("sort") or "new").strip()
+    active_car_community = (request.args.get("car_community") or "").strip()
 
     local_posts = [_decorate_local_post(post) for post in Post.query.order_by(Post.id.desc()).all()]
     remote_posts = _load_remote_posts()
     combined_posts = local_posts + remote_posts
 
+    car_communities = (
+        CarCommunity.query
+        .order_by(CarCommunity.name.asc())
+        .all()
+    )
+
+    if active_car_community:
+        combined_posts = [
+            post for post in combined_posts
+            if getattr(post, "community_slug", None) == active_car_community
+        ]
+
     if query:
         filtered = []
         for post in combined_posts:
             haystack = f"{post.title} {post.content} {post.author_display_name}".lower()
+            haystack = f"{haystack} {getattr(post, 'community_name', '')}".lower()
             if query in haystack:
                 filtered.append(post)
                 continue
@@ -331,6 +384,8 @@ def community():
         unanswered_posts=unanswered_posts,
         most_active_posts=most_active_posts,
         quick_topics=quick_topics,
+        car_communities=car_communities,
+        active_car_community=active_car_community,
         community_stats={
             "posts": len(posts),
             "comments": total_comments,
@@ -346,6 +401,8 @@ def create_post():
     if request.method == "POST":
         title = (request.form.get("title") or "").strip()
         content = (request.form.get("content") or "").strip()
+        community_id = request.form.get("community_id")
+        new_community_name = (request.form.get("new_community_name") or "").strip()
 
         if not title or not content:
             flash("Title and content required")
@@ -361,7 +418,19 @@ def create_post():
             image.save(upload_path)
             external_image_url = url_for("static", filename=f"post_images/{filename}", _external=True)
 
-        post = Post(title=title, content=content, image=filename, user_id=current_user.id)
+        car_community = None
+        if new_community_name:
+            car_community = _get_or_create_car_community(new_community_name, user=current_user)
+        elif community_id:
+            car_community = CarCommunity.query.get(community_id)
+
+        post = Post(
+            title=title,
+            content=content,
+            image=filename,
+            user_id=current_user.id,
+            community_id=car_community.id if car_community else None,
+        )
         db.session.add(post)
         db.session.flush()
 
@@ -380,6 +449,7 @@ def create_post():
                 "location": current_user.city or "Website",
                 "text": f"{title}\n\n{content}",
                 "imageUrl": external_image_url,
+                "community": car_community.name if car_community else "General Community",
             },
         )
 
@@ -387,7 +457,28 @@ def create_post():
         flash("Post created successfully")
         return redirect("/community")
 
-    return render_template("create_post.html")
+    car_communities = CarCommunity.query.order_by(CarCommunity.name.asc()).all()
+    selected_community = request.args.get("car_community") or ""
+    return render_template(
+        "create_post.html",
+        car_communities=car_communities,
+        selected_community=selected_community,
+    )
+
+
+@community_bp.route("/community/cars/create", methods=["POST"])
+@login_required
+def create_car_community():
+    name = (request.form.get("name") or "").strip()
+    description = (request.form.get("description") or "").strip()
+    if not name:
+        flash("Car community name is required.")
+        return redirect(url_for("community.community"))
+
+    car_community = _get_or_create_car_community(name, description=description, user=current_user)
+    db.session.commit()
+    flash(f"{car_community.name} community is ready.")
+    return redirect(url_for("community.community", car_community=car_community.slug))
 
 
 @community_bp.route("/post/<int:post_id>")
@@ -415,6 +506,14 @@ def edit_post(post_id):
     if request.method == "POST":
         post.title = request.form["title"]
         post.content = request.form["content"]
+        new_community_name = (request.form.get("new_community_name") or "").strip()
+        community_id = request.form.get("community_id")
+        if new_community_name:
+            post.car_community = _get_or_create_car_community(new_community_name, user=current_user)
+        elif community_id:
+            post.car_community = CarCommunity.query.get(community_id)
+        else:
+            post.car_community = None
         remote_post_id = _find_remote_post_id_for_website_post(post.id)
         if remote_post_id:
             _safe_remote_call(
@@ -429,7 +528,11 @@ def edit_post(post_id):
         db.session.commit()
         return redirect(url_for("community.post_detail", post_id=post.id))
 
-    return render_template("edit.html", post=post)
+    return render_template(
+        "edit_post.html",
+        post=post,
+        car_communities=CarCommunity.query.order_by(CarCommunity.name.asc()).all(),
+    )
 
 
 @community_bp.route("/post/<int:post_id>/delete", methods=["POST"])

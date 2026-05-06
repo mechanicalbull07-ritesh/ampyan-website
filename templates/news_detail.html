@@ -30,6 +30,7 @@
 {% endmacro %}
 
 <section class="page-shell">
+{% set image_url = news_image_url(news.image) %}
 <div class="ui-card narrow-card">
 <div class="page-header">
 <div class="page-header-copy">
@@ -47,8 +48,8 @@
 </div>
 </div>
 
-{% if news.image %}
-<img src="{{ url_for('static', filename='news_images/' + news.image) }}" class="news-detail-image">
+{% if image_url %}
+<img src="{{ image_url }}" class="news-detail-image" alt="{{ news.title }}">
 {% endif %}
 
 <div class="body-copy-lg">

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="create-wrapper">
+<div class="create-card">
+<h2>Edit Community Post</h2>
+<p class="create-sub">Update the discussion and choose the right car community.</p>
+
+<form method="POST">
+<input type="text" name="title" value="{{ post.title }}" placeholder="Post title" required>
+
+<textarea name="content" rows="6" placeholder="Describe your problem or discussion..." required>{{ post.content }}</textarea>
+
+<label class="create-label">Post in car community</label>
+<select name="community_id">
+<option value="">General Community</option>
+{% for car_group in car_communities %}
+<option value="{{ car_group.id }}" {% if post.community_id == car_group.id %}selected{% endif %}>{{ car_group.name }}</option>
+{% endfor %}
+</select>
+
+<input type="text" name="new_community_name" placeholder="Or create new car community">
+
+<button type="submit" class="publish-btn">
+<i class="fa-solid fa-floppy-disk"></i> Save Changes
+</button>
+</form>
+</div>
+</div>
+
+{% endblock %}

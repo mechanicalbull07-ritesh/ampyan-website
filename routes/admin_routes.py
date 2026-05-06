@@ -1,37 +1,69 @@
 from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta
 
-from flask import Blueprint, render_template, redirect, flash
+from flask import Blueprint, render_template, redirect, flash, request
 from flask_login import login_required, current_user
 from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEvent, MechanicProfile, MechanicReview, Car
 from services.garage_network_service import refresh_mechanic_reputation
 
 admin_bp = Blueprint("admin", __name__)
+IST_OFFSET = timedelta(hours=5, minutes=30)
+
+
+def _to_ist(value):
+    if not value:
+        return None
+    return value + IST_OFFSET
+
+
+def _format_ist(value, fallback="N/A"):
+    ist_value = _to_ist(value)
+    if not ist_value:
+        return fallback
+    return ist_value.strftime("%d %b %Y, %I:%M %p IST")
+
+
+def _frequency_options():
+    return [
+        ("24h", "Last 24 hours", timedelta(hours=24)),
+        ("7d", "Last 7 days", timedelta(days=7)),
+        ("30d", "Last 30 days", timedelta(days=30)),
+        ("90d", "Last 90 days", timedelta(days=90)),
+        ("all", "All time", None),
+    ]
+
+
+def _frequency_start(filter_key):
+    now = datetime.utcnow()
+    for key, label, delta in _frequency_options():
+        if key == filter_key:
+            return (now - delta) if delta else None, label
+    return now - timedelta(days=30), "Last 30 days"
 
 
 def _count_by_hour(visits):
-    now = datetime.utcnow().replace(minute=0, second=0, microsecond=0)
+    now = _to_ist(datetime.utcnow()).replace(minute=0, second=0, microsecond=0)
     buckets = {
         (now - timedelta(hours=index)).strftime("%d %b %H:00"): 0
         for index in range(23, -1, -1)
     }
     for visit in visits:
         if visit.visit_time:
-            key = visit.visit_time.replace(minute=0, second=0, microsecond=0).strftime("%d %b %H:00")
+            key = _to_ist(visit.visit_time).replace(minute=0, second=0, microsecond=0).strftime("%d %b %H:00")
             if key in buckets:
                 buckets[key] += 1
     return list(buckets.items())
 
 
 def _count_by_day(visits, days=30):
-    today = datetime.utcnow().date()
+    today = _to_ist(datetime.utcnow()).date()
     buckets = {
         (today - timedelta(days=index)).strftime("%d %b"): 0
         for index in range(days - 1, -1, -1)
     }
     for visit in visits:
         if visit.visit_time:
-            key = visit.visit_time.date().strftime("%d %b")
+            key = _to_ist(visit.visit_time).date().strftime("%d %b")
             if key in buckets:
                 buckets[key] += 1
     return list(buckets.items())
@@ -41,7 +73,7 @@ def _count_by_month(visits):
     buckets = defaultdict(int)
     for visit in visits:
         if visit.visit_time:
-            buckets[visit.visit_time.strftime("%b %Y")] += 1
+            buckets[_to_ist(visit.visit_time).strftime("%b %Y")] += 1
     return list(buckets.items())[-12:]
 
 
@@ -191,8 +223,47 @@ def _build_admin_analytics_context(section="overview"):
         if car.pollution_expiry and car.pollution_expiry < today
     ]
 
+    frequency_filter = request.args.get("frequency", "30d")
+    frequency_start, frequency_label = _frequency_start(frequency_filter)
+    user_rows = []
+    for user in User.query.order_by(User.id.desc()).all():
+        user_visits_query = WebsiteVisit.query.filter(
+            WebsiteVisit.user_id == user.id,
+            WebsiteVisit.is_page_view.is_(True)
+        )
+        if frequency_start:
+            user_visits_query = user_visits_query.filter(WebsiteVisit.visit_time >= frequency_start)
+        user_visits = user_visits_query.order_by(WebsiteVisit.visit_time.desc()).all()
+        latest_visit = user_visits[0] if user_visits else (
+            WebsiteVisit.query.filter_by(user_id=user.id, is_page_view=True)
+            .order_by(WebsiteVisit.visit_time.desc())
+            .first()
+        )
+        user_cars = sorted(user.cars, key=lambda car: car.created_at or datetime.min, reverse=True)
+        primary_car = next((car for car in user_cars if car.is_default), user_cars[0] if user_cars else None)
+        user_events_query = WebsiteEvent.query.filter(WebsiteEvent.user_id == user.id)
+        if frequency_start:
+            user_events_query = user_events_query.filter(WebsiteEvent.event_time >= frequency_start)
+        user_rows.append({
+            "user": user,
+            "cars": user_cars,
+            "primary_car": primary_car,
+            "visit_count": len(user_visits),
+            "event_count": user_events_query.count(),
+            "last_seen": _format_ist(latest_visit.visit_time) if latest_visit else "No visit tracked",
+            "last_path": latest_visit.path if latest_visit else "N/A",
+        })
+    user_rows.sort(key=lambda row: (row["visit_count"], row["event_count"], row["user"].id), reverse=True)
+    active_user_rows = [row for row in user_rows if row["visit_count"] > 0]
+
     return {
         "section": section,
+        "frequency_filter": frequency_filter,
+        "frequency_label": frequency_label,
+        "frequency_options": _frequency_options(),
+        "user_rows": user_rows,
+        "active_user_rows": active_user_rows,
+        "inactive_user_count": max(0, len(user_rows) - len(active_user_rows)),
         "visit_count": visit_count,
         "today_page_views": today_page_views,
         "yesterday_page_views": yesterday_page_views,
@@ -231,7 +302,7 @@ def admin_analytics(section="overview"):
     if not _require_admin():
         return "Access Denied", 403
 
-    allowed_sections = {"overview", "traffic", "engagement", "safety", "vehicles"}
+    allowed_sections = {"overview", "traffic", "engagement", "safety", "vehicles", "users"}
     if section not in allowed_sections:
         return redirect("/admin/analytics/overview")
 

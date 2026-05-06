@@ -25,6 +25,20 @@ placeholder="Describe your problem or discussion..."
 required
 ></textarea>
 
+<label class="create-label">Post in car community</label>
+<select name="community_id">
+<option value="">General Community</option>
+{% for car_group in car_communities %}
+<option value="{{ car_group.id }}" {% if selected_community == car_group.slug %}selected{% endif %}>{{ car_group.name }}</option>
+{% endfor %}
+</select>
+
+<input
+type="text"
+name="new_community_name"
+placeholder="Or create new car community, e.g. Swift Diesel Owners"
+>
+
 <div class="image-upload">
 
 <label style="display:block; margin-bottom:8px; color:#aaa;">

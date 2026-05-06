@@ -12,7 +12,7 @@
 </div>
 
 <div class="ui-grid ui-grid-4 card-spacer">
-<div class="stat-card"><span>Total Users</span><div class="stat-number">{{ total_users }}</div></div>
+<a class="stat-card stat-card-link" href="/admin/analytics/users"><span>Total Users</span><div class="stat-number">{{ total_users }}</div></a>
 <div class="stat-card"><span>Total Posts</span><div class="stat-number">{{ posts|length }}</div></div>
 <div class="stat-card"><span>Total Intelligence Usage</span><div class="stat-number">{{ total_ai_usage }}</div></div>
 <div class="stat-card"><span>Total Page Views</span><div class="stat-number">{{ visit_count }}</div></div>
@@ -43,6 +43,7 @@
 <a href="/admin/analytics/overview"><i class="fa-solid fa-chart-line"></i><span>Analytics Overview</span></a>
 <a href="/admin/analytics/traffic"><i class="fa-solid fa-signal"></i><span>Traffic</span></a>
 <a href="/admin/analytics/engagement"><i class="fa-solid fa-arrow-pointer"></i><span>Clicks & Engagement</span></a>
+<a href="/admin/analytics/users"><i class="fa-solid fa-users"></i><span>Users</span></a>
 <a href="/admin/analytics/safety"><i class="fa-solid fa-shield-halved"></i><span>Safety Alerts</span></a>
 <a href="/admin/analytics/vehicles"><i class="fa-solid fa-car-side"></i><span>Vehicles</span></a>
 </div>

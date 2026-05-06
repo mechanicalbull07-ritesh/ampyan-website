@@ -16,6 +16,7 @@
 <a href="/admin/analytics/overview" class="{% if section == 'overview' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i><span>Overview</span></a>
 <a href="/admin/analytics/traffic" class="{% if section == 'traffic' %}active{% endif %}"><i class="fa-solid fa-signal"></i><span>Traffic</span></a>
 <a href="/admin/analytics/engagement" class="{% if section == 'engagement' %}active{% endif %}"><i class="fa-solid fa-arrow-pointer"></i><span>Engagement</span></a>
+<a href="/admin/analytics/users" class="{% if section == 'users' %}active{% endif %}"><i class="fa-solid fa-users"></i><span>Users</span></a>
 <a href="/admin/analytics/safety" class="{% if section == 'safety' %}active{% endif %}"><i class="fa-solid fa-shield-halved"></i><span>Safety</span></a>
 <a href="/admin/analytics/vehicles" class="{% if section == 'vehicles' %}active{% endif %}"><i class="fa-solid fa-car-side"></i><span>Vehicles</span></a>
 </div>
@@ -161,6 +162,98 @@
 <p class="section-copy">No device data yet.</p>
 {% endif %}
 </div>
+</div>
+{% endif %}
+
+{% if section == "users" %}
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Total Users</span><div class="stat-number">{{ user_rows|length }}</div></div>
+<div class="stat-card"><span>Active Users</span><div class="stat-number">{{ active_user_rows|length }}</div></div>
+<div class="stat-card"><span>Inactive Users</span><div class="stat-number">{{ inactive_user_count }}</div></div>
+<div class="stat-card"><span>Frequency</span><div class="stat-number stat-number-sm">{{ frequency_label }}</div></div>
+</div>
+
+<div class="ui-card card-spacer">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">User Frequency</p>
+<h2 class="section-heading">Users, cars and document status</h2>
+<p class="section-copy">Times are shown in Indian Standard Time. Contact and vehicle information is visible for admin support and reminders.</p>
+</div>
+<span class="garage-trust-score">{{ active_user_rows|length }} active in {{ frequency_label }}</span>
+</div>
+
+<form method="GET" class="admin-filter-row">
+{% for key, label, delta in frequency_options %}
+<button type="submit" name="frequency" value="{{ key }}" class="{% if frequency_filter == key %}active{% endif %}">{{ label }}</button>
+{% endfor %}
+</form>
+</div>
+
+<div class="admin-analytics-panel admin-wide-panel card-spacer">
+<h3>All users</h3>
+{% if user_rows %}
+<div class="admin-table-wrap">
+<table class="admin-analytics-table admin-user-table">
+<thead>
+<tr>
+<th>User</th>
+<th>Email ID</th>
+<th>Contact Number</th>
+<th>Car</th>
+<th>Insurance</th>
+<th>Pollution</th>
+<th>Buy Year</th>
+<th>Next Service</th>
+<th>Frequency</th>
+<th>Last Seen</th>
+</tr>
+</thead>
+<tbody>
+{% for row in user_rows %}
+{% set user = row.user %}
+{% set car = row.primary_car %}
+<tr>
+<td>
+<strong>{{ user.username }}</strong>
+<small>{{ user.role }}{% if user.is_banned %} • Banned{% endif %}</small>
+</td>
+<td>{{ user.email }}</td>
+<td>{{ user.mobile or "N/A" }}</td>
+<td>
+{% if car %}
+{{ car.brand or "Unknown" }} {{ car.model or "Vehicle" }}
+<small>{{ car.fuel_type or "Fuel N/A" }} • {{ row.cars|length }} car{{ "s" if row.cars|length != 1 else "" }}</small>
+{% else %}
+N/A
+{% endif %}
+</td>
+<td>{{ car.insurance_expiry if car and car.insurance_expiry else "N/A" }}</td>
+<td>{{ car.pollution_expiry if car and car.pollution_expiry else "N/A" }}</td>
+<td>{{ car.year if car and car.year else "N/A" }}</td>
+<td>
+{% if car %}
+{% if car.next_service_date %}{{ car.next_service_date.strftime("%d %b %Y") }}
+{% elif car.next_service_km %}{{ car.next_service_km }} km
+{% else %}N/A{% endif %}
+{% else %}N/A{% endif %}
+</td>
+<td>
+<strong>{{ row.visit_count }}</strong> visits
+<small>{{ row.event_count }} actions</small>
+</td>
+<td>
+{{ row.last_seen }}
+<small>{{ row.last_path }}</small>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% else %}
+<p class="section-copy">No users found.</p>
+{% endif %}
 </div>
 {% endif %}
 

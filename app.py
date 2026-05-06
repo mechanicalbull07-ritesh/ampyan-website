@@ -22,7 +22,7 @@ from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
 # ================= MODELS =================
-from models.models import db, User, Post, Comment, Vote, News, NewsReply, Video, VideoReply, DiagnosticLearning, HelpReport, Car, WebsiteVisit, WebsiteEvent
+from models.models import db, User, Post, Comment, Vote, News, NewsReply, Video, VideoReply, DiagnosticLearning, HelpReport, Car, CarCommunity, WebsiteVisit, WebsiteEvent
 print("Models loaded")
 
 # ================= SECURITY =================
@@ -251,6 +251,29 @@ ADMIN_EMAILS = [
 @app.context_processor
 def inject_admin_emails():
     return dict(ADMIN_EMAILS=ADMIN_EMAILS)
+
+def static_image_url_if_exists(folder, filename):
+    if not filename:
+        return None
+
+    candidates = []
+    for candidate in (filename, secure_filename(filename)):
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+
+    for candidate in candidates:
+        relative_path = os.path.join(folder, candidate)
+        absolute_path = os.path.join(app.static_folder, relative_path)
+        if os.path.isfile(absolute_path):
+            return url_for("static", filename=relative_path.replace(os.sep, "/"))
+
+    return None
+
+@app.context_processor
+def inject_image_helpers():
+    return dict(
+        news_image_url=lambda filename: static_image_url_if_exists("news_images", filename)
+    )
     
 from flask_mail import Mail, Message
 
@@ -1727,6 +1750,37 @@ def ensure_reply_schema():
     db.session.commit()
 
 
+def ensure_post_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("post"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("post")}
+    if "community_id" not in existing_columns:
+        db.session.execute(text("ALTER TABLE post ADD COLUMN community_id INTEGER"))
+
+    db.session.commit()
+
+
+def ensure_car_community_seed():
+    seed_communities = [
+        ("General Owners", "General car ownership questions, buying advice and everyday driving help."),
+        ("Swift Community", "Swift owners discussing mileage, service, parts and city use."),
+        ("Creta Community", "Creta owners comparing features, maintenance, tyres and road trips."),
+        ("Thar Community", "Thar owners sharing off-road, modification and service experience."),
+        ("Honda City Community", "Honda City owners discussing comfort, petrol CVT and long-term reliability."),
+        ("EV Owners India", "EV owners talking charging, range, batteries and daily use."),
+        ("Diesel Owners", "Diesel owners discussing DPF, mileage, turbo and service habits."),
+    ]
+
+    for name, description in seed_communities:
+        slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+        if not CarCommunity.query.filter_by(slug=slug).first():
+            db.session.add(CarCommunity(name=name, slug=slug, description=description))
+
+    db.session.commit()
+
+
 def ensure_demo_community_seed():
     demo_authors = [
         ("AmanService", "demo.aman.service@example.com", "Service Guide", 84),
@@ -1883,6 +1937,8 @@ def initialize_database():
         ensure_car_schema()
         ensure_website_visit_schema()
         ensure_reply_schema()
+        ensure_post_schema()
+        ensure_car_community_seed()
         ensure_demo_community_seed()
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()

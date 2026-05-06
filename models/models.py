@@ -109,6 +109,18 @@ class MechanicReview(db.Model):
 
 # ================= POSTS =================
 
+class CarCommunity(db.Model):
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(120), unique=True, nullable=False)
+    slug = db.Column(db.String(140), unique=True, nullable=False)
+    description = db.Column(db.String(255))
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    creator = db.relationship("User", backref="created_car_communities")
+
+
 class Post(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
@@ -119,10 +131,12 @@ class Post(db.Model):
     image = db.Column(db.String(200))
 
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    community_id = db.Column(db.Integer, db.ForeignKey("car_community.id"), nullable=True)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     author = db.relationship("User", backref="posts")
+    car_community = db.relationship("CarCommunity", backref="posts")
 
     comments = db.relationship(
         "Comment",

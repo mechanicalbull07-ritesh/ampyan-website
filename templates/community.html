@@ -11,7 +11,7 @@
 <p class="page-subtitle">Ask questions, share ownership experience and learn from real car owners across the platform.</p>
 </div>
 
-<a href="/create-post" class="create-btn">Create Post</a>
+<a href="/create-post" class="create-btn"><i class="fa-solid fa-pen-to-square"></i> Create Post</a>
 </div>
 
 <div class="community-interactive-grid card-spacer">
@@ -40,10 +40,23 @@
 <div class="ui-card card-spacer">
 <form method="GET" class="filter-bar">
 <input type="text" name="q" value="{{ search_query }}" placeholder="Search posts, topics, problems...">
+{% if active_car_community %}
+<input type="hidden" name="car_community" value="{{ active_car_community }}">
+{% endif %}
 <button type="submit">Search</button>
-<a href="{{ url_for('community.community', q=search_query, sort='new') }}" class="sort-btn {% if current_sort == 'new' %}active-sort{% endif %}">New</a>
-<a href="{{ url_for('community.community', q=search_query, sort='popular') }}" class="sort-btn {% if current_sort == 'popular' %}active-sort{% endif %}">Popular</a>
+<a href="{{ url_for('community.community', q=search_query, sort='new', car_community=active_car_community) }}" class="sort-btn {% if current_sort == 'new' %}active-sort{% endif %}">New</a>
+<a href="{{ url_for('community.community', q=search_query, sort='popular', car_community=active_car_community) }}" class="sort-btn {% if current_sort == 'popular' %}active-sort{% endif %}">Popular</a>
 </form>
+<div class="community-quick-row">
+<a href="{{ url_for('community.community', q=search_query, sort=current_sort) }}" class="community-quick-chip {% if not active_car_community %}active-community-chip{% endif %}">
+<i class="fa-solid fa-layer-group"></i> All
+</a>
+{% for car_group in car_communities[:8] %}
+<a href="{{ url_for('community.community', car_community=car_group.slug, q=search_query, sort=current_sort) }}" class="community-quick-chip {% if active_car_community == car_group.slug %}active-community-chip{% endif %}">
+<i class="fa-solid fa-car-side"></i> {{ car_group.name }}
+</a>
+{% endfor %}
+</div>
 <div class="community-quick-row">
 {% for label, topic in quick_topics %}
 <a href="{{ url_for('community.community', q=topic) }}" class="community-quick-chip">{{ label }}</a>
@@ -93,7 +106,7 @@
 </div>
 <div class="author-location">
 {% if post.author_city %}
-📍 {{ post.author_city }}
+<i class="fa-solid fa-location-dot"></i> {{ post.author_city }}
 {% else %}
 Community Member
 {% endif %}
@@ -106,6 +119,10 @@ Community Member
 <a href="{{ post.detail_url }}">{{ post.title }}</a>
 </h2>
 
+<a href="{{ post.community_url }}" class="post-community-pill">
+<i class="fa-solid fa-car-rear"></i> {{ post.community_name }}
+</a>
+
 <p class="post-preview">{{ post.preview_text }}</p>
 
 {% if post.image_url %}
@@ -113,35 +130,43 @@ Community Member
 {% endif %}
 
 {% if post.top_comments %}
+<div class="reply-preview-stack">
 {% for comment in post.top_comments %}
 <div class="top-reply">
-<span class="top-reply-label">{% if loop.index == 1 %}Top Reply{% else %}2nd Reply{% endif %}</span>
+<span class="top-reply-label">{% if loop.index == 1 %}Top Reply{% else %}Reply {{ loop.index }}{% endif %}</span>
 <p>{{ comment.content[:120] }}{% if comment.content|length > 120 %}...{% endif %}</p>
 </div>
 {% endfor %}
+</div>
 {% endif %}
 
 <div class="post-divider"></div>
 
 <div class="post-actions">
 {% if post.vote_url %}
-<a href="{{ post.vote_url }}" class="vote-btn {% if current_user.is_authenticated and not post.is_remote and post.votes|selectattr('user_id','equalto',current_user.id)|list|length > 0 %}voted{% endif %}">
-🔥 {{ post.vote_count }}
+<a href="{{ post.vote_url }}" class="vote-btn ampyan-boost-btn {% if current_user.is_authenticated and not post.is_remote and post.votes|selectattr('user_id','equalto',current_user.id)|list|length > 0 %}voted{% endif %}" title="Boost helpful post">
+<i class="fa-solid fa-bolt-lightning"></i> {{ post.vote_count }}
 </a>
 {% else %}
-<span class="vote-btn" style="opacity:0.7;pointer-events:none;">🔥 {{ post.vote_count }}</span>
+<span class="vote-btn ampyan-boost-btn" style="opacity:0.7;pointer-events:none;"><i class="fa-solid fa-bolt-lightning"></i> {{ post.vote_count }}</span>
 {% endif %}
 
 <a href="{{ post.detail_url }}" class="reply-count">
-💬 {{ post.reply_count }} replies
+<i class="fa-solid fa-comments"></i> {{ post.reply_count }} replies
 </a>
 
-<button type="button" class="ui-button-secondary share-btn" data-share-url="{{ post.share_url }}" data-share-title="{{ post.title }}">Share</button>
+<button type="button" class="community-icon-action share-btn" data-share-url="{{ post.share_url }}" data-share-title="{{ post.title }}" title="Share">
+<i class="fa-solid fa-share-nodes"></i><span>Share</span>
+</button>
 
 {% if post.can_edit %}
-<a href="{{ post.edit_url }}" class="ui-button-secondary">Edit</a>
+<a href="{{ post.edit_url }}" class="community-icon-action" title="Edit">
+<i class="fa-solid fa-pen"></i><span>Edit</span>
+</a>
 <form method="POST" action="{{ post.delete_url }}" class="inline-form">
-<button type="submit" class="ui-button-danger" onclick="return confirm('Delete this post?')">Delete</button>
+<button type="submit" class="community-icon-action danger-action" onclick="return confirm('Delete this post?')" title="Delete">
+<i class="fa-solid fa-trash"></i><span>Delete</span>
+</button>
 </form>
 {% endif %}
 </div>
@@ -154,6 +179,18 @@ Community Member
 </div>
 
 <aside class="community-sidebar">
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Car Communities</h2>
+<p class="section-copy">Connect with owners of the same car or vehicle type.</p>
+</div>
+<form method="POST" action="{{ url_for('community.create_car_community') }}" class="car-community-form">
+<input type="text" name="name" placeholder="Create: Baleno Owners, XUV700..." required>
+<input type="text" name="description" placeholder="Short purpose (optional)">
+<button type="submit"><i class="fa-solid fa-plus"></i> Create</button>
+</form>
+</div>
+
 {% if unanswered_posts %}
 <div class="ui-card card-spacer">
 <div class="community-section-head">
