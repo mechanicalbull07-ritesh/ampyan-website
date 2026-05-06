@@ -72,11 +72,7 @@
 
 <div class="cockpit-feed">
 <div class="cockpit-post-composer">
-{% if current_user.is_authenticated and current_user.profile_photo %}
-<img src="{{ url_for('static', filename='profile_images/' + current_user.profile_photo) }}" alt="{{ current_user.username }}">
-{% else %}
-<div>{{ current_user.username[0]|upper if current_user.is_authenticated else "A" }}</div>
-{% endif %}
+<span><i class="fa-solid fa-pen-to-square"></i> Owner Hub</span>
 <a href="/create-post">Ask or share with AMPYAN owners</a>
 <a href="/tools/ai-diagnosis">Check car issue</a>
 </div>
