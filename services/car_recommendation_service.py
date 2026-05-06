@@ -1,125 +1,6 @@
-CAR_CATALOG = [
-    {
-        "name": "Maruti Suzuki WagonR",
-        "body_style": "Tall hatchback",
-        "price_band": "Budget",
-        "fuel": ["petrol", "cng"],
-        "transmission": ["manual", "automatic"],
-        "city_score": 9,
-        "highway_score": 6,
-        "family_score": 8,
-        "solo_score": 7,
-        "running_cost_score": 10,
-        "comfort_score": 7,
-        "tags": ["city", "family", "budget", "daily", "practical"],
-        "reason": "Very easy to drive in city traffic, affordable to maintain and spacious for daily family use."
-    },
-    {
-        "name": "Tata Punch",
-        "body_style": "Micro SUV",
-        "price_band": "Budget",
-        "fuel": ["petrol", "cng"],
-        "transmission": ["manual", "automatic"],
-        "city_score": 8,
-        "highway_score": 7,
-        "family_score": 8,
-        "solo_score": 7,
-        "running_cost_score": 8,
-        "comfort_score": 7,
-        "tags": ["city", "family", "weekend", "high-ground-clearance"],
-        "reason": "Good for mixed city use, broken roads and buyers who want a compact SUV-like feel."
-    },
-    {
-        "name": "Hyundai Exter",
-        "body_style": "Compact SUV",
-        "price_band": "Budget",
-        "fuel": ["petrol", "cng"],
-        "transmission": ["manual", "automatic"],
-        "city_score": 8,
-        "highway_score": 7,
-        "family_score": 7,
-        "solo_score": 8,
-        "running_cost_score": 8,
-        "comfort_score": 7,
-        "tags": ["city", "solo", "family", "feature-rich"],
-        "reason": "Feature-rich option for urban buyers who want easy driving and decent road-trip ability."
-    },
-    {
-        "name": "Maruti Suzuki Baleno",
-        "body_style": "Premium hatchback",
-        "price_band": "Mid",
-        "fuel": ["petrol", "cng"],
-        "transmission": ["manual", "automatic"],
-        "city_score": 8,
-        "highway_score": 8,
-        "family_score": 8,
-        "solo_score": 8,
-        "running_cost_score": 9,
-        "comfort_score": 8,
-        "tags": ["city", "highway", "family", "refined"],
-        "reason": "Balanced all-rounder with good efficiency, cabin space and everyday comfort."
-    },
-    {
-        "name": "Honda Amaze",
-        "body_style": "Compact sedan",
-        "price_band": "Mid",
-        "fuel": ["petrol"],
-        "transmission": ["manual", "automatic"],
-        "city_score": 7,
-        "highway_score": 8,
-        "family_score": 8,
-        "solo_score": 7,
-        "running_cost_score": 8,
-        "comfort_score": 8,
-        "tags": ["family", "boot-space", "highway", "comfort"],
-        "reason": "Strong choice for users who want comfort, boot space and a relaxed family-friendly drive."
-    },
-    {
-        "name": "Hyundai Creta",
-        "body_style": "Mid-size SUV",
-        "price_band": "Premium",
-        "fuel": ["petrol", "diesel"],
-        "transmission": ["manual", "automatic"],
-        "city_score": 7,
-        "highway_score": 9,
-        "family_score": 9,
-        "solo_score": 7,
-        "running_cost_score": 6,
-        "comfort_score": 9,
-        "tags": ["family", "highway", "premium", "road-trip"],
-        "reason": "Great for family highway users who want comfort, road presence and long-distance ease."
-    },
-    {
-        "name": "Kia Carens",
-        "body_style": "MPV",
-        "price_band": "Premium",
-        "fuel": ["petrol", "diesel"],
-        "transmission": ["manual", "automatic"],
-        "city_score": 6,
-        "highway_score": 9,
-        "family_score": 10,
-        "solo_score": 5,
-        "running_cost_score": 6,
-        "comfort_score": 9,
-        "tags": ["large-family", "highway", "comfort", "touring"],
-        "reason": "Excellent for bigger families, frequent outstation travel and maximum passenger comfort."
-    },
-    {
-        "name": "Mahindra XUV 3XO",
-        "body_style": "Compact SUV",
-        "price_band": "Mid",
-        "fuel": ["petrol", "diesel"],
-        "transmission": ["manual", "automatic"],
-        "city_score": 7,
-        "highway_score": 8,
-        "family_score": 8,
-        "solo_score": 8,
-        "running_cost_score": 7,
-        "comfort_score": 8,
-        "tags": ["highway", "family", "performance", "feature-rich"],
-        "reason": "A strong match for users who want a safer, more powerful compact SUV for mixed usage."
-    },
-]
+from services.india_car_catalog import recommendation_catalog
+
+CAR_CATALOG = recommendation_catalog()
 
 
 def _preference_bonus(car, preferences):
@@ -199,7 +80,7 @@ def recommend_cars(preferences):
         })
 
     ranked.sort(key=lambda item: item["match_score"], reverse=True)
-    return ranked[:3]
+    return ranked[:9]
 
 
 def _build_fit_summary(car, preferences):

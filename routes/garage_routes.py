@@ -4,6 +4,7 @@ from flask import Blueprint, render_template, request, redirect
 from flask_login import login_required, current_user
 from models.models import db, Car, DiagnosticLearning
 from services.garage_summary import enrich_car_for_garage
+from services.india_car_catalog import catalog_brands, garage_catalog_payload
 
 garage_bp = Blueprint("garage", __name__)
 
@@ -124,7 +125,11 @@ def add_car():
 
         return redirect("/garage")
 
-    return render_template("add_car.html")
+    return render_template(
+        "add_car.html",
+        car_brands=catalog_brands(),
+        car_catalog=garage_catalog_payload(),
+    )
 
 
 # ================= SET DEFAULT CAR =================

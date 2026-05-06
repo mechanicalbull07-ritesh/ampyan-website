@@ -10,25 +10,21 @@
 
 <form action="/add-car" method="POST" class="auth-form">
 
-<!-- BRAND -->
+<label class="form-label">Car Brand</label>
+<select name="brand" id="carBrandSelect" required class="auth-input">
+<option value="">Select Brand</option>
+{% for brand in car_brands %}
+<option value="{{ brand }}">{{ brand }}</option>
+{% endfor %}
+</select>
 
-<input
-type="text"
-name="brand"
-placeholder="Car Brand (Maruti, Hyundai)"
-required
-class="auth-input"
-/>
+<label class="form-label">Car Model</label>
+<select name="model" id="carModelSelect" required class="auth-input">
+<option value="">Select Model</option>
+</select>
 
-<!-- MODEL -->
-
-<input
-type="text"
-name="model"
-placeholder="Car Model (Swift, Creta)"
-required
-class="auth-input"
-/>
+<p class="section-copy" id="catalogCarMeta" style="margin-top:-8px;">Choose a brand to see India-market models available in AMPYAN catalog.</p>
+<p class="section-copy" style="font-size:12px;">AMPYAN uses a locally maintained factual model-name catalog. It does not copy third-party descriptions, images or proprietary specs.</p>
 
 <!-- YEAR -->
 
@@ -49,6 +45,7 @@ class="auth-input"
 <option value="Diesel">Diesel</option>
 <option value="CNG">CNG</option>
 <option value="Electric">Electric</option>
+<option value="Hybrid">Hybrid</option>
 
 </select>
 
@@ -114,5 +111,51 @@ Add Car
 </div>
 
 </div>
+
+<script>
+const indiaCarCatalog = {{ car_catalog|tojson }};
+const brandSelect = document.getElementById("carBrandSelect");
+const modelSelect = document.getElementById("carModelSelect");
+const fuelSelect = document.querySelector("select[name='fuel']");
+const meta = document.getElementById("catalogCarMeta");
+
+function updateModels(){
+    const brand = brandSelect.value;
+    const cars = indiaCarCatalog[brand] || [];
+    modelSelect.innerHTML = '<option value="">Select Model</option>';
+    cars.forEach(car => {
+        const option = document.createElement("option");
+        option.value = car.model;
+        option.textContent = car.model;
+        option.dataset.fuel = JSON.stringify(car.fuel || []);
+        option.dataset.body = car.body_style || "";
+        option.dataset.price = car.price_band || "";
+        modelSelect.appendChild(option);
+    });
+    meta.textContent = cars.length ? `${cars.length} ${brand} models available in AMPYAN catalog.` : "Choose a brand to see India-market models.";
+}
+
+function updateFuelAndMeta(){
+    const selected = modelSelect.options[modelSelect.selectedIndex];
+    if(!selected || !selected.value) return;
+    const fuels = JSON.parse(selected.dataset.fuel || "[]");
+    if(fuels.length && fuelSelect){
+        const labels = {petrol:"Petrol", diesel:"Diesel", cng:"CNG", electric:"Electric", hybrid:"Hybrid"};
+        fuelSelect.innerHTML = '<option value="">Select Fuel Type</option>';
+        fuels.forEach(fuel => {
+            const option = document.createElement("option");
+            option.value = labels[fuel] || fuel;
+            option.textContent = labels[fuel] || fuel;
+            fuelSelect.appendChild(option);
+        });
+    }
+    meta.textContent = `${brandSelect.value} ${selected.value} - ${selected.dataset.body || "Car"} - ${selected.dataset.price || "India"} range.`;
+}
+
+if(brandSelect && modelSelect){
+    brandSelect.addEventListener("change", updateModels);
+    modelSelect.addEventListener("change", updateFuelAndMeta);
+}
+</script>
 
 {% endblock %}
