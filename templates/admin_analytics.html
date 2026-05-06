@@ -23,10 +23,17 @@
 
 {% if section == "overview" %}
 <div class="ui-grid ui-grid-4 card-spacer">
-<div class="stat-card"><span>Total Views</span><div class="stat-number">{{ visit_count }}</div></div>
-<div class="stat-card"><span>Today Views</span><div class="stat-number">{{ today_page_views }}</div></div>
+<div class="stat-card"><span>Public Views</span><div class="stat-number">{{ visit_count }}</div></div>
+<div class="stat-card"><span>Today Public Views</span><div class="stat-number">{{ today_page_views }}</div></div>
 <div class="stat-card"><span>Unique Visitors</span><div class="stat-number">{{ total_unique_visitors }}</div></div>
-<div class="stat-card"><span>Tracked Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
+<div class="stat-card"><span>Public Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>New Visitors 24h</span><div class="stat-number">{{ user_frequency_summary.day.new }}</div></div>
+<div class="stat-card"><span>Repeated Visitors 24h</span><div class="stat-number">{{ user_frequency_summary.day.repeated }}</div></div>
+<div class="stat-card"><span>Admin Views 30d</span><div class="stat-number">{{ admin_activity.views_30d }}</div></div>
+<div class="stat-card"><span>Admin Clicks 30d</span><div class="stat-number">{{ admin_activity.clicks_30d }}</div></div>
 </div>
 
 <div class="admin-analytics-grid card-spacer">
@@ -58,12 +65,21 @@
 {% endfor %}
 </div>
 </div>
+<div class="admin-analytics-panel">
+<h3>Public user frequency</h3>
+<div class="admin-mini-stats">
+<div><span>Hour Unique</span><strong>{{ user_frequency_summary.hour.unique }}</strong></div>
+<div><span>Day Unique</span><strong>{{ user_frequency_summary.day.unique }}</strong></div>
+<div><span>Week Repeat</span><strong>{{ user_frequency_summary.week.repeated }}</strong></div>
+<div><span>Month New</span><strong>{{ user_frequency_summary.month.new }}</strong></div>
+</div>
+</div>
 </div>
 {% endif %}
 
 {% if section == "traffic" %}
 <div class="ui-grid ui-grid-4 card-spacer">
-<div class="stat-card"><span>Today</span><div class="stat-number">{{ today_page_views }}</div></div>
+<div class="stat-card"><span>Today Public</span><div class="stat-number">{{ today_page_views }}</div></div>
 <div class="stat-card"><span>Yesterday</span><div class="stat-number">{{ yesterday_page_views }}</div></div>
 <div class="stat-card"><span>Change</span><div class="stat-number">{{ "+" if traffic_delta_today >= 0 else "" }}{{ traffic_delta_today }}</div></div>
 <div class="stat-card"><span>Today Visitors</span><div class="stat-number">{{ today_unique_visitors }}</div></div>
@@ -76,6 +92,21 @@
 {% for label, count in hourly_traffic %}
 <div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 8, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
 {% endfor %}
+</div>
+</div>
+
+<div class="admin-analytics-panel admin-wide-panel card-spacer">
+<h3>Unique, new and repeated users</h3>
+<div class="admin-table-wrap">
+<table class="admin-analytics-table">
+<thead><tr><th>Period</th><th>Views</th><th>Unique</th><th>New</th><th>Repeated</th><th>Logged-in</th></tr></thead>
+<tbody>
+<tr><td>Hour</td><td>{{ user_frequency_summary.hour.views }}</td><td>{{ user_frequency_summary.hour.unique }}</td><td>{{ user_frequency_summary.hour.new }}</td><td>{{ user_frequency_summary.hour.repeated }}</td><td>{{ user_frequency_summary.hour.logged_in }}</td></tr>
+<tr><td>Day</td><td>{{ user_frequency_summary.day.views }}</td><td>{{ user_frequency_summary.day.unique }}</td><td>{{ user_frequency_summary.day.new }}</td><td>{{ user_frequency_summary.day.repeated }}</td><td>{{ user_frequency_summary.day.logged_in }}</td></tr>
+<tr><td>Week</td><td>{{ user_frequency_summary.week.views }}</td><td>{{ user_frequency_summary.week.unique }}</td><td>{{ user_frequency_summary.week.new }}</td><td>{{ user_frequency_summary.week.repeated }}</td><td>{{ user_frequency_summary.week.logged_in }}</td></tr>
+<tr><td>Month</td><td>{{ user_frequency_summary.month.views }}</td><td>{{ user_frequency_summary.month.unique }}</td><td>{{ user_frequency_summary.month.new }}</td><td>{{ user_frequency_summary.month.repeated }}</td><td>{{ user_frequency_summary.month.logged_in }}</td></tr>
+</tbody>
+</table>
 </div>
 </div>
 <div class="admin-analytics-panel">
@@ -120,9 +151,16 @@
 
 {% if section == "engagement" %}
 <div class="ui-grid ui-grid-3 card-spacer">
-<div class="stat-card"><span>Tracked Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
+<div class="stat-card"><span>Public Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
 <div class="stat-card"><span>Logged-in Views</span><div class="stat-number">{{ logged_in_views }}</div></div>
 <div class="stat-card"><span>Guest Views</span><div class="stat-number">{{ guest_views }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Admin Clicks 24h</span><div class="stat-number">{{ admin_activity.clicks_24h }}</div></div>
+<div class="stat-card"><span>Admin Clicks 30d</span><div class="stat-number">{{ admin_activity.clicks_30d }}</div></div>
+<div class="stat-card"><span>Admin Views 24h</span><div class="stat-number">{{ admin_activity.views_24h }}</div></div>
+<div class="stat-card"><span>Active Admins 30d</span><div class="stat-number">{{ admin_activity.unique_admins_30d }}</div></div>
 </div>
 
 <div class="admin-analytics-grid card-spacer">
@@ -171,6 +209,13 @@
 <div class="stat-card"><span>Active Users</span><div class="stat-number">{{ active_user_rows|length }}</div></div>
 <div class="stat-card"><span>Inactive Users</span><div class="stat-number">{{ inactive_user_count }}</div></div>
 <div class="stat-card"><span>Frequency</span><div class="stat-number stat-number-sm">{{ frequency_label }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Hour Unique</span><div class="stat-number">{{ user_frequency_summary.hour.unique }}</div></div>
+<div class="stat-card"><span>Day New</span><div class="stat-number">{{ user_frequency_summary.day.new }}</div></div>
+<div class="stat-card"><span>Week Repeated</span><div class="stat-number">{{ user_frequency_summary.week.repeated }}</div></div>
+<div class="stat-card"><span>Month Unique</span><div class="stat-number">{{ user_frequency_summary.month.unique }}</div></div>
 </div>
 
 <div class="ui-card card-spacer">

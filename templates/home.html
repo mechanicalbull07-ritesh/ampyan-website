@@ -60,6 +60,80 @@
 </div>
 </section>
 
+<section class="ampyan-cockpit-section">
+<aside class="cockpit-rail">
+<a href="/news"><i class="fa-solid fa-newspaper"></i><span>News</span></a>
+<a href="/community"><i class="fa-solid fa-people-group"></i><span>Community</span></a>
+<a href="/tools/ai-diagnosis"><i class="fa-solid fa-car-burst"></i><span>Car Check</span></a>
+<a href="/garage-dashboard"><i class="fa-solid fa-car-side"></i><span>My Garage</span></a>
+<a href="/marketplace"><i class="fa-solid fa-cart-shopping"></i><span>Buy/Sell</span></a>
+<a href="/garage-network"><i class="fa-solid fa-shop"></i><span>Garages</span></a>
+</aside>
+
+<div class="cockpit-feed">
+<div class="cockpit-post-composer">
+{% if current_user.is_authenticated and current_user.profile_photo %}
+<img src="{{ url_for('static', filename='profile_images/' + current_user.profile_photo) }}" alt="{{ current_user.username }}">
+{% else %}
+<div>{{ current_user.username[0]|upper if current_user.is_authenticated else "A" }}</div>
+{% endif %}
+<a href="/create-post">Ask or share with AMPYAN owners</a>
+<a href="/tools/ai-diagnosis">Check car issue</a>
+</div>
+
+<div class="cockpit-main-card">
+<div class="cockpit-card-top">
+<span><i class="fa-solid fa-bolt-lightning"></i> Live Ownership Feed</span>
+<a href="/community">Open Community</a>
+</div>
+{% if recent_posts %}
+{% for post in recent_posts[:2] %}
+<a href="/post/{{ post.id }}" class="cockpit-discussion-row">
+<strong>{{ post.title }}</strong>
+<small>{{ post.author.username if post.author else "Member" }} · {{ post.comments|length }} replies · {{ post.votes|length }} boosts</small>
+<p>{{ post.content[:115] }}{% if post.content|length > 115 %}...{% endif %}</p>
+</a>
+{% endfor %}
+{% else %}
+<a href="/create-post" class="cockpit-discussion-row">
+<strong>Start the first owner discussion</strong>
+<small>Community · 0 replies</small>
+<p>Ask about mileage, service, buying advice, warning lights or daily ownership problems.</p>
+</a>
+{% endif %}
+</div>
+</div>
+
+<aside class="cockpit-side">
+<div class="cockpit-widget">
+<h3>Platform Snapshot</h3>
+<div class="cockpit-stat-grid">
+<div><span>Owners</span><strong>{{ ecosystem_stats.owners }}</strong></div>
+<div><span>Posts</span><strong>{{ ecosystem_stats.posts }}</strong></div>
+<div><span>Cars</span><strong>{{ ecosystem_stats.car_profiles }}</strong></div>
+<div><span>Garages</span><strong>{{ ecosystem_stats.mechanics }}</strong></div>
+</div>
+</div>
+
+<div class="cockpit-widget">
+<h3>Latest News</h3>
+{% if latest_news %}
+{% for news in latest_news[:3] %}
+<a href="/news/{{ news.id }}" class="cockpit-link-row">{{ news.title }}</a>
+{% endfor %}
+{% else %}
+<a href="/news" class="cockpit-link-row">News updates will appear here</a>
+{% endif %}
+</div>
+
+<div class="cockpit-widget cockpit-tool-strip">
+<a href="/tools/fuel-cost"><i class="fa-solid fa-gas-pump"></i><span>Fuel</span></a>
+<a href="/tools/emi-calculator"><i class="fa-solid fa-file-invoice-dollar"></i><span>EMI</span></a>
+<a href="/tools/depreciation-calculator"><i class="fa-solid fa-chart-line"></i><span>Value</span></a>
+</div>
+</aside>
+</section>
+
 <section class="ampyan-command-hero">
 <div class="ampyan-hero-shell">
 <div class="ampyan-hero-copy">

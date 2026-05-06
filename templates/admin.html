@@ -15,11 +15,11 @@
 <a class="stat-card stat-card-link" href="/admin/analytics/users"><span>Total Users</span><div class="stat-number">{{ total_users }}</div></a>
 <div class="stat-card"><span>Total Posts</span><div class="stat-number">{{ posts|length }}</div></div>
 <div class="stat-card"><span>Total Intelligence Usage</span><div class="stat-number">{{ total_ai_usage }}</div></div>
-<div class="stat-card"><span>Total Page Views</span><div class="stat-number">{{ visit_count }}</div></div>
+<div class="stat-card"><span>Public Page Views</span><div class="stat-number">{{ visit_count }}</div></div>
 </div>
 
 <div class="ui-grid ui-grid-4 card-spacer">
-<div class="stat-card"><span>Today Page Views</span><div class="stat-number">{{ today_page_views }}</div></div>
+<div class="stat-card"><span>Today Public Views</span><div class="stat-number">{{ today_page_views }}</div></div>
 <div class="stat-card"><span>Today Visitors</span><div class="stat-number">{{ today_unique_visitors }}</div></div>
 <div class="stat-card"><span>Total Visitors</span><div class="stat-number">{{ total_unique_visitors }}</div></div>
 <div class="stat-card"><span>Logged-in Views</span><div class="stat-number">{{ logged_in_views }}</div></div>
@@ -28,7 +28,7 @@
 <div class="ui-grid ui-grid-4 card-spacer">
 <div class="stat-card"><span>Yesterday Views</span><div class="stat-number">{{ yesterday_page_views }}</div></div>
 <div class="stat-card"><span>Today Change</span><div class="stat-number">{{ "+" if traffic_delta_today >= 0 else "" }}{{ traffic_delta_today }}</div></div>
-<div class="stat-card"><span>Tracked Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
+<div class="stat-card"><span>Public Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
 <div class="stat-card"><span>Security Events 24h</span><div class="stat-number">{{ security_events_24h|length }}</div></div>
 </div>
 

@@ -41,6 +41,39 @@ def _frequency_start(filter_key):
     return now - timedelta(days=30), "Last 30 days"
 
 
+def _ist_day_start_utc(days_back=0):
+    ist_now = _to_ist(datetime.utcnow())
+    ist_start = datetime.combine((ist_now - timedelta(days=days_back)).date(), time.min)
+    return ist_start - IST_OFFSET
+
+
+def _visitor_key(visit):
+    if visit.user_id:
+        return f"user-{visit.user_id}"
+    if visit.visitor_id:
+        return f"visitor-{visit.visitor_id}"
+    return f"ip-{visit.ip_address or visit.id}"
+
+
+def _period_user_stats(visits, period_start):
+    period_visits = [visit for visit in visits if visit.visit_time and visit.visit_time >= period_start]
+    visitor_counts = Counter(_visitor_key(visit) for visit in period_visits)
+    first_seen = {}
+    for visit in visits:
+        key = _visitor_key(visit)
+        if visit.visit_time and (key not in first_seen or visit.visit_time < first_seen[key]):
+            first_seen[key] = visit.visit_time
+    new_visitors = [key for key, value in first_seen.items() if value >= period_start]
+    logged_in_users = {visit.user_id for visit in period_visits if visit.user_id}
+    return {
+        "views": len(period_visits),
+        "unique": len(visitor_counts),
+        "repeated": sum(1 for count in visitor_counts.values() if count > 1),
+        "new": len(new_visitors),
+        "logged_in": len(logged_in_users),
+    }
+
+
 def _count_by_hour(visits):
     now = _to_ist(datetime.utcnow()).replace(minute=0, second=0, microsecond=0)
     buckets = {
@@ -98,27 +131,36 @@ def _require_admin():
 
 def _build_admin_analytics_context(section="overview"):
     now = datetime.utcnow()
-    today_start = datetime.combine(now.date(), time.min)
-    yesterday_start = today_start - timedelta(days=1)
+    today_start = _ist_day_start_utc()
+    yesterday_start = _ist_day_start_utc(1)
     last_24h = now - timedelta(hours=24)
+    last_7d = now - timedelta(days=7)
     last_30d = now - timedelta(days=30)
     last_365d = now - timedelta(days=365)
+    admin_user_ids = [user.id for user in User.query.filter_by(role="admin").all()]
 
     tracked_visits = WebsiteVisit.query.filter_by(is_page_view=True)
-    visit_count = tracked_visits.count()
+    public_visits_query = tracked_visits.filter(
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
+    )
+    admin_visits_query = tracked_visits.filter(WebsiteVisit.user_id.in_(admin_user_ids)) if admin_user_ids else tracked_visits.filter(False)
+    visit_count = public_visits_query.count()
     today_page_views = tracked_visits.filter(WebsiteVisit.visit_time >= today_start).count()
-    yesterday_page_views = tracked_visits.filter(
+    today_page_views = public_visits_query.filter(WebsiteVisit.visit_time >= today_start).count()
+    yesterday_page_views = public_visits_query.filter(
         WebsiteVisit.visit_time >= yesterday_start,
         WebsiteVisit.visit_time < today_start
     ).count()
     total_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
         WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.visitor_id.isnot(None)
+        WebsiteVisit.visitor_id.isnot(None),
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).scalar() or 0
     today_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
         WebsiteVisit.is_page_view.is_(True),
         WebsiteVisit.visitor_id.isnot(None),
-        WebsiteVisit.visit_time >= today_start
+        WebsiteVisit.visit_time >= today_start,
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).scalar() or 0
 
     top_pages = db.session.query(
@@ -126,7 +168,8 @@ def _build_admin_analytics_context(section="overview"):
         db.func.count(WebsiteVisit.id).label("views")
     ).filter(
         WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.path.isnot(None)
+        WebsiteVisit.path.isnot(None),
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).group_by(WebsiteVisit.path).order_by(db.func.count(WebsiteVisit.id).desc()).limit(20).all()
 
     device_breakdown = db.session.query(
@@ -134,19 +177,29 @@ def _build_admin_analytics_context(section="overview"):
         db.func.count(WebsiteVisit.id).label("views")
     ).filter(
         WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.device_type.isnot(None)
+        WebsiteVisit.device_type.isnot(None),
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).group_by(WebsiteVisit.device_type).order_by(db.func.count(WebsiteVisit.id).desc()).all()
 
-    recent_visit_rows = tracked_visits.filter(WebsiteVisit.visit_time >= last_365d).all()
+    recent_visit_rows = public_visits_query.filter(WebsiteVisit.visit_time >= last_365d).all()
+    all_public_visit_rows = public_visits_query.all()
+    admin_visit_rows = admin_visits_query.filter(WebsiteVisit.visit_time >= last_30d).all()
     visits_24h = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_24h]
     visits_30d = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_30d]
     hourly_traffic = _count_by_hour(visits_24h)
     daily_traffic = _count_by_day(visits_30d)
     monthly_traffic = _count_by_month(recent_visit_rows)
 
-    click_events = WebsiteEvent.query.filter_by(event_type="click").filter(
-        WebsiteEvent.event_time >= last_30d
-    ).order_by(WebsiteEvent.event_time.desc()).all()
+    public_click_query = WebsiteEvent.query.filter_by(event_type="click").filter(
+        WebsiteEvent.event_time >= last_30d,
+        (WebsiteEvent.user_id.is_(None)) | (~WebsiteEvent.user_id.in_(admin_user_ids))
+    )
+    admin_click_query = WebsiteEvent.query.filter_by(event_type="click").filter(
+        WebsiteEvent.event_time >= last_30d,
+        WebsiteEvent.user_id.in_(admin_user_ids)
+    ) if admin_user_ids else WebsiteEvent.query.filter(False)
+    click_events = public_click_query.order_by(WebsiteEvent.event_time.desc()).all()
+    admin_click_events = admin_click_query.order_by(WebsiteEvent.event_time.desc()).all()
     security_events = WebsiteEvent.query.filter_by(event_type="security").filter(
         WebsiteEvent.event_time >= last_30d
     ).order_by(WebsiteEvent.event_time.desc()).all()
@@ -173,7 +226,7 @@ def _build_admin_analytics_context(section="overview"):
             "logged_in": sum(1 for visit in page_visits if visit.is_authenticated),
             "guest": sum(1 for visit in page_visits if not visit.is_authenticated),
             "clicks": page_clicks,
-            "last_visit": max((visit.visit_time for visit in page_visits if visit.visit_time), default=None),
+            "last_visit": _to_ist(max((visit.visit_time for visit in page_visits if visit.visit_time), default=None)),
         })
 
     suspicious_ip_counter = Counter(event.ip_address or "Unknown" for event in security_events_24h)
@@ -255,6 +308,19 @@ def _build_admin_analytics_context(section="overview"):
         })
     user_rows.sort(key=lambda row: (row["visit_count"], row["event_count"], row["user"].id), reverse=True)
     active_user_rows = [row for row in user_rows if row["visit_count"] > 0]
+    user_frequency_summary = {
+        "hour": _period_user_stats(all_public_visit_rows, now - timedelta(hours=1)),
+        "day": _period_user_stats(all_public_visit_rows, today_start),
+        "week": _period_user_stats(all_public_visit_rows, last_7d),
+        "month": _period_user_stats(all_public_visit_rows, last_30d),
+    }
+    admin_activity = {
+        "views_30d": len(admin_visit_rows),
+        "views_24h": sum(1 for visit in admin_visit_rows if visit.visit_time and visit.visit_time >= last_24h),
+        "clicks_30d": len(admin_click_events),
+        "clicks_24h": sum(1 for event in admin_click_events if event.event_time and event.event_time >= last_24h),
+        "unique_admins_30d": len({visit.user_id for visit in admin_visit_rows if visit.user_id}),
+    }
 
     return {
         "section": section,
@@ -264,14 +330,16 @@ def _build_admin_analytics_context(section="overview"):
         "user_rows": user_rows,
         "active_user_rows": active_user_rows,
         "inactive_user_count": max(0, len(user_rows) - len(active_user_rows)),
+        "user_frequency_summary": user_frequency_summary,
+        "admin_activity": admin_activity,
         "visit_count": visit_count,
         "today_page_views": today_page_views,
         "yesterday_page_views": yesterday_page_views,
         "traffic_delta_today": today_page_views - yesterday_page_views,
         "total_unique_visitors": total_unique_visitors,
         "today_unique_visitors": today_unique_visitors,
-        "logged_in_views": tracked_visits.filter_by(is_authenticated=True).count(),
-        "guest_views": tracked_visits.filter_by(is_authenticated=False).count(),
+        "logged_in_views": public_visits_query.filter_by(is_authenticated=True).count(),
+        "guest_views": public_visits_query.filter_by(is_authenticated=False).count(),
         "page_metrics": page_metrics,
         "device_breakdown": device_breakdown,
         "hourly_traffic": hourly_traffic,
@@ -331,43 +399,51 @@ def admin_dashboard():
 
     total_ai_usage = db.session.query(db.func.sum(User.ai_uses_today)).scalar() or 0
     now = datetime.utcnow()
-    today_start = datetime.combine(datetime.utcnow().date(), time.min)
-    yesterday_start = today_start - timedelta(days=1)
+    today_start = _ist_day_start_utc()
+    yesterday_start = _ist_day_start_utc(1)
     last_24h = now - timedelta(hours=24)
     last_30d = now - timedelta(days=30)
     last_365d = now - timedelta(days=365)
+    admin_user_ids = [user.id for user in User.query.filter_by(role="admin").all()]
     tracked_visits = WebsiteVisit.query.filter_by(is_page_view=True)
-    visit_count = tracked_visits.count()
-    today_page_views = tracked_visits.filter(WebsiteVisit.visit_time >= today_start).count()
-    yesterday_page_views = tracked_visits.filter(
+    public_visits_query = tracked_visits.filter(
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
+    )
+    visit_count = public_visits_query.count()
+    today_page_views = public_visits_query.filter(WebsiteVisit.visit_time >= today_start).count()
+    yesterday_page_views = public_visits_query.filter(
         WebsiteVisit.visit_time >= yesterday_start,
         WebsiteVisit.visit_time < today_start
     ).count()
     traffic_delta_today = today_page_views - yesterday_page_views
     total_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
         WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.visitor_id.isnot(None)
+        WebsiteVisit.visitor_id.isnot(None),
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).scalar() or 0
     today_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
         WebsiteVisit.is_page_view.is_(True),
         WebsiteVisit.visitor_id.isnot(None),
-        WebsiteVisit.visit_time >= today_start
+        WebsiteVisit.visit_time >= today_start,
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).scalar() or 0
-    logged_in_views = tracked_visits.filter_by(is_authenticated=True).count()
-    guest_views = tracked_visits.filter_by(is_authenticated=False).count()
+    logged_in_views = public_visits_query.filter_by(is_authenticated=True).count()
+    guest_views = public_visits_query.filter_by(is_authenticated=False).count()
     top_pages = db.session.query(
         WebsiteVisit.path,
         db.func.count(WebsiteVisit.id).label("views")
     ).filter(
         WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.path.isnot(None)
+        WebsiteVisit.path.isnot(None),
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).group_by(WebsiteVisit.path).order_by(db.func.count(WebsiteVisit.id).desc()).limit(8).all()
     device_breakdown = db.session.query(
         WebsiteVisit.device_type,
         db.func.count(WebsiteVisit.id).label("views")
     ).filter(
         WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.device_type.isnot(None)
+        WebsiteVisit.device_type.isnot(None),
+        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).group_by(WebsiteVisit.device_type).order_by(db.func.count(WebsiteVisit.id).desc()).all()
     total_users = User.query.count()
     banned_users_count = User.query.filter_by(is_banned=True).count()
@@ -375,7 +451,7 @@ def admin_dashboard():
     pending_garages_count = MechanicProfile.query.filter_by(is_verified=False).count()
     approved_garages_count = MechanicProfile.query.filter_by(is_verified=True).count()
     featured_garages_count = MechanicProfile.query.filter_by(is_featured=True).count()
-    recent_visit_rows = tracked_visits.filter(WebsiteVisit.visit_time >= last_365d).all()
+    recent_visit_rows = public_visits_query.filter(WebsiteVisit.visit_time >= last_365d).all()
     visits_24h = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_24h]
     visits_30d = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_30d]
     hourly_traffic = _count_by_hour(visits_24h)
@@ -383,7 +459,8 @@ def admin_dashboard():
     monthly_traffic = _count_by_month(recent_visit_rows)
 
     click_events = WebsiteEvent.query.filter_by(event_type="click").filter(
-        WebsiteEvent.event_time >= last_30d
+        WebsiteEvent.event_time >= last_30d,
+        (WebsiteEvent.user_id.is_(None)) | (~WebsiteEvent.user_id.in_(admin_user_ids))
     ).order_by(WebsiteEvent.event_time.desc()).all()
     security_events = WebsiteEvent.query.filter_by(event_type="security").filter(
         WebsiteEvent.event_time >= last_30d

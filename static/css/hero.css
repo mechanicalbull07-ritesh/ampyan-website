@@ -3119,6 +3119,233 @@ from{transform:translateX(-50%);}
 to{transform:translateX(0);}
 }
 
+.ampyan-cockpit-section{
+max-width:1400px;
+margin:18px auto 0;
+padding:0 24px;
+display:grid;
+grid-template-columns:210px minmax(0,1fr) 330px;
+gap:18px;
+align-items:start;
+}
+
+.cockpit-rail,
+.cockpit-feed,
+.cockpit-side{
+min-width:0;
+}
+
+.cockpit-rail{
+position:sticky;
+top:112px;
+display:grid;
+gap:8px;
+padding:12px;
+border-radius:20px;
+border:1px solid rgba(255,255,255,0.08);
+background:rgba(8,10,14,0.86);
+}
+
+.cockpit-rail a{
+display:flex;
+align-items:center;
+gap:12px;
+padding:12px 14px;
+border-radius:14px;
+color:#d9d9d9;
+text-decoration:none;
+font-weight:800;
+}
+
+.cockpit-rail a:hover{
+background:rgba(255,90,54,0.13);
+color:#fff;
+}
+
+.cockpit-rail i{
+width:22px;
+color:#ffad96;
+}
+
+.cockpit-feed{
+display:grid;
+gap:14px;
+}
+
+.cockpit-post-composer{
+display:grid;
+grid-template-columns:auto minmax(0,1fr) auto;
+gap:12px;
+align-items:center;
+padding:14px;
+border-radius:20px;
+border:1px solid rgba(255,255,255,0.1);
+background:rgba(255,255,255,0.05);
+}
+
+.cockpit-post-composer img,
+.cockpit-post-composer div{
+width:46px;
+height:46px;
+border-radius:50%;
+object-fit:cover;
+display:grid;
+place-items:center;
+background:linear-gradient(135deg,#ff5a36,#ff7b29);
+color:#fff;
+font-weight:900;
+}
+
+.cockpit-post-composer a{
+padding:13px 15px;
+border-radius:999px;
+background:rgba(0,0,0,0.26);
+border:1px solid rgba(255,255,255,0.1);
+color:#eaeaea;
+text-decoration:none;
+font-weight:800;
+}
+
+.cockpit-post-composer a:last-child{
+background:#fff;
+color:#111;
+}
+
+.cockpit-main-card,
+.cockpit-widget{
+border-radius:22px;
+border:1px solid rgba(255,255,255,0.09);
+background:linear-gradient(155deg,rgba(22,24,28,0.96),rgba(8,10,14,0.96));
+box-shadow:0 20px 48px rgba(0,0,0,0.24);
+}
+
+.cockpit-main-card{
+padding:18px;
+}
+
+.cockpit-card-top{
+display:flex;
+justify-content:space-between;
+align-items:center;
+gap:12px;
+margin-bottom:12px;
+}
+
+.cockpit-card-top span{
+color:#ffad96;
+font-size:12px;
+font-weight:900;
+letter-spacing:.14em;
+text-transform:uppercase;
+}
+
+.cockpit-card-top a,
+.cockpit-link-row{
+color:#fff;
+text-decoration:none;
+}
+
+.cockpit-discussion-row{
+display:block;
+padding:16px 0;
+border-top:1px solid rgba(255,255,255,0.08);
+color:#fff;
+text-decoration:none;
+}
+
+.cockpit-discussion-row strong,
+.cockpit-discussion-row small,
+.cockpit-discussion-row p{
+display:block;
+}
+
+.cockpit-discussion-row strong{
+font-size:22px;
+line-height:1.25;
+}
+
+.cockpit-discussion-row small{
+margin-top:7px;
+color:#ffcc66;
+}
+
+.cockpit-discussion-row p{
+margin:10px 0 0;
+color:#c8c8c8;
+line-height:1.6;
+}
+
+.cockpit-side{
+display:grid;
+gap:14px;
+}
+
+.cockpit-widget{
+padding:18px;
+}
+
+.cockpit-widget h3{
+margin:0 0 12px;
+font-size:17px;
+}
+
+.cockpit-stat-grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:10px;
+}
+
+.cockpit-stat-grid div{
+padding:12px;
+border-radius:14px;
+background:rgba(255,255,255,0.05);
+}
+
+.cockpit-stat-grid span,
+.cockpit-stat-grid strong{
+display:block;
+}
+
+.cockpit-stat-grid span{
+color:#aaa;
+font-size:12px;
+}
+
+.cockpit-stat-grid strong{
+margin-top:4px;
+font-size:22px;
+}
+
+.cockpit-link-row{
+display:block;
+padding:10px 0;
+border-top:1px solid rgba(255,255,255,0.08);
+font-weight:800;
+line-height:1.35;
+}
+
+.cockpit-tool-strip{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:10px;
+}
+
+.cockpit-tool-strip a{
+display:grid;
+place-items:center;
+gap:7px;
+min-height:78px;
+border-radius:14px;
+background:rgba(255,90,54,0.1);
+color:#fff;
+text-decoration:none;
+font-weight:900;
+}
+
+.cockpit-tool-strip i{
+color:#ffad96;
+}
+
 .hero-attention-grid{
 display:grid;
 grid-template-columns:repeat(4,minmax(0,1fr));
@@ -3357,7 +3584,17 @@ color:#aaa;
 @media(max-width:900px){
 .hero-attention-grid,
 .tool-graphics-grid,
-.marketplace-home-card{
+.marketplace-home-card,
+.ampyan-cockpit-section{
+grid-template-columns:1fr;
+}
+
+.cockpit-rail{
+position:static;
+grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.cockpit-post-composer{
 grid-template-columns:1fr;
 }
 
