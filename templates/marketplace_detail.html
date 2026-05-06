@@ -11,6 +11,20 @@
 <h1 class="page-title">{{ listing.title }}</h1>
 <p class="page-subtitle">{{ listing.description or "Owner-to-owner marketplace listing." }}</p>
 
+<div class="ampyan-car-visual">
+<div class="car-visual-skyline"></div>
+<div class="car-visual-body">
+<span class="car-visual-roof"></span>
+<span class="car-visual-cabin"></span>
+<span class="car-visual-wheel left"></span>
+<span class="car-visual-wheel right"></span>
+</div>
+<div class="car-visual-meta">
+<span>{{ listing.brand or listing.listing_type|upper }}</span>
+<strong>{{ listing.model or "Car" }}</strong>
+</div>
+</div>
+
 <div class="admin-car-meta card-spacer">
 <div><span>Owner</span><strong>{{ listing.user.username if listing.user else "Owner" }}</strong></div>
 <div><span>Location</span><strong>{{ listing.location or "N/A" }}</strong></div>

@@ -132,6 +132,19 @@
 <div class="ui-grid ui-grid-3">
 {% for car in recommendations %}
 <div class="car-match-card">
+<div class="ampyan-car-visual">
+<div class="car-visual-skyline"></div>
+<div class="car-visual-body">
+<span class="car-visual-roof"></span>
+<span class="car-visual-cabin"></span>
+<span class="car-visual-wheel left"></span>
+<span class="car-visual-wheel right"></span>
+</div>
+<div class="car-visual-meta">
+<span>{{ car.brand }}</span>
+<strong>{{ car.model }}</strong>
+</div>
+</div>
 <div class="car-match-score">Match {{ car.match_score }}%</div>
 <h3>{{ car.name }}</h3>
 <p class="car-match-body">{{ car.body_style }} • {{ car.price_band }} range</p>

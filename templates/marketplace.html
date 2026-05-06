@@ -25,6 +25,19 @@
 <div class="marketplace-grid">
 {% for listing in listings %}
 <article class="marketplace-card">
+<div class="ampyan-car-visual compact">
+<div class="car-visual-skyline"></div>
+<div class="car-visual-body">
+<span class="car-visual-roof"></span>
+<span class="car-visual-cabin"></span>
+<span class="car-visual-wheel left"></span>
+<span class="car-visual-wheel right"></span>
+</div>
+<div class="car-visual-meta">
+<span>{{ listing.brand or listing.listing_type|upper }}</span>
+<strong>{{ listing.model or "Car" }}</strong>
+</div>
+</div>
 <div class="garage-trust-top">
 <span class="garage-trust-level">{{ listing.listing_type|upper }}</span>
 <span class="garage-trust-score">{{ listing.created_at.strftime("%d %b") }}</span>
