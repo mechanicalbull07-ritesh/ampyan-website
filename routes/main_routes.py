@@ -8,6 +8,7 @@ from services.garage_network_service import (
     trust_level_from_score,
     refresh_mechanic_reputation,
 )
+from services.india_car_catalog import catalog_image_path
 
 main_bp = Blueprint("main", __name__)
 
@@ -18,6 +19,11 @@ def _safe_int(value):
         return parsed or None
     except (TypeError, ValueError):
         return None
+
+
+def _attach_listing_catalog_image(listing):
+    listing.catalog_image_path = catalog_image_path(listing.brand, listing.model)
+    return listing
 
 
 # ================= HOME PAGE =================
@@ -57,6 +63,8 @@ def home():
         .limit(4)
         .all()
     )
+    for listing in marketplace_listings:
+        _attach_listing_catalog_image(listing)
 
     # ACTIVITY FEED
     activity_items = []
@@ -149,7 +157,7 @@ def marketplace():
 
     return render_template(
         "marketplace.html",
-        listings=query.all(),
+        listings=[_attach_listing_catalog_image(listing) for listing in query.all()],
         listing_type=listing_type,
     )
 
@@ -190,6 +198,7 @@ def create_marketplace_listing():
 @main_bp.route("/marketplace/<int:listing_id>")
 def marketplace_listing_detail(listing_id):
     listing = MarketplaceListing.query.get_or_404(listing_id)
+    _attach_listing_catalog_image(listing)
     return render_template("marketplace_detail.html", listing=listing)
 
 

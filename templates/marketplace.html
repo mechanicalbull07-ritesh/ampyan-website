@@ -26,6 +26,9 @@
 {% for listing in listings %}
 <article class="marketplace-card">
 <div class="ampyan-car-visual compact">
+{% if listing.catalog_image_path %}
+<img src="{{ url_for('static', filename=listing.catalog_image_path) }}" alt="{{ listing.brand }} {{ listing.model }}" class="catalog-car-image">
+{% else %}
 <div class="car-visual-skyline"></div>
 <div class="car-visual-body">
 <span class="car-visual-roof"></span>
@@ -33,6 +36,7 @@
 <span class="car-visual-wheel left"></span>
 <span class="car-visual-wheel right"></span>
 </div>
+{% endif %}
 <div class="car-visual-meta">
 <span>{{ listing.brand or listing.listing_type|upper }}</span>
 <strong>{{ listing.model or "Car" }}</strong>

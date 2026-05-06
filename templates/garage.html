@@ -23,6 +23,9 @@
 <li class="simple-list-card">
 <div class="garage-list-car-row">
 <div class="ampyan-car-visual compact">
+{% if car.catalog_image_path %}
+<img src="{{ url_for('static', filename=car.catalog_image_path) }}" alt="{{ car.brand }} {{ car.model }}" class="catalog-car-image">
+{% else %}
 <div class="car-visual-skyline"></div>
 <div class="car-visual-body">
 <span class="car-visual-roof"></span>
@@ -30,6 +33,7 @@
 <span class="car-visual-wheel left"></span>
 <span class="car-visual-wheel right"></span>
 </div>
+{% endif %}
 <div class="car-visual-meta">
 <span>{{ car.brand or "Car" }}</span>
 <strong>{{ car.model or "Vehicle" }}</strong>

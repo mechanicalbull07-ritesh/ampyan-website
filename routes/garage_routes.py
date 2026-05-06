@@ -4,7 +4,7 @@ from flask import Blueprint, render_template, request, redirect
 from flask_login import login_required, current_user
 from models.models import db, Car, DiagnosticLearning
 from services.garage_summary import enrich_car_for_garage
-from services.india_car_catalog import catalog_brands, garage_catalog_payload
+from services.india_car_catalog import catalog_brands, catalog_image_path, garage_catalog_payload
 
 garage_bp = Blueprint("garage", __name__)
 
@@ -27,6 +27,11 @@ def _safe_date(value):
         return None
 
 
+def _attach_catalog_image(car):
+    car.catalog_image_path = catalog_image_path(car.brand, car.model)
+    return car
+
+
 # ================= GARAGE =================
 
 @garage_bp.route("/garage")
@@ -38,6 +43,7 @@ def garage():
     for car in cars:
 
         enrich_car_for_garage(car)
+        _attach_catalog_image(car)
 
     return render_template("garage.html", cars=cars)
 
@@ -53,6 +59,7 @@ def garage_dashboard():
     for car in cars:
 
         enrich_car_for_garage(car)
+        _attach_catalog_image(car)
 
     diagnostics = DiagnosticLearning.query.filter_by(
         user_id=current_user.id

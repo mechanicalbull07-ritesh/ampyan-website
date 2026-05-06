@@ -9,7 +9,7 @@ INDIA_CAR_CATALOG = [
     {"brand": "Maruti Suzuki", "model": "Fronx", "body_style": "Compact crossover", "price_band": "Mid", "fuel": ["petrol", "cng"], "transmission": ["manual", "automatic"], "tags": ["city", "style", "high-ground-clearance"]},
     {"brand": "Maruti Suzuki", "model": "Brezza", "body_style": "Compact SUV", "price_band": "Mid", "fuel": ["petrol", "cng"], "transmission": ["manual", "automatic"], "tags": ["family", "rough_roads", "high-ground-clearance"]},
     {"brand": "Maruti Suzuki", "model": "Ertiga", "body_style": "MPV", "price_band": "Mid", "fuel": ["petrol", "cng"], "transmission": ["manual", "automatic"], "tags": ["large-family", "low_running_cost"]},
-    {"brand": "Maruti Suzuki", "model": "XL6", "body_style": "MPV", "price_band": "Mid", "fuel": ["petrol"], "transmission": ["manual", "automatic"], "tags": ["family", "comfort"]},
+    {"brand": "Maruti Suzuki", "model": "XL6", "body_style": "MPV", "price_band": "Mid", "fuel": ["petrol"], "transmission": ["manual", "automatic"], "tags": ["family", "comfort"], "image_path": "images/cars/maruti-suzuki-xl6.png"},
     {"brand": "Maruti Suzuki", "model": "Grand Vitara", "body_style": "Mid-size SUV", "price_band": "Premium", "fuel": ["petrol", "hybrid", "cng"], "transmission": ["manual", "automatic"], "tags": ["family", "highway", "low_running_cost"]},
     {"brand": "Maruti Suzuki", "model": "Jimny", "body_style": "Lifestyle SUV", "price_band": "Premium", "fuel": ["petrol"], "transmission": ["manual", "automatic"], "tags": ["rough_roads", "off-road"]},
     {"brand": "Maruti Suzuki", "model": "Invicto", "body_style": "Premium MPV", "price_band": "Premium", "fuel": ["hybrid"], "transmission": ["automatic"], "tags": ["large-family", "comfort", "highway"]},
@@ -168,6 +168,7 @@ def garage_catalog_payload():
                 "fuel": car["fuel"],
                 "body_style": car["body_style"],
                 "price_band": car["price_band"],
+                "image_path": car.get("image_path"),
             }
             for car in cars
         ]
@@ -191,6 +192,15 @@ def normalize_catalog_car(car):
 
 def recommendation_catalog():
     return [normalize_catalog_car(car) for car in INDIA_CAR_CATALOG]
+
+
+def catalog_image_path(brand, model):
+    wanted_brand = (brand or "").strip().lower()
+    wanted_model = (model or "").strip().lower()
+    for car in INDIA_CAR_CATALOG:
+        if car["brand"].lower() == wanted_brand and car["model"].lower() == wanted_model:
+            return car.get("image_path")
+    return None
 
 
 def _score(car, category):
