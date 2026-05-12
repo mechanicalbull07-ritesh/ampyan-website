@@ -235,98 +235,6 @@
 </form>
 </div>
 
-<div class="ui-card card-spacer">
-<div class="admin-section-head">
-<div>
-<p class="page-kicker">Smart Filters</p>
-<h2 class="section-heading">Find and sort users quickly</h2>
-<p class="section-copy">Search short usernames, filter by role/status/location, and sort the table without leaving the user analytics page.</p>
-</div>
-</div>
-
-<form method="GET" action="/admin/analytics/users" class="admin-filter-row admin-user-filter-form">
-<input type="hidden" name="frequency" value="{{ frequency_filter }}">
-<input type="search" name="q" value="{{ user_search }}" placeholder="Search username, email, mobile">
-<input type="search" name="location" value="{{ location_filter }}" placeholder="City, state, country, pincode">
-<select name="sort">
-<option value="activity" {% if user_sort == "activity" %}selected{% endif %}>Most active</option>
-<option value="username_az" {% if user_sort == "username_az" %}selected{% endif %}>Username A-Z</option>
-<option value="username_za" {% if user_sort == "username_za" %}selected{% endif %}>Username Z-A</option>
-<option value="newest" {% if user_sort == "newest" %}selected{% endif %}>Newest accounts</option>
-<option value="oldest" {% if user_sort == "oldest" %}selected{% endif %}>Oldest accounts</option>
-<option value="visits_low" {% if user_sort == "visits_low" %}selected{% endif %}>Lowest visits</option>
-<option value="reputation" {% if user_sort == "reputation" %}selected{% endif %}>Top reputation</option>
-</select>
-<select name="role">
-<option value="all" {% if role_filter == "all" %}selected{% endif %}>All roles</option>
-<option value="user" {% if role_filter == "user" %}selected{% endif %}>Users</option>
-<option value="admin" {% if role_filter == "admin" %}selected{% endif %}>Admins</option>
-</select>
-<select name="status">
-<option value="all" {% if status_filter == "all" %}selected{% endif %}>All status</option>
-<option value="active" {% if status_filter == "active" %}selected{% endif %}>Active</option>
-<option value="inactive" {% if status_filter == "inactive" %}selected{% endif %}>Inactive</option>
-<option value="banned" {% if status_filter == "banned" %}selected{% endif %}>Banned</option>
-</select>
-<select name="gender">
-<option value="all" {% if gender_filter == "all" %}selected{% endif %}>All genders</option>
-<option value="male" {% if gender_filter == "male" %}selected{% endif %}>Male</option>
-<option value="female" {% if gender_filter == "female" %}selected{% endif %}>Female</option>
-<option value="unknown" {% if gender_filter == "unknown" %}selected{% endif %}>Unknown</option>
-</select>
-<select name="age">
-<option value="all" {% if age_filter == "all" %}selected{% endif %}>All ages</option>
-<option value="18-24" {% if age_filter == "18-24" %}selected{% endif %}>18-24</option>
-<option value="25-34" {% if age_filter == "25-34" %}selected{% endif %}>25-34</option>
-<option value="35-44" {% if age_filter == "35-44" %}selected{% endif %}>35-44</option>
-<option value="45-54" {% if age_filter == "45-54" %}selected{% endif %}>45-54</option>
-<option value="55+" {% if age_filter == "55+" %}selected{% endif %}>55+</option>
-<option value="unknown" {% if age_filter == "unknown" %}selected{% endif %}>Unknown</option>
-</select>
-<button type="submit" class="auth-button">Apply</button>
-<a href="/admin/analytics/users" class="ui-button-secondary">Reset</a>
-</form>
-</div>
-
-<div class="admin-analytics-grid card-spacer">
-<div class="admin-analytics-panel">
-<h3>Registered age ratio</h3>
-<div class="ui-meta-list">
-{% for row in demographic_summary.age %}
-<div class="ui-meta-item"><span class="ui-meta-label">{{ row.label }}</span><span class="ui-meta-value">{{ row.count }} / {{ row.percent }}%</span></div>
-{% endfor %}
-</div>
-</div>
-<div class="admin-analytics-panel">
-<h3>Registered gender ratio</h3>
-<div class="ui-meta-list">
-{% for row in demographic_summary.gender %}
-<div class="ui-meta-item"><span class="ui-meta-label">{{ row.label }}</span><span class="ui-meta-value">{{ row.count }} / {{ row.percent }}%</span></div>
-{% endfor %}
-</div>
-</div>
-<div class="admin-analytics-panel">
-<h3>Registered location ratio</h3>
-<div class="ui-meta-list">
-{% for row in demographic_summary.location %}
-<div class="ui-meta-item"><span class="ui-meta-label">{{ row.label }}</span><span class="ui-meta-value">{{ row.count }} / {{ row.percent }}%</span></div>
-{% endfor %}
-</div>
-</div>
-<div class="admin-analytics-panel">
-<h3>Visit demographic ratio</h3>
-<p class="section-copy">{{ demographic_summary.note }}</p>
-<div class="ui-meta-list">
-{% for row in demographic_summary.visit_gender[:4] %}
-<div class="ui-meta-item"><span class="ui-meta-label">Gender: {{ row.label }}</span><span class="ui-meta-value">{{ row.count }} / {{ row.percent }}%</span></div>
-{% endfor %}
-{% for row in demographic_summary.visit_age[:4] %}
-<div class="ui-meta-item"><span class="ui-meta-label">Age: {{ row.label }}</span><span class="ui-meta-value">{{ row.count }} / {{ row.percent }}%</span></div>
-{% endfor %}
-</div>
-</div>
-</div>
-
 <div class="admin-analytics-panel admin-wide-panel card-spacer">
 <h3>All users</h3>
 {% if user_rows %}
@@ -337,9 +245,6 @@
 <th>User</th>
 <th>Email ID</th>
 <th>Contact Number</th>
-<th>Age</th>
-<th>Gender</th>
-<th>Location</th>
 <th>Car</th>
 <th>Insurance</th>
 <th>Pollution</th>
@@ -360,9 +265,6 @@
 </td>
 <td>{{ user.email }}</td>
 <td>{{ user.mobile or "N/A" }}</td>
-<td>{{ user.age_range or "Unknown" }}</td>
-<td>{{ user.gender|title if user.gender else "Unknown" }}</td>
-<td>{{ [user.city, user.state, user.country]|select|join(", ") or "Unknown" }}</td>
 <td>
 {% if car %}
 {{ car.brand or "Unknown" }} {{ car.model or "Vehicle" }}
