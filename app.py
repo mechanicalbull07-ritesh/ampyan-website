@@ -2076,6 +2076,7 @@ def seed_english_community_admin():
 
     ensure_user_schema()
     ensure_car_community_seed()
+    ensure_demo_community_seed()
     ensure_english_community_seed()
 
     return jsonify({
@@ -2101,7 +2102,6 @@ def initialize_database():
         ensure_reply_schema()
         ensure_post_schema()
         ensure_car_community_seed()
-        ensure_demo_community_seed()
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
         changed = False
