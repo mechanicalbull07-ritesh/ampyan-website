@@ -42,6 +42,8 @@ class User(UserMixin, db.Model):
     state = db.Column(db.String(100))
     country = db.Column(db.String(100))
     pincode = db.Column(db.String(20))
+    age_range = db.Column(db.String(30))
+    gender = db.Column(db.String(30))
 
     # community stats
     reputation = db.Column(db.Integer, default=0)

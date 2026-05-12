@@ -1671,6 +1671,8 @@ def ensure_user_schema():
         "state": f"{string_type}(100)",
         "country": f"{string_type}(100)",
         "pincode": f"{string_type}(20)",
+        "age_range": f"{string_type}(30)",
+        "gender": f"{string_type}(30)",
         "reputation": "INTEGER DEFAULT 0",
         "posts_count": "INTEGER DEFAULT 0",
         "helpful_answers": "INTEGER DEFAULT 0",
@@ -1936,6 +1938,136 @@ def ensure_demo_community_seed():
     db.session.commit()
 
 
+def ensure_english_community_seed():
+    """Seed English community Q&A content and realistic demo accounts once."""
+    seed_marker_title = "Seed Q001: Why does my car vibrate while braking at highway speed?"
+    if Post.query.filter_by(title=seed_marker_title).first():
+        return
+
+    first_names = [
+        "Adam", "Bella", "Caleb", "Diana", "Ethan", "Farah", "George", "Hannah", "Ivan", "Julia",
+        "Kevin", "Lara", "Miles", "Nora", "Owen", "Priya", "Quinn", "Riya", "Sam", "Tara",
+        "Umar", "Vera", "Will", "Xena", "Yash", "Zara", "Aaron", "Bianca", "Chris", "Divya",
+        "Elena", "Felix", "Grace", "Harish", "Isha", "Jonah", "Kiran", "Leah", "Maya", "Neil",
+        "Olivia", "Pavel", "Reena", "Shaun", "Tina", "Varun", "Wendy", "Yusuf", "Aisha", "Rohan",
+    ]
+    cities = [
+        ("Mumbai", "Maharashtra"), ("Delhi", "Delhi"), ("Bengaluru", "Karnataka"), ("Chennai", "Tamil Nadu"),
+        ("Hyderabad", "Telangana"), ("Pune", "Maharashtra"), ("Ahmedabad", "Gujarat"), ("Kolkata", "West Bengal"),
+        ("Jaipur", "Rajasthan"), ("Lucknow", "Uttar Pradesh"),
+    ]
+    genders = ["male", "female"]
+    age_ranges = ["18-24", "25-34", "35-44", "45-54", "55+"]
+
+    seed_users = []
+    for index, first_name in enumerate(first_names):
+        city, state = cities[index % len(cities)]
+        seed_users.append({
+            "username": f"{first_name}Auto{index + 1:02d}",
+            "email": f"english.seed.user{index + 1:02d}@ampyan.example",
+            "badge": ["Member", "Contributor", "Car Enthusiast", "Helpful Member"][index % 4],
+            "reputation": 40 + (index % 10) * 9,
+            "city": city,
+            "state": state,
+            "country": "India",
+            "gender": genders[index % len(genders)],
+            "age_range": age_ranges[index % len(age_ranges)],
+        })
+
+    question_bank = [
+        ("Why does my car vibrate while braking at highway speed?", "My steering wheel shakes only when I brake above 80 km/h. What should I inspect first?", "Brake rotor runout, uneven pad deposits, worn suspension bushes, and wheel balance can all cause this. Start with brake rotor inspection and wheel balancing, then check lower arm bushes."),
+        ("What causes white smoke from the exhaust on cold start?", "The smoke disappears after a few minutes, but it worries me every morning.", "Light vapor on cold mornings can be normal condensation. Thick white smoke with coolant loss may indicate a head gasket or coolant leak into the combustion chamber."),
+        ("Why is my fuel mileage dropping in city driving?", "My mileage dropped from 15 km/l to 11 km/l without any major change in route.", "Check tyre pressure, air filter, spark plugs, brake drag, wheel alignment, and recent fuel quality. A scan for fuel trim values can reveal sensor or injector issues."),
+        ("Should I replace engine oil by time or kilometers?", "I drive only 5,000 km a year. Can I wait until the full kilometer interval?", "Use both time and kilometer limits. Low running still ages oil through moisture and contamination, so replace it at least once a year or as your manual recommends."),
+        ("Why does the AC cool well on the highway but poorly in traffic?", "The AC is cold while moving but becomes weak at signals.", "Common causes are a weak radiator/condenser fan, dirty condenser, low refrigerant, or high engine bay heat. Inspect fan speed and clean the condenser first."),
+        ("What does a clicking sound while turning indicate?", "I hear repeated clicks from the front when taking a U-turn.", "Repeated clicking during turns often points to a worn outer CV joint. Inspect the CV boot for tears and grease leakage before the joint fails fully."),
+        ("How do I know if my battery or alternator is weak?", "The car cranks slowly in the morning but starts fine later.", "Test resting battery voltage, cranking voltage, and charging voltage. A healthy charging system usually shows around 13.8 to 14.5 volts when running."),
+        ("Is it safe to drive with the check engine light on?", "The light is steady and the car feels normal.", "A steady light usually means you can drive gently to a workshop for scanning. If it flashes or the engine misfires, stop driving to protect the catalytic converter."),
+        ("Why does my clutch feel heavy in traffic?", "The pedal has become harder over the last month.", "A heavy clutch can come from clutch cable wear, hydraulic issues, pressure plate wear, or linkage friction. Inspect the actuation system before replacing the clutch kit."),
+        ("What tyre pressure should I use for highway trips?", "Should I increase tyre pressure for a long highway drive?", "Follow the manufacturer label for normal load or full load. Check pressure when tyres are cold, and do not exceed the recommended full-load value."),
+        ("Why is my car pulling to one side?", "The steering drifts left even on a straight road.", "Wheel alignment, uneven tyre wear, brake drag, or suspension damage can cause pulling. Rotate tyres and perform alignment with suspension inspection."),
+        ("How often should brake fluid be changed?", "My brakes feel normal but the fluid is dark.", "Brake fluid absorbs moisture over time. Most cars benefit from replacement every two years, or sooner if testing shows high moisture content."),
+        ("What causes engine overheating in traffic?", "Temperature rises in traffic but drops once the car moves.", "Check radiator fan operation, coolant level, thermostat, radiator blockage, and cap pressure. Traffic overheating often starts with fan or airflow problems."),
+        ("Is premium fuel useful for a normal petrol car?", "Will high octane fuel improve mileage or power?", "Use the octane recommended by the manufacturer. Higher octane does not usually improve performance unless the engine is designed for it or knocking on regular fuel."),
+        ("Why do my headlights dim at idle?", "Lights become brighter when I rev the engine.", "Possible causes include weak alternator output, loose belt, poor grounding, or an aging battery. Test charging voltage under electrical load."),
+        ("What is the best way to prepare a car for monsoon?", "I want to avoid breakdowns during heavy rain.", "Check wipers, tyres, brakes, battery health, lights, door seals, AC demist function, and underbody protection. Avoid deep water crossings."),
+        ("Why is there a burning smell after driving uphill?", "After climbing a steep road I noticed a burnt smell.", "It may be clutch overheating, brake overheating, oil leakage on hot parts, or plastic contact. Check whether the smell follows clutch use or braking."),
+        ("How do I know if shock absorbers are worn?", "The car feels bouncy and unstable on broken roads.", "Look for oil leakage, excessive bounce after pushing the car, uneven tyre wear, nose dive under braking, and poor stability over bumps."),
+        ("Should I warm up my car before driving?", "I usually idle for five minutes every morning.", "Modern engines need only a short idle period. Start, wait briefly for stable idle, then drive gently until the engine reaches operating temperature."),
+        ("Why does my steering make noise when fully turned?", "There is a whining sound at full lock.", "Hydraulic steering can whine at full lock, but low fluid, belt slip, or pump wear can worsen it. Avoid holding full lock for long periods."),
+    ]
+
+    users_by_email = {}
+    for user_data in seed_users:
+        user = User.query.filter_by(email=user_data["email"]).first()
+        if not user:
+            user = User(
+                username=build_unique_username(user_data["username"]),
+                email=user_data["email"],
+                password=generate_password_hash(secrets.token_urlsafe(16)),
+                role="user",
+                email_verified=True,
+                badge=user_data["badge"],
+                reputation=user_data["reputation"],
+                city=user_data["city"],
+                state=user_data["state"],
+                country=user_data["country"],
+                gender=user_data["gender"],
+                age_range=user_data["age_range"],
+                posts_count=0,
+            )
+            db.session.add(user)
+            db.session.flush()
+        users_by_email[user_data["email"]] = user
+
+    communities = CarCommunity.query.order_by(CarCommunity.name.asc()).all()
+    general_community = CarCommunity.query.filter_by(slug="general-owners").first()
+
+    for index in range(100):
+        question, detail, answer = question_bank[index % len(question_bank)]
+        title = f"Seed Q{index + 1:03d}: {question}"
+        if Post.query.filter_by(title=title).first():
+            continue
+
+        author_data = seed_users[index % len(seed_users)]
+        answer_data = seed_users[(index + 17) % len(seed_users)]
+        followup_data = seed_users[(index + 31) % len(seed_users)]
+        community = communities[index % len(communities)] if communities else general_community
+
+        post = Post(
+            title=title,
+            content=f"{detail} Vehicle context: daily use, mixed city and highway driving. I am looking for practical English advice before visiting a workshop.",
+            user_id=users_by_email[author_data["email"]].id,
+            community_id=community.id if community else None,
+        )
+        db.session.add(post)
+        db.session.flush()
+
+        main_comment = Comment(
+            content=f"Answer: {answer}",
+            user_id=users_by_email[answer_data["email"]].id,
+            post_id=post.id,
+        )
+        db.session.add(main_comment)
+        db.session.flush()
+
+        db.session.add(Comment(
+            content="Additional tip: note the exact speed, temperature, warning lights, and recent service work. Clear details make community diagnosis much more accurate.",
+            user_id=users_by_email[followup_data["email"]].id,
+            post_id=post.id,
+            parent_id=main_comment.id,
+        ))
+
+    for user in users_by_email.values():
+        posts_count = Post.query.filter_by(user_id=user.id).count()
+        comments_count = Comment.query.filter_by(user_id=user.id).count()
+        user.posts_count = posts_count
+        user.helpful_answers = comments_count
+        user.reputation = max(user.reputation or 0, (posts_count * 5) + (comments_count * 3))
+
+    db.session.commit()
+
+
 def initialize_database():
     global database_initialized
     if database_initialized:
@@ -1953,6 +2085,7 @@ def initialize_database():
         ensure_post_schema()
         ensure_car_community_seed()
         ensure_demo_community_seed()
+        ensure_english_community_seed()
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
         changed = False

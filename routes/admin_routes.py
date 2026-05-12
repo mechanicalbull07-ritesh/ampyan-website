@@ -129,6 +129,19 @@ def _require_admin():
     return current_user.is_authenticated and current_user.role == "admin"
 
 
+def _percent(count, total):
+    if not total:
+        return 0
+    return round((count / total) * 100, 1)
+
+
+def _counter_ratio_rows(counter, total):
+    return [
+        {"label": label, "count": count, "percent": _percent(count, total)}
+        for label, count in counter.most_common()
+    ]
+
+
 def _build_admin_analytics_context(section="overview"):
     now = datetime.utcnow()
     today_start = _ist_day_start_utc()
@@ -278,6 +291,13 @@ def _build_admin_analytics_context(section="overview"):
 
     frequency_filter = request.args.get("frequency", "30d")
     frequency_start, frequency_label = _frequency_start(frequency_filter)
+    user_search = (request.args.get("q") or "").strip().lower()
+    user_sort = request.args.get("sort", "activity")
+    role_filter = request.args.get("role", "all")
+    status_filter = request.args.get("status", "all")
+    gender_filter = request.args.get("gender", "all")
+    age_filter = request.args.get("age", "all")
+    location_filter = (request.args.get("location") or "").strip().lower()
     user_rows = []
     for user in User.query.order_by(User.id.desc()).all():
         user_visits_query = WebsiteVisit.query.filter(
@@ -304,10 +324,90 @@ def _build_admin_analytics_context(section="overview"):
             "visit_count": len(user_visits),
             "event_count": user_events_query.count(),
             "last_seen": _format_ist(latest_visit.visit_time) if latest_visit else "No visit tracked",
+            "last_seen_raw": latest_visit.visit_time if latest_visit else None,
             "last_path": latest_visit.path if latest_visit else "N/A",
         })
-    user_rows.sort(key=lambda row: (row["visit_count"], row["event_count"], row["user"].id), reverse=True)
+
+    if user_search:
+        user_rows = [
+            row for row in user_rows
+            if user_search in (row["user"].username or "").lower()
+            or user_search in (row["user"].email or "").lower()
+            or user_search in (row["user"].mobile or "").lower()
+        ]
+    if role_filter != "all":
+        user_rows = [row for row in user_rows if row["user"].role == role_filter]
+    if status_filter == "active":
+        user_rows = [row for row in user_rows if row["visit_count"] > 0]
+    elif status_filter == "inactive":
+        user_rows = [row for row in user_rows if row["visit_count"] == 0]
+    elif status_filter == "banned":
+        user_rows = [row for row in user_rows if row["user"].is_banned]
+    if gender_filter != "all":
+        user_rows = [row for row in user_rows if (row["user"].gender or "unknown").lower() == gender_filter]
+    if age_filter != "all":
+        user_rows = [row for row in user_rows if (row["user"].age_range or "unknown") == age_filter]
+    if location_filter:
+        user_rows = [
+            row for row in user_rows
+            if location_filter in " ".join([
+                row["user"].city or "",
+                row["user"].state or "",
+                row["user"].country or "",
+                row["user"].pincode or "",
+            ]).lower()
+        ]
+
+    if user_sort == "username_az":
+        user_rows.sort(key=lambda row: (row["user"].username or "").lower())
+    elif user_sort == "username_za":
+        user_rows.sort(key=lambda row: (row["user"].username or "").lower(), reverse=True)
+    elif user_sort == "newest":
+        user_rows.sort(key=lambda row: row["user"].id, reverse=True)
+    elif user_sort == "oldest":
+        user_rows.sort(key=lambda row: row["user"].id)
+    elif user_sort == "visits_low":
+        user_rows.sort(key=lambda row: (row["visit_count"], row["event_count"], row["user"].id))
+    elif user_sort == "reputation":
+        user_rows.sort(key=lambda row: (row["user"].reputation or 0, row["user"].id), reverse=True)
+    else:
+        user_rows.sort(key=lambda row: (row["visit_count"], row["event_count"], row["user"].id), reverse=True)
+
     active_user_rows = [row for row in user_rows if row["visit_count"] > 0]
+    all_users = User.query.order_by(User.id.desc()).all()
+    registered_total = len(all_users)
+    age_counter = Counter((user.age_range or "Unknown") for user in all_users)
+    gender_counter = Counter((user.gender or "Unknown").title() for user in all_users)
+    location_counter = Counter(
+        ", ".join(part for part in [user.city, user.state] if part) or "Unknown"
+        for user in all_users
+    )
+    visit_location_counter = Counter()
+    visit_age_counter = Counter()
+    visit_gender_counter = Counter()
+    users_by_id = {user.id: user for user in all_users}
+    for visit in all_public_visit_rows:
+        user = users_by_id.get(visit.user_id)
+        if not user:
+            visit_location_counter["Unknown visitor"] += 1
+            visit_age_counter["Unknown visitor"] += 1
+            visit_gender_counter["Unknown visitor"] += 1
+            continue
+        visit_location_counter[", ".join(part for part in [user.city, user.state] if part) or "Unknown"] += 1
+        visit_age_counter[user.age_range or "Unknown"] += 1
+        visit_gender_counter[(user.gender or "Unknown").title()] += 1
+
+    demographic_summary = {
+        "registered_total": registered_total,
+        "visit_total": len(all_public_visit_rows),
+        "age": _counter_ratio_rows(age_counter, registered_total),
+        "gender": _counter_ratio_rows(gender_counter, registered_total),
+        "location": _counter_ratio_rows(location_counter, registered_total)[:12],
+        "visit_age": _counter_ratio_rows(visit_age_counter, len(all_public_visit_rows)),
+        "visit_gender": _counter_ratio_rows(visit_gender_counter, len(all_public_visit_rows)),
+        "visit_location": _counter_ratio_rows(visit_location_counter, len(all_public_visit_rows))[:12],
+        "note": "Age and gender ratios use registered profile fields only. Guest visitors remain Unknown because the site does not collect demographic data from anonymous traffic.",
+    }
     user_frequency_summary = {
         "hour": _period_user_stats(all_public_visit_rows, now - timedelta(hours=1)),
         "day": _period_user_stats(all_public_visit_rows, today_start),
@@ -327,6 +427,14 @@ def _build_admin_analytics_context(section="overview"):
         "frequency_filter": frequency_filter,
         "frequency_label": frequency_label,
         "frequency_options": _frequency_options(),
+        "user_search": request.args.get("q") or "",
+        "user_sort": user_sort,
+        "role_filter": role_filter,
+        "status_filter": status_filter,
+        "gender_filter": gender_filter,
+        "age_filter": age_filter,
+        "location_filter": request.args.get("location") or "",
+        "demographic_summary": demographic_summary,
         "user_rows": user_rows,
         "active_user_rows": active_user_rows,
         "inactive_user_count": max(0, len(user_rows) - len(active_user_rows)),
@@ -375,6 +483,14 @@ def admin_analytics(section="overview"):
         return redirect("/admin/analytics/overview")
 
     return render_template("admin_analytics.html", **_build_admin_analytics_context(section))
+
+
+@admin_bp.route("/admin/users")
+@login_required
+def admin_users_page():
+    if not _require_admin():
+        return "Access Denied", 403
+    return redirect("/admin/analytics/users")
 
 
 # ================= ADMIN DASHBOARD =================
