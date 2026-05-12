@@ -60,6 +60,54 @@
 </div>
 </section>
 
+<section class="home-wow-hero" aria-label="AMPYAN automotive intelligence overview">
+<div class="home-wow-media">
+<img src="{{ url_for('static', filename='images/car-bg.jpg') }}" alt="AMPYAN automotive intelligence">
+</div>
+<div class="home-wow-content">
+<div class="home-wow-badges">
+<span><i class="fa-solid fa-bolt"></i> Live Ecosystem</span>
+<span><i class="fa-solid fa-shield-heart"></i> Owner First</span>
+<span><i class="fa-solid fa-wand-magic-sparkles"></i> AI Powered</span>
+</div>
+
+<h1>AMPYAN makes car ownership smarter, safer and easier.</h1>
+<p>Diagnose symptoms, track your garage, learn from owners, compare costs and discover trusted automotive help in one energetic platform.</p>
+
+<div class="home-wow-actions">
+<a href="/tools/ai-diagnosis" class="home-wow-primary"><i class="fa-solid fa-car-burst"></i> Check My Car</a>
+<a href="/garage-dashboard" class="home-wow-secondary"><i class="fa-solid fa-car-side"></i> Open Garage</a>
+<a href="/community" class="home-wow-secondary"><i class="fa-solid fa-comments"></i> Ask Community</a>
+</div>
+
+<div class="home-wow-stats" aria-label="AMPYAN platform statistics">
+<div><strong>{{ ecosystem_stats.owners }}</strong><span>Owners</span></div>
+<div><strong>{{ ecosystem_stats.posts }}</strong><span>Posts</span></div>
+<div><strong>{{ ecosystem_stats.car_profiles }}</strong><span>Cars</span></div>
+<div><strong>{{ ecosystem_stats.mechanics }}</strong><span>Garages</span></div>
+</div>
+</div>
+
+<div class="home-wow-panel">
+<div class="home-wow-panel-top">
+<span>Today on AMPYAN</span>
+<i class="fa-solid fa-gauge-high"></i>
+</div>
+<a href="/tools/ai-diagnosis" class="home-wow-panel-row row-red">
+<i class="fa-solid fa-stethoscope"></i>
+<span><strong>Vehicle Check</strong><small>Symptoms to likely causes</small></span>
+</a>
+<a href="/tools/maintenance-cost" class="home-wow-panel-row row-yellow">
+<i class="fa-solid fa-indian-rupee-sign"></i>
+<span><strong>Repair Estimate</strong><small>Cost clarity before service</small></span>
+</a>
+<a href="/garage-network" class="home-wow-panel-row row-green">
+<i class="fa-solid fa-shop"></i>
+<span><strong>Garage Network</strong><small>Find trusted local support</small></span>
+</a>
+</div>
+</section>
+
 <section class="ampyan-cockpit-section">
 <aside class="cockpit-rail">
 <a href="/news"><i class="fa-solid fa-newspaper"></i><span>News</span></a>
