@@ -2068,23 +2068,6 @@ def ensure_english_community_seed():
     db.session.commit()
 
 
-@app.route("/admin/seed-english-community", methods=["POST"])
-@login_required
-def seed_english_community_admin():
-    if current_user.role != "admin":
-        return "Access Denied", 403
-
-    ensure_user_schema()
-    ensure_car_community_seed()
-    ensure_english_community_seed()
-
-    return jsonify({
-        "status": "ok",
-        "seed_users": User.query.filter(User.email.like("english.seed.user%@ampyan.example")).count(),
-        "seed_posts": Post.query.filter(Post.title.like("Seed Q%")).count(),
-    })
-
-
 def initialize_database():
     global database_initialized
     if database_initialized:
@@ -2102,6 +2085,7 @@ def initialize_database():
         ensure_post_schema()
         ensure_car_community_seed()
         ensure_demo_community_seed()
+        ensure_english_community_seed()
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
         changed = False
