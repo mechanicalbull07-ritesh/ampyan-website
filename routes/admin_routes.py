@@ -182,7 +182,12 @@ def _build_admin_analytics_context(section="overview"):
     ).group_by(WebsiteVisit.device_type).order_by(db.func.count(WebsiteVisit.id).desc()).all()
 
     recent_visit_rows = public_visits_query.filter(WebsiteVisit.visit_time >= last_365d).all()
-    all_public_visit_rows = public_visits_query.all()
+    all_public_visit_rows = (
+        public_visits_query
+        .order_by(WebsiteVisit.visit_time.desc())
+        .limit(5000)
+        .all()
+    )
     admin_visit_rows = admin_visits_query.filter(WebsiteVisit.visit_time >= last_30d).all()
     visits_24h = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_24h]
     visits_30d = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_30d]
@@ -279,7 +284,7 @@ def _build_admin_analytics_context(section="overview"):
     frequency_filter = request.args.get("frequency", "30d")
     frequency_start, frequency_label = _frequency_start(frequency_filter)
     user_rows = []
-    for user in User.query.order_by(User.id.desc()).all():
+    for user in User.query.order_by(User.id.desc()).limit(500).all():
         user_visits_query = WebsiteVisit.query.filter(
             WebsiteVisit.user_id == user.id,
             WebsiteVisit.is_page_view.is_(True)
@@ -385,17 +390,17 @@ def admin_dashboard():
     if current_user.role != "admin":
         return "Access Denied", 403
 
-    users = User.query.order_by(User.id.desc()).all()
-    posts = Post.query.order_by(Post.id.desc()).all()
-    comments = Comment.query.order_by(Comment.id.desc()).all()
-    news = News.query.order_by(News.id.desc()).all()
+    users = User.query.order_by(User.id.desc()).limit(300).all()
+    posts = Post.query.order_by(Post.id.desc()).limit(300).all()
+    comments = Comment.query.order_by(Comment.id.desc()).limit(300).all()
+    news = News.query.order_by(News.id.desc()).limit(300).all()
     mechanics = MechanicProfile.query.order_by(
         MechanicProfile.is_verified.asc(),
         MechanicProfile.is_featured.desc(),
         MechanicProfile.id.desc()
     ).all()
     reviews = MechanicReview.query.order_by(MechanicReview.id.desc()).limit(10).all()
-    cars = Car.query.order_by(Car.created_at.desc()).all()
+    cars = Car.query.order_by(Car.created_at.desc()).limit(500).all()
 
     total_ai_usage = db.session.query(db.func.sum(User.ai_uses_today)).scalar() or 0
     now = datetime.utcnow()

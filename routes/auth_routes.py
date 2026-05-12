@@ -43,7 +43,7 @@ def _sync_profile(name, email, phone=""):
         method="POST",
     )
     try:
-        with urllib_request.urlopen(req, timeout=8):
+        with urllib_request.urlopen(req, timeout=3):
             return True
     except Exception as exc:
         current_app.logger.warning("AMPYAN auth/profile sync failed: %s", exc)

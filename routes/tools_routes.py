@@ -4,8 +4,8 @@ from models.models import Car, AIFeedback, db
 from services.car_recommendation_service import recommend_cars, build_user_profile_summary
 
 # AI ENGINE
-from ai_engine.diagnostic_engine import diagnose_vehicle
 from ai_engine.response_formatter import enrich_diagnosis_results
+from services.diagnosis_safety import safe_diagnose_vehicle
 
 # FAILURE DATABASE
 from failure_database import FAILURE_DATABASE
@@ -270,7 +270,7 @@ def ai_diagnosis_page():
 
         if problem:
 
-            results, questions = diagnose_vehicle(problem)
+            results, questions = safe_diagnose_vehicle(problem, route_name="tools_ai_diagnosis")
 
             current_app.logger.info("AI diagnosis completed with %s result(s)", len(results or []))
 
@@ -343,7 +343,7 @@ def ai_diagnosis_followup():
         if key.startswith("q"):
             answers[key] = request.form.get(key)
 
-    results, questions = diagnose_vehicle(problem, answers)
+    results, questions = safe_diagnose_vehicle(problem, answers, route_name="tools_ai_followup")
 
     current_app.logger.info("AI diagnosis follow-up completed with %s result(s)", len(results or []))
 

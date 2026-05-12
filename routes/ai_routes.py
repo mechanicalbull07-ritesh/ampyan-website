@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify
 from flask_login import login_required, current_user
 from datetime import datetime
 from models.models import db
-from ai_engine.diagnostic_engine import diagnose_vehicle
+from services.diagnosis_safety import safe_diagnose_vehicle
 
 # ================= BLUEPRINT =================
 
@@ -50,12 +50,8 @@ def ask_ai():
         if current_user.role != "premium" and current_user.ai_uses_today >= 5:
             return jsonify({"reply": "Free intelligence limit reached (5 per day)."})
 
-    try:
-        results, questions = diagnose_vehicle(user_message)
-        top_results = results[:3]
-    except Exception:
-        top_results = []
-        questions = []
+    results, questions = safe_diagnose_vehicle(user_message, route_name="ask_ai")
+    top_results = results[:3]
 
     if current_user.is_authenticated:
         current_user.ai_uses_today = (current_user.ai_uses_today or 0) + 1

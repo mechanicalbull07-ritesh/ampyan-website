@@ -39,9 +39,13 @@ def get_learning_boost(problem, answers, user_id=None):
     boost_map = defaultdict(int)
 
     try:
-        records = DiagnosticLearning.query.filter(
-            DiagnosticLearning.problem.contains(problem)
-        ).all()
+        records = (
+            DiagnosticLearning.query
+            .filter(DiagnosticLearning.problem.contains(problem[:120]))
+            .order_by(DiagnosticLearning.id.desc())
+            .limit(50)
+            .all()
+        )
 
         for r in records:
 

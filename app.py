@@ -66,8 +66,8 @@ from routes.garage_routes import garage_bp
 from routes.tools_routes import tools_bp
 from routes.user_routes import user_bp
 from routes.auth_routes import ADMIN_EMAILS
-from ai_engine.diagnostic_engine import diagnose_vehicle
 from ai_engine.response_formatter import enrich_diagnosis_results
+from services.diagnosis_safety import safe_diagnose_vehicle
 
 print("All imports completed")
 
@@ -442,7 +442,7 @@ def videos():
         flash("Video added successfully.", "success")
         return redirect(url_for("videos"))
 
-    videos = Video.query.order_by(Video.created_at.desc()).all()
+    videos = Video.query.order_by(Video.created_at.desc()).limit(50).all()
     for video in videos:
         video.reply_threads = [reply for reply in video.replies if reply.parent_id is None]
         video.reply_count = len(video.replies)
@@ -846,6 +846,9 @@ def rate_limited(path):
 
 @app.before_request
 def security_guard():
+    g.request_start_time = time.perf_counter()
+    g.request_start_utc = datetime.utcnow()
+
     forwarded_proto = request.headers.get("X-Forwarded-Proto", request.scheme)
     if (
         IS_PRODUCTION
@@ -963,6 +966,26 @@ def track_visit():
 
 @app.after_request
 def attach_visitor_cookie(response):
+    elapsed = None
+    if hasattr(g, "request_start_time"):
+        elapsed = time.perf_counter() - g.request_start_time
+        log_message = (
+            "route=%s method=%s path=%s status=%s start=%s end=%s duration=%.3fs"
+        )
+        log_args = (
+            request.endpoint or "unknown",
+            request.method,
+            request.path,
+            response.status_code,
+            getattr(g, "request_start_utc", datetime.utcnow()).isoformat(),
+            datetime.utcnow().isoformat(),
+            elapsed,
+        )
+        if elapsed >= float(os.environ.get("SLOW_ROUTE_WARNING_SECONDS", "2.0")):
+            app.logger.warning("slow_request " + log_message, *log_args)
+        else:
+            app.logger.info("request " + log_message, *log_args)
+
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("X-Frame-Options", "DENY")
     response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -1039,7 +1062,7 @@ def diagnose():
             return redirect("/tools/ai-diagnosis")
 
         # ✅ AI ENGINE
-        results, questions = diagnose_vehicle(problem, car=car)
+        results, questions = safe_diagnose_vehicle(problem, car=car, route_name="app_ai_diagnosis")
 
         app.logger.info("AI diagnosis completed with %s result(s)", len(results or []))
 
@@ -1274,7 +1297,7 @@ def symptom_suggest():
 
 @app.route("/news")
 def news_list():
-    news_items = News.query.order_by(News.id.desc()).all()
+    news_items = News.query.order_by(News.id.desc()).limit(50).all()
     return render_template("news.html", news_items=news_items)
 
 
@@ -1952,7 +1975,6 @@ def initialize_database():
         ensure_reply_schema()
         ensure_post_schema()
         ensure_car_community_seed()
-        ensure_demo_community_seed()
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
         changed = False
@@ -1971,6 +1993,11 @@ def initialize_database():
 @app.before_request
 def ensure_database_ready():
     if request.endpoint in {"healthz", "version"} or request.path in {"/healthz", "/version"}:
+        return
+    if request.path.startswith("/static") or "." in request.path.rsplit("/", 1)[-1]:
+        return
+    if IS_PRODUCTION and not database_initialized:
+        app.logger.info("Database initialization is still warming in background; request continues.")
         return
 
     try:
@@ -2062,6 +2089,26 @@ def healthz():
 @app.route("/version")
 def version():
     return os.environ.get("RENDER_GIT_COMMIT", "local")
+
+
+def start_background_database_init():
+    if not IS_PRODUCTION or os.environ.get("ENABLE_BACKGROUND_DB_INIT", "").lower() != "true":
+        return
+
+    def runner():
+        with app.app_context():
+            try:
+                app.logger.info("Background database initialization started.")
+                initialize_database()
+                app.logger.info("Background database initialization finished.")
+            except Exception as e:
+                db.session.rollback()
+                app.logger.warning("Background database initialization failed: %s", e.__class__.__name__)
+
+    threading.Thread(target=runner, daemon=True, name="db-init").start()
+
+
+start_background_database_init()
 
 # ================= START SERVER =================
 

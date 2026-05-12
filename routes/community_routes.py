@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import json
 import os
 from types import SimpleNamespace
@@ -7,9 +7,13 @@ from urllib import error, parse, request as urllib_request
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from models.models import CarCommunity, Comment, Post, User, Vote, db
+from sqlalchemy import or_
+from sqlalchemy.orm import selectinload
 from werkzeug.utils import secure_filename
 
 community_bp = Blueprint("community", __name__)
+REMOTE_POST_CACHE = {"expires_at": None, "posts": []}
+REMOTE_CACHE_TTL_SECONDS = int(os.environ.get("REMOTE_COMMUNITY_CACHE_SECONDS", "60"))
 
 
 class RemoteSyncError(Exception):
@@ -20,7 +24,7 @@ def _ampyan_api_base_url():
     return (os.environ.get("AMPYAN_API_BASE_URL") or "https://api.ampyan.com").rstrip("/")
 
 
-def _ampyan_api_request(path, method="GET", payload=None, timeout=8):
+def _ampyan_api_request(path, method="GET", payload=None, timeout=3):
     url = f"{_ampyan_api_base_url()}{path}"
     data = None
     headers = {}
@@ -40,7 +44,7 @@ def _ampyan_api_request(path, method="GET", payload=None, timeout=8):
         raise RemoteSyncError(str(exc))
 
 
-def _safe_remote_call(path, method="GET", payload=None, timeout=8):
+def _safe_remote_call(path, method="GET", payload=None, timeout=3):
     try:
         return _ampyan_api_request(path, method=method, payload=payload, timeout=timeout)
     except RemoteSyncError as exc:
@@ -228,15 +232,22 @@ def _build_remote_post(post):
 
 
 def _load_remote_posts():
+    now = datetime.utcnow()
+    if REMOTE_POST_CACHE["expires_at"] and REMOTE_POST_CACHE["expires_at"] > now:
+        return REMOTE_POST_CACHE["posts"]
+
     payload = _safe_remote_call("/community/export?include_replies=true")
     if not payload:
-        return []
+        return REMOTE_POST_CACHE["posts"] if REMOTE_POST_CACHE["posts"] else []
 
     remote_posts = []
     for post in payload.get("posts") or []:
         if (post.get("source") or "").lower() == "website":
             continue
         remote_posts.append(_build_remote_post(post))
+    remote_posts = remote_posts[:40]
+    REMOTE_POST_CACHE["posts"] = remote_posts
+    REMOTE_POST_CACHE["expires_at"] = now + timedelta(seconds=REMOTE_CACHE_TTL_SECONDS)
     return remote_posts
 
 
@@ -281,7 +292,26 @@ def community():
     sort = (request.args.get("sort") or "new").strip()
     active_car_community = (request.args.get("car_community") or "").strip()
 
-    local_posts = [_decorate_local_post(post) for post in Post.query.order_by(Post.id.desc()).all()]
+    local_query = (
+        Post.query
+        .options(
+            selectinload(Post.author),
+            selectinload(Post.car_community),
+            selectinload(Post.votes),
+            selectinload(Post.comments).selectinload(Comment.user),
+        )
+        .order_by(Post.id.desc())
+    )
+    if active_car_community:
+        local_query = local_query.join(CarCommunity).filter(CarCommunity.slug == active_car_community)
+    if query:
+        local_query = local_query.filter(
+            or_(
+                Post.title.ilike(f"%{query}%"),
+                Post.content.ilike(f"%{query}%"),
+            )
+        )
+    local_posts = [_decorate_local_post(post) for post in local_query.limit(80).all()]
     remote_posts = _load_remote_posts()
     combined_posts = local_posts + remote_posts
 
