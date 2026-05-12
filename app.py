@@ -17,7 +17,7 @@ from failure_database import FAILURE_DATABASE
 print("Failure database loaded")
 
 # ================= FLASK =================
-from flask import Flask, g, render_template, request, redirect, flash, url_for, jsonify
+from flask import Flask, Response, g, render_template, request, redirect, flash, url_for, jsonify
 from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
@@ -28,6 +28,7 @@ print("Models loaded")
 # ================= SECURITY =================
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.utils import secure_filename
 print("Security modules loaded")
@@ -157,6 +158,7 @@ def ai_diagnose(problem, car):
     return results
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 IS_PRODUCTION = os.environ.get("ENV", "").lower() == "production" or os.environ.get("RENDER", "").lower() == "true"
 
 app.register_blueprint(auth_bp)
@@ -844,6 +846,17 @@ def rate_limited(path):
 
 @app.before_request
 def security_guard():
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", request.scheme)
+    if (
+        IS_PRODUCTION
+        and forwarded_proto == "http"
+        and request.host in {"ampyan.com", "www.ampyan.com"}
+    ):
+        return redirect(f"https://ampyan.com{request.full_path.rstrip('?')}", code=301)
+
+    if IS_PRODUCTION and request.host == "www.ampyan.com":
+        return redirect(f"https://ampyan.com{request.full_path.rstrip('?')}", code=301)
+
     if security_path_matches(request.path):
         record_website_event(
             "security",
@@ -1995,6 +2008,50 @@ def handle_unexpected_error(error):
     if wants_json_response():
         return jsonify({"status": "error", "message": "Internal server error"}), 500
     return "Something went wrong. Please try again later.", 500
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    return Response(
+        "User-agent: *\n"
+        "Allow: /\n\n"
+        "Sitemap: https://ampyan.com/sitemap.xml\n",
+        mimetype="text/plain",
+    )
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    sitemap = """<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>https://ampyan.com/</loc>
+  </url>
+  <url>
+    <loc>https://ampyan.com/login</loc>
+  </url>
+  <url>
+    <loc>https://ampyan.com/community</loc>
+  </url>
+  <url>
+    <loc>https://ampyan.com/diagnosis</loc>
+  </url>
+  <url>
+    <loc>https://ampyan.com/mygarage</loc>
+  </url>
+</urlset>
+"""
+    return Response(sitemap, mimetype="application/xml")
+
+
+@app.route("/diagnosis")
+def diagnosis_alias():
+    return redirect("/tools/ai-diagnosis", code=301)
+
+
+@app.route("/mygarage")
+def mygarage_alias():
+    return redirect("/garage-dashboard", code=301)
 
 
 @app.route("/healthz")
