@@ -233,6 +233,9 @@
 <button type="submit" name="frequency" value="{{ key }}" class="{% if frequency_filter == key %}active{% endif %}">{{ label }}</button>
 {% endfor %}
 </form>
+<form method="POST" action="/admin/seed-english-community" class="admin-filter-row">
+<button type="submit">Seed 50 English users + 100 Q&A</button>
+</form>
 </div>
 
 <div class="ui-card card-spacer">
