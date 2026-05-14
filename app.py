@@ -271,6 +271,12 @@ def static_image_url_if_exists(folder, filename):
 
     return None
 
+def social_preview_text(text, fallback="AMPYAN automotive update"):
+    cleaned = re.sub(r"\s+", " ", (text or "")).strip()
+    if not cleaned:
+        cleaned = fallback
+    return cleaned[:157] + "..." if len(cleaned) > 160 else cleaned
+
 @app.context_processor
 def inject_image_helpers():
     return dict(
@@ -1306,7 +1312,21 @@ def news_detail(news_id):
     news = News.query.get_or_404(news_id)
     news.reply_threads = [reply for reply in news.replies if reply.parent_id is None]
     news.reply_count = len(news.replies)
-    return render_template("news_detail.html", news=news)
+    image_url = static_image_url_if_exists("news_images", news.image)
+    meta_image = (
+        url_for("static", filename=image_url.replace("/static/", "", 1), _external=True)
+        if image_url
+        else url_for("static", filename="images/logo.png", _external=True)
+    )
+    return render_template(
+        "news_detail.html",
+        news=news,
+        meta_title=news.title,
+        meta_description=social_preview_text(news.content, "Read this AMPYAN automotive news update."),
+        meta_url=url_for("news_detail", news_id=news.id, _external=True),
+        meta_image=meta_image,
+        meta_type="article",
+    )
 
 
 @app.route("/news/<int:news_id>/reply", methods=["POST"])

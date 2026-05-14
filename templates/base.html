@@ -8,13 +8,25 @@
 <meta name="description" content="AMPYAN is an AI powered automotive ecosystem helping car owners diagnose vehicle problems, track maintenance, improve safety, and save money.">
 <meta name="keywords" content="AMPYAN, AI car diagnosis, automotive AI, car maintenance, vehicle assistant, dashcam AI">
 <meta name="robots" content="index, follow">
-<link rel="canonical" href="https://ampyan.com{{ request.path }}">
-<meta property="og:title" content="AMPYAN">
-<meta property="og:description" content="AI Powered Automotive Ecosystem">
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://ampyan.com{{ request.path }}">
-<meta property="og:image" content="https://ampyan.com/static/images/logo.png">
+{% set social_title = meta_title|default("AMPYAN", true) %}
+{% set social_description = meta_description|default("AI Powered Automotive Ecosystem", true) %}
+{% set social_url = meta_url|default(request.url, true) %}
+{% set social_image = meta_image|default(url_for('static', filename='images/logo.png', _external=True), true) %}
+{% set social_type = meta_type|default("website", true) %}
+<link rel="canonical" href="{{ social_url }}">
+<meta property="og:site_name" content="AMPYAN">
+<meta property="og:title" content="{{ social_title }}">
+<meta property="og:description" content="{{ social_description }}">
+<meta property="og:type" content="{{ social_type }}">
+<meta property="og:url" content="{{ social_url }}">
+<meta property="og:image" content="{{ social_image }}">
+<meta property="og:image:secure_url" content="{{ social_image }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ social_title }}">
+<meta name="twitter:description" content="{{ social_description }}">
+<meta name="twitter:image" content="{{ social_image }}">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -29,7 +41,7 @@
 }
 </script>
 
-<title>AMPYAN - AI Powered Automotive Assistant</title>
+<title>{{ social_title }} - AMPYAN</title>
 
 <!-- FONTS -->
 
@@ -438,6 +450,31 @@ sendAI();
 });
 
 document.addEventListener("click",async function(event){
+const copyButton=event.target.closest(".copy-share-btn");
+if(copyButton){
+const copyUrl=copyButton.dataset.shareUrl || window.location.href;
+try{
+await navigator.clipboard.writeText(copyUrl);
+const label=copyButton.querySelector("span");
+const originalText=label ? label.textContent : copyButton.textContent;
+if(label){
+label.textContent="Copied";
+}else{
+copyButton.textContent="Copied";
+}
+setTimeout(function(){
+if(label){
+label.textContent=originalText;
+}else{
+copyButton.textContent=originalText;
+}
+},1400);
+}catch(error){
+window.prompt("Copy this link",copyUrl);
+}
+return;
+}
+
 const button=event.target.closest(".share-btn");
 if(!button) return;
 
@@ -451,10 +488,19 @@ return;
 }
 
 await navigator.clipboard.writeText(shareUrl);
-const originalText=button.textContent;
+const label=button.querySelector("span");
+const originalText=label ? label.textContent : button.textContent;
+if(label){
+label.textContent="Copied";
+}else{
 button.textContent="Copied";
+}
 setTimeout(function(){
+if(label){
+label.textContent=originalText;
+}else{
 button.textContent=originalText;
+}
 },1400);
 }catch(error){
 window.prompt("Copy this link",shareUrl);

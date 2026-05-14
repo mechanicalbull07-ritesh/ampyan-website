@@ -160,6 +160,34 @@ def _remote_title(text):
     return (base_text[:80] + "...") if len(base_text) > 80 else base_text
 
 
+def _social_preview_text(text, fallback="AMPYAN community discussion"):
+    cleaned = " ".join((text or "").split())
+    if not cleaned:
+        cleaned = fallback
+    return cleaned[:157] + "..." if len(cleaned) > 160 else cleaned
+
+
+def _absolute_image_url(image_url):
+    if not image_url:
+        return url_for("static", filename="images/logo.png", _external=True)
+    if str(image_url).startswith(("http://", "https://")):
+        return image_url
+    return parse.urljoin(request.url_root, str(image_url).lstrip("/"))
+
+
+def _post_social_context(post):
+    return {
+        "meta_title": post.title,
+        "meta_description": _social_preview_text(
+            post.content,
+            f"{post.community_name} discussion on AMPYAN.",
+        ),
+        "meta_url": post.share_url,
+        "meta_image": _absolute_image_url(post.image_url),
+        "meta_type": "article",
+    }
+
+
 def _build_remote_comment(reply):
     user = reply.get("user") or {}
     author_name = user.get("name") or user.get("email") or reply.get("userId") or "Community Member"
@@ -514,7 +542,7 @@ def create_car_community():
 @community_bp.route("/post/<int:post_id>")
 def post_detail(post_id):
     post = _decorate_local_post(Post.query.get_or_404(post_id))
-    return render_template("post_detail.html", post=post)
+    return render_template("post_detail.html", post=post, **_post_social_context(post))
 
 
 @community_bp.route("/community/remote/<int:remote_post_id>")
@@ -523,7 +551,7 @@ def remote_post_detail(remote_post_id):
     if not post:
         flash("Post not found in shared community feed.")
         return redirect(url_for("community.community"))
-    return render_template("post_detail.html", post=post)
+    return render_template("post_detail.html", post=post, **_post_social_context(post))
 
 
 @community_bp.route("/post/<int:post_id>/edit", methods=["GET", "POST"])

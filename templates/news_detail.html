@@ -40,12 +40,21 @@
 </div>
 
 <div class="ui-button-row">
-<button type="button" class="ui-button-secondary share-btn" data-share-url="{{ url_for('news_detail', news_id=news.id, _external=True) }}" data-share-title="{{ news.title }}">Share</button>
 {% if current_user.is_authenticated and current_user.role == "admin" %}
 <a href="/admin/news/edit/{{ news.id }}" class="ui-button-secondary">Edit</a>
 <a href="/admin/news/delete/{{ news.id }}" class="ui-button-danger" onclick="return confirm('Delete this news?')">Delete</a>
 {% endif %}
 </div>
+</div>
+
+{% set share_url = url_for('news_detail', news_id=news.id, _external=True) %}
+<div class="social-share-panel" aria-label="Share this news">
+<span class="social-share-label">Share</span>
+<a class="social-share-action facebook-share" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f"></i><span>Facebook</span></a>
+<a class="social-share-action whatsapp-share" href="https://wa.me/?text={{ (news.title ~ ' ' ~ share_url)|urlencode }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>
+<a class="social-share-action x-share" href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}&text={{ news.title|urlencode }}" target="_blank" rel="noopener" title="Share on X"><i class="fa-brands fa-x-twitter"></i><span>X</span></a>
+<button type="button" class="social-share-action share-btn instagram-share" data-share-url="{{ share_url }}" data-share-title="{{ news.title }}" title="Share to Instagram story from your phone"><i class="fa-brands fa-instagram"></i><span>Story</span></button>
+<button type="button" class="social-share-action copy-share-btn" data-share-url="{{ share_url }}" title="Copy link"><i class="fa-solid fa-link"></i><span>Copy</span></button>
 </div>
 
 {% if image_url %}

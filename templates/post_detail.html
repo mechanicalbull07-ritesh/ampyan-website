@@ -40,9 +40,6 @@
 </div>
 
 <div class="ui-button-row">
-<button type="button" class="community-icon-action share-btn" data-share-url="{{ post.share_url }}" data-share-title="{{ post.title }}" title="Share">
-<i class="fa-solid fa-share-nodes"></i><span>Share</span>
-</button>
 {% if post.can_edit %}
 <a href="{{ post.edit_url }}" class="community-icon-action" title="Edit">
 <i class="fa-solid fa-pen"></i><span>Edit</span>
@@ -54,6 +51,15 @@
 </form>
 {% endif %}
 </div>
+</div>
+
+<div class="social-share-panel" aria-label="Share this community post">
+<span class="social-share-label">Share</span>
+<a class="social-share-action facebook-share" href="https://www.facebook.com/sharer/sharer.php?u={{ post.share_url|urlencode }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f"></i><span>Facebook</span></a>
+<a class="social-share-action whatsapp-share" href="https://wa.me/?text={{ (post.title ~ ' ' ~ post.share_url)|urlencode }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>
+<a class="social-share-action x-share" href="https://twitter.com/intent/tweet?url={{ post.share_url|urlencode }}&text={{ post.title|urlencode }}" target="_blank" rel="noopener" title="Share on X"><i class="fa-brands fa-x-twitter"></i><span>X</span></a>
+<button type="button" class="social-share-action share-btn instagram-share" data-share-url="{{ post.share_url }}" data-share-title="{{ post.title }}" title="Share to Instagram story from your phone"><i class="fa-brands fa-instagram"></i><span>Story</span></button>
+<button type="button" class="social-share-action copy-share-btn" data-share-url="{{ post.share_url }}" title="Copy link"><i class="fa-solid fa-link"></i><span>Copy</span></button>
 </div>
 
 <div class="author-left card-spacer">
