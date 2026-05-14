@@ -541,6 +541,10 @@ background:linear-gradient(135deg,#f58529,#dd2a7b,#8134af);
 background:#1f1f1f;
 }
 
+.story-card-share{
+background:linear-gradient(135deg,#ff5a36,#ffb347);
+}
+
 .car-community-form{
 display:grid;
 gap:10px;

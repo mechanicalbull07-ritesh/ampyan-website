@@ -17,7 +17,7 @@ from failure_database import FAILURE_DATABASE
 print("Failure database loaded")
 
 # ================= FLASK =================
-from flask import Flask, Response, g, render_template, request, redirect, flash, url_for, jsonify
+from flask import Flask, Response, g, render_template, request, redirect, flash, url_for, jsonify, send_file
 from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
@@ -53,13 +53,15 @@ print("Email service loaded")
 # ================= OTHER IMPORTS =================
 from flask import session
 import os
-from PIL import Image
+from PIL import Image, ImageDraw, ImageFont
 from collections import defaultdict, deque
 import re
 import threading
 import time
 from datetime import datetime, timedelta
 from urllib.parse import parse_qs, urlparse
+from io import BytesIO
+import textwrap
 from authlib.integrations.flask_client import OAuth
 from routes.main_routes import main_bp
 from routes.garage_routes import garage_bp
@@ -276,6 +278,96 @@ def social_preview_text(text, fallback="AMPYAN automotive update"):
     if not cleaned:
         cleaned = fallback
     return cleaned[:157] + "..." if len(cleaned) > 160 else cleaned
+
+def story_font(size, bold=False):
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/Library/Fonts/Arial Bold.ttf" if bold else "/Library/Fonts/Arial.ttf",
+    ]
+    for path in candidates:
+        if path and os.path.exists(path):
+            return ImageFont.truetype(path, size)
+    return ImageFont.load_default()
+
+def draw_wrapped_text(draw, text, xy, font, fill, max_width, max_lines, line_spacing=12):
+    words = re.sub(r"\s+", " ", (text or "")).strip().split()
+    lines = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if draw.textbbox((0, 0), candidate, font=font)[2] <= max_width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+        if len(lines) >= max_lines:
+            break
+    if current and len(lines) < max_lines:
+        lines.append(current)
+    if len(lines) == max_lines and len(" ".join(words)) > len(" ".join(lines)):
+        lines[-1] = lines[-1].rstrip(".") + "..."
+
+    x, y = xy
+    for line in lines:
+        draw.text((x, y), line, font=font, fill=fill)
+        y += draw.textbbox((0, 0), line, font=font)[3] + line_spacing
+    return y
+
+def story_response(title, subtitle, body, footer="Read full on AMPYAN", source_url=None, accent=(255, 82, 46), kind="AMPYAN"):
+    width, height = 1080, 1920
+    image = Image.new("RGB", (width, height), (7, 9, 16))
+    draw = ImageDraw.Draw(image)
+
+    for y in range(height):
+        blend = y / height
+        r = int(9 + (30 * blend))
+        g = int(11 + (12 * blend))
+        b = int(20 + (4 * blend))
+        draw.line((0, y, width, y), fill=(r, g, b))
+
+    draw.rounded_rectangle((58, 58, 1022, 1862), radius=58, fill=(13, 17, 29), outline=(54, 60, 78), width=3)
+    draw.rounded_rectangle((58, 58, 1022, 350), radius=58, fill=(30, 19, 24))
+    draw.rectangle((58, 225, 1022, 350), fill=(30, 19, 24))
+    draw.ellipse((760, -120, 1190, 310), fill=(accent[0] // 3, accent[1] // 3, accent[2] // 3))
+    draw.ellipse((-170, 120, 280, 570), fill=(70, 28, 22))
+
+    brand_font = story_font(46, bold=True)
+    kicker_font = story_font(30, bold=True)
+    title_font = story_font(74, bold=True)
+    subtitle_font = story_font(38, bold=True)
+    body_font = story_font(34)
+    small_font = story_font(27, bold=True)
+
+    draw.text((104, 110), "AMPYAN", font=brand_font, fill=(255, 255, 255))
+    draw.text((104, 176), kind.upper(), font=kicker_font, fill=(255, 178, 116))
+    draw.rounded_rectangle((104, 252, 520, 302), radius=25, fill=accent)
+    draw.text((130, 260), "SHARE STORY", font=small_font, fill=(255, 255, 255))
+
+    y = 430
+    y = draw_wrapped_text(draw, title, (104, y), title_font, (255, 255, 255), 872, 5, line_spacing=18)
+    y += 18
+    if subtitle:
+        draw.rounded_rectangle((104, y, 976, y + 92), radius=26, fill=(23, 28, 42), outline=(54, 64, 86), width=2)
+        draw_wrapped_text(draw, subtitle, (132, y + 22), subtitle_font, (255, 216, 168), 816, 1, line_spacing=8)
+        y += 128
+
+    draw.rounded_rectangle((104, y, 976, 1510), radius=34, fill=(15, 20, 32), outline=(52, 59, 78), width=2)
+    draw_wrapped_text(draw, body, (140, y + 42), body_font, (225, 231, 242), 800, 13, line_spacing=18)
+
+    draw.rounded_rectangle((104, 1560, 976, 1765), radius=34, fill=(24, 30, 44), outline=(accent[0], accent[1], accent[2]), width=2)
+    draw.text((140, 1600), footer, font=subtitle_font, fill=(255, 255, 255))
+    if source_url:
+        draw_wrapped_text(draw, source_url, (140, 1664), story_font(28), (190, 203, 225), 780, 2, line_spacing=10)
+    else:
+        draw.text((140, 1664), "Open AMPYAN and share this result.", font=story_font(28), fill=(190, 203, 225))
+
+    draw.text((104, 1812), "ampyan.com", font=story_font(30, bold=True), fill=(255, 178, 116))
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    output.seek(0)
+    return send_file(output, mimetype="image/png", as_attachment=False, download_name="ampyan-story.png")
 
 @app.context_processor
 def inject_image_helpers():
@@ -1326,6 +1418,66 @@ def news_detail(news_id):
         meta_url=url_for("news_detail", news_id=news.id, _external=True),
         meta_image=meta_image,
         meta_type="article",
+    )
+
+
+@app.route("/story/news/<int:news_id>")
+def news_story(news_id):
+    news = News.query.get_or_404(news_id)
+    return story_response(
+        title=news.title,
+        subtitle=news.created_at.strftime("%d %B %Y"),
+        body=news.content,
+        footer="Read full news on AMPYAN",
+        source_url=url_for("news_detail", news_id=news.id, _external=True),
+        accent=(255, 89, 44),
+        kind="AMPYAN News",
+    )
+
+
+@app.route("/story/post/<int:post_id>")
+def post_story(post_id):
+    post = Post.query.get_or_404(post_id)
+    author = post.author.username if post.author else "AMPYAN Member"
+    community_name = post.car_community.name if post.car_community else "General Community"
+    return story_response(
+        title=post.title,
+        subtitle=f"{community_name} - {author}",
+        body=post.content,
+        footer="Read full community post on AMPYAN",
+        source_url=url_for("community.post_detail", post_id=post.id, _external=True),
+        accent=(255, 71, 51),
+        kind="Community Post",
+    )
+
+
+@app.route("/story/diagnosis", methods=["POST"])
+def diagnosis_story():
+    issue = (request.form.get("issue") or "Vehicle Intelligence Report").strip()
+    problem = (request.form.get("problem") or "Car diagnosis result").strip()
+    car_label = (request.form.get("car_label") or "Vehicle").strip()
+    confidence = (request.form.get("confidence") or "").strip()
+    severity = (request.form.get("severity") or "").strip()
+    urgency = (request.form.get("urgency") or "").strip()
+    summary_parts = [
+        f"Problem: {problem}",
+        f"Detected issue: {issue}",
+    ]
+    if confidence:
+        summary_parts.append(f"Confidence: {confidence}%")
+    if severity:
+        summary_parts.append(f"Severity: {severity}")
+    if urgency:
+        summary_parts.append(f"Urgency: {urgency}")
+
+    return story_response(
+        title=issue,
+        subtitle=car_label,
+        body=". ".join(summary_parts),
+        footer="Vehicle check powered by AMPYAN",
+        source_url=url_for("diagnose", _external=True),
+        accent=(255, 96, 54),
+        kind="Vehicle Diagnosis",
     )
 
 

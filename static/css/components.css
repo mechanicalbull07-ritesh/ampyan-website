@@ -555,6 +555,11 @@ gap:12px;
 flex-wrap:wrap;
 }
 
+.story-download-form{
+display:inline-flex;
+margin:0 12px 12px 0;
+}
+
 .ui-button-secondary,
 .ui-button-danger{
 display:inline-flex;

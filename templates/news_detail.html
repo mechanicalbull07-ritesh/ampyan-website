@@ -54,6 +54,7 @@
 <a class="social-share-action whatsapp-share" href="https://wa.me/?text={{ (news.title ~ ' ' ~ share_url)|urlencode }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>
 <a class="social-share-action x-share" href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}&text={{ news.title|urlencode }}" target="_blank" rel="noopener" title="Share on X"><i class="fa-brands fa-x-twitter"></i><span>X</span></a>
 <button type="button" class="social-share-action share-btn instagram-share" data-share-url="{{ share_url }}" data-share-title="{{ news.title }}" title="Share to Instagram story from your phone"><i class="fa-brands fa-instagram"></i><span>Story</span></button>
+<a class="social-share-action story-card-share" href="{{ url_for('news_story', news_id=news.id) }}" target="_blank" rel="noopener" title="Open Instagram-ready story image"><i class="fa-solid fa-mobile-screen"></i><span>Story PNG</span></a>
 <button type="button" class="social-share-action copy-share-btn" data-share-url="{{ share_url }}" title="Copy link"><i class="fa-solid fa-link"></i><span>Copy</span></button>
 </div>
 

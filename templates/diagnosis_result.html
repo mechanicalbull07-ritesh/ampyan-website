@@ -165,6 +165,17 @@
 {% endif %}
 
 <div class="login-reminder ui-card">
+{% if results %}
+<form method="POST" action="{{ url_for('diagnosis_story') }}" target="_blank" class="story-download-form">
+<input type="hidden" name="issue" value="{{ results[0].issue }}">
+<input type="hidden" name="problem" value="{{ problem|default('Vehicle problem') }}">
+<input type="hidden" name="car_label" value="{% if car %}{{ car.brand }} {{ car.model }}{% if car.year %} ({{ car.year }}){% endif %}{% else %}Vehicle{% endif %}">
+<input type="hidden" name="confidence" value="{{ results[0].confidence }}">
+<input type="hidden" name="severity" value="{{ results[0].severity_label }}">
+<input type="hidden" name="urgency" value="{{ results[0].urgency_label }}">
+<button type="submit" class="auth-button"><i class="fa-solid fa-mobile-screen"></i> Share as Story PNG</button>
+</form>
+{% endif %}
 <a href="/tools/ai-diagnosis" class="diagnosis-cta">{{ t.retry }}</a>
 </div>
 
