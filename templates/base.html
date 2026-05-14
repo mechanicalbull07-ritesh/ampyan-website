@@ -13,6 +13,7 @@
 {% set social_url = meta_url|default(request.url, true) %}
 {% set social_image = meta_image|default(url_for('static', filename='images/logo.png', _external=True), true) %}
 {% set social_type = meta_type|default("website", true) %}
+{% set browser_title = (social_title ~ " - AMPYAN") if meta_title is defined else "AMPYAN - AI Powered Automotive Assistant" %}
 <link rel="canonical" href="{{ social_url }}">
 <meta property="og:site_name" content="AMPYAN">
 <meta property="og:title" content="{{ social_title }}">
@@ -41,7 +42,7 @@
 }
 </script>
 
-<title>{{ social_title }} - AMPYAN</title>
+<title>{{ browser_title }}</title>
 
 <!-- FONTS -->
 
