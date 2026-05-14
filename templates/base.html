@@ -28,6 +28,7 @@
 <meta name="twitter:title" content="{{ social_title }}">
 <meta name="twitter:description" content="{{ social_description }}">
 <meta name="twitter:image" content="{{ social_image }}">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -83,9 +84,12 @@
 
 <!-- LEFT : LOGO -->
 
-<div class="navbar-logo">
-<img src="{{ url_for('static', filename='images/logo.png') }}" alt="Logo">
-</div>
+<a href="/" class="navbar-brand" aria-label="AMPYAN home">
+<picture>
+<source srcset="{{ url_for('static', filename='images/logo-navbar.svg') }}" type="image/svg+xml">
+<img src="{{ url_for('static', filename='images/logo-navbar.png') }}" alt="AMPYAN">
+</picture>
+</a>
 
 
 <!-- CENTER MENU -->
