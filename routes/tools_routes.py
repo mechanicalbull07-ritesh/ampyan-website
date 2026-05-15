@@ -2,6 +2,7 @@ from flask import Blueprint, current_app, render_template, request, jsonify, ses
 from flask_login import current_user
 from models.models import Car, AIFeedback, db
 from services.car_recommendation_service import recommend_cars, build_user_profile_summary
+from service_estimator import estimate_service
 
 # AI ENGINE
 from ai_engine.response_formatter import enrich_diagnosis_results
@@ -174,42 +175,39 @@ def maintenance_cost():
     result = None
     error = None
     form_data = {
-        "vehicle_age": request.form.get("vehicle_age", ""),
-        "current_km": request.form.get("current_km", ""),
-        "fuel_type": request.form.get("fuel_type", "Petrol"),
-        "service_type": request.form.get("service_type", "routine"),
+        "car_make": request.form.get("car_make", ""),
+        "car_model": request.form.get("car_model", ""),
+        "fuel_type": request.form.get("fuel_type", "petrol"),
+        "transmission": request.form.get("transmission", "manual"),
+        "vehicle_age_years": request.form.get("vehicle_age_years", request.form.get("vehicle_age", "")),
+        "odometer_km": request.form.get("odometer_km", request.form.get("current_km", "")),
+        "average_daily_km": request.form.get("average_daily_km", ""),
+        "usage_type": request.form.get("usage_type", "city"),
+        "driving_style": request.form.get("driving_style", "normal"),
+        "last_service_km": request.form.get("last_service_km", ""),
+        "last_service_months_ago": request.form.get("last_service_months_ago", ""),
+        "last_service_date": request.form.get("last_service_date", ""),
+        "query": request.form.get("query", ""),
     }
 
     if request.method == "POST":
-        vehicle_age = _safe_float(form_data["vehicle_age"])
-        current_km = _safe_float(form_data["current_km"])
+        vehicle_age = _safe_float(form_data["vehicle_age_years"])
+        current_km = _safe_float(form_data["odometer_km"])
         if vehicle_age is None or vehicle_age < 0:
             error = "Vehicle age cannot be negative."
         elif current_km is None or current_km < 0:
             error = "Current odometer cannot be negative."
         else:
-            base = 4500
-            if form_data["service_type"] == "major":
-                base = 11000
-            elif form_data["service_type"] == "repair":
-                base = 16000
-            if current_km > 80000:
-                base += 4500
-            elif current_km > 40000:
-                base += 2500
-            if vehicle_age > 7:
-                base += 3500
-            if form_data["fuel_type"] == "Diesel":
-                base += 1800
-            elif form_data["fuel_type"] == "Electric":
-                base = max(base - 2200, 2500)
-            result = {
-                "estimated_min": round(base * 0.85, 2),
-                "estimated_max": round(base * 1.35, 2),
-                "note": "Estimated maintenance planning range. Actual workshop cost may vary.",
-            }
+            result = estimate_service(form_data)
 
     return render_template("maintenance_cost.html", result=result, error=error, form_data=form_data)
+
+
+@tools_bp.route("/api/service-estimator", methods=["POST"])
+def api_service_estimator():
+    data = request.get_json(silent=True) or {}
+    result = estimate_service(data)
+    return jsonify(result)
 
 
 @tools_bp.route("/tools/car-suggestion", methods=["GET", "POST"])

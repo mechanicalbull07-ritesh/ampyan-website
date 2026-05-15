@@ -1,50 +1,156 @@
 {% extends "base.html" %}
 {% block content %}
 
-<section class="calculator-page">
+<section class="calculator-page service-estimator-page">
 <div class="calculator-header">
-<p class="page-kicker">MAINTENANCE</p>
-<h1 class="page-title">Maintenance Cost Estimator</h1>
-<p class="page-subtitle">Estimate a planning range for routine service, major service or repair preparation.</p>
+<p class="page-kicker">SERVICE ESTIMATOR</p>
+<h1 class="page-title">Service Estimator</h1>
+<p class="page-subtitle">Know what your car may need based on km, age and usage.</p>
 </div>
 
 <div class="calculator-layout">
-<form method="POST" class="calculator-card">
+<form method="POST" class="calculator-card service-estimator-form">
 {% if error %}<div class="calc-error">{{ error }}</div>{% endif %}
 
-<label class="form-label">Vehicle Age (Years)</label>
-<input type="number" step="0.1" min="0" name="vehicle_age" value="{{ form_data.vehicle_age }}" placeholder="Example: 5" required class="auth-input">
+<div class="ui-grid ui-grid-2">
+<div>
+<label class="form-label">Car Make</label>
+<input type="text" name="car_make" value="{{ form_data.car_make }}" placeholder="Example: Hyundai" class="auth-input">
+</div>
+<div>
+<label class="form-label">Car Model</label>
+<input type="text" name="car_model" value="{{ form_data.car_model }}" placeholder="Example: Creta" class="auth-input">
+</div>
+</div>
 
-<label class="form-label">Current Odometer (KM)</label>
-<input type="number" step="1" min="0" name="current_km" value="{{ form_data.current_km }}" placeholder="Example: 65000" required class="auth-input">
-
+<div class="ui-grid ui-grid-2">
+<div>
 <label class="form-label">Fuel Type</label>
 <select name="fuel_type" class="auth-input">
-<option value="Petrol" {% if form_data.fuel_type == "Petrol" %}selected{% endif %}>Petrol</option>
-<option value="Diesel" {% if form_data.fuel_type == "Diesel" %}selected{% endif %}>Diesel</option>
-<option value="CNG" {% if form_data.fuel_type == "CNG" %}selected{% endif %}>CNG</option>
-<option value="Electric" {% if form_data.fuel_type == "Electric" %}selected{% endif %}>Electric</option>
+{% for value,label in [("petrol","Petrol"),("diesel","Diesel"),("cng","CNG"),("hybrid","Hybrid"),("ev","EV")] %}
+<option value="{{ value }}" {% if form_data.fuel_type == value %}selected{% endif %}>{{ label }}</option>
+{% endfor %}
 </select>
-
-<label class="form-label">Service Type</label>
-<select name="service_type" class="auth-input">
-<option value="routine" {% if form_data.service_type == "routine" %}selected{% endif %}>Routine Service</option>
-<option value="major" {% if form_data.service_type == "major" %}selected{% endif %}>Major Service</option>
-<option value="repair" {% if form_data.service_type == "repair" %}selected{% endif %}>Repair Planning</option>
+</div>
+<div>
+<label class="form-label">Transmission</label>
+<select name="transmission" class="auth-input">
+{% for value,label in [("manual","Manual"),("automatic","Automatic"),("amt","AMT"),("cvt","CVT"),("dct","DCT")] %}
+<option value="{{ value }}" {% if form_data.transmission == value %}selected{% endif %}>{{ label }}</option>
+{% endfor %}
 </select>
+</div>
+</div>
 
-<button type="submit" class="auth-button calc-submit">Estimate Cost</button>
+<div class="ui-grid ui-grid-2">
+<div>
+<label class="form-label">Vehicle Age (Years)</label>
+<input type="number" step="0.1" min="0" name="vehicle_age_years" value="{{ form_data.vehicle_age_years }}" placeholder="Example: 5" required class="auth-input">
+</div>
+<div>
+<label class="form-label">Current KM</label>
+<input type="number" step="1" min="0" name="odometer_km" value="{{ form_data.odometer_km }}" placeholder="Example: 65000" required class="auth-input">
+</div>
+</div>
+
+<div class="ui-grid ui-grid-2">
+<div>
+<label class="form-label">Average Daily KM</label>
+<input type="number" step="1" min="0" name="average_daily_km" value="{{ form_data.average_daily_km }}" placeholder="Example: 35" class="auth-input">
+</div>
+<div>
+<label class="form-label">Last Service KM</label>
+<input type="number" step="1" min="0" name="last_service_km" value="{{ form_data.last_service_km }}" placeholder="Example: 55000" class="auth-input">
+</div>
+</div>
+
+<div class="ui-grid ui-grid-2">
+<div>
+<label class="form-label">Usage Type</label>
+<select name="usage_type" class="auth-input">
+{% for value,label in [("city","City"),("highway","Highway"),("mixed","Mixed")] %}
+<option value="{{ value }}" {% if form_data.usage_type == value %}selected{% endif %}>{{ label }}</option>
+{% endfor %}
+</select>
+</div>
+<div>
+<label class="form-label">Driving Style</label>
+<select name="driving_style" class="auth-input">
+{% for value,label in [("normal","Normal"),("aggressive","Aggressive"),("stop_go","Stop-go")] %}
+<option value="{{ value }}" {% if form_data.driving_style == value %}selected{% endif %}>{{ label }}</option>
+{% endfor %}
+</select>
+</div>
+</div>
+
+<div class="ui-grid ui-grid-2">
+<div>
+<label class="form-label">Last Service Months Ago</label>
+<input type="number" step="1" min="0" name="last_service_months_ago" value="{{ form_data.last_service_months_ago }}" placeholder="Example: 10" class="auth-input">
+</div>
+<div>
+<label class="form-label">Last Service Date</label>
+<input type="date" name="last_service_date" value="{{ form_data.last_service_date }}" class="auth-input">
+</div>
+</div>
+
+<label class="form-label">Ask Service Query</label>
+<textarea name="query" rows="3" placeholder="Example: engine oil change, brake pad replace, engine flush, AC service" class="auth-input">{{ form_data.query }}</textarea>
+
+<button type="submit" class="auth-button calc-submit">Estimate Service</button>
 </form>
 
-<div class="calculator-result-card">
+<div class="calculator-result-card service-estimator-results">
 {% if result %}
-<p class="calc-label">Estimated Range</p>
-<h2>₹{{ result.estimated_min }} - ₹{{ result.estimated_max }}</h2>
-<p class="calc-muted">{{ result.note }}</p>
+<p class="calc-label">AMPYAN Estimate</p>
+<h2>{{ result.summary }}</h2>
+<p class="calc-muted">Stress factor: {{ result.stress_factor }} | Effective km: {{ result.effective_km }}</p>
+{% if result.safety_note %}
+<p class="calc-muted diagnosis-safety-message"><strong>Safety:</strong> {{ result.safety_note }}</p>
+{% endif %}
+
+{% if result.recommended_services %}
+<div class="service-result-section">
+<h3 class="section-heading">Recommended Services</h3>
+{% for service in result.recommended_services %}
+<div class="simple-list-card service-result-card service-status-{{ service.status|lower|replace(' ', '-')|replace('/', '') }}">
+<div class="ui-meta-list">
+<div class="ui-meta-item">
+<span class="ui-meta-label">{{ service.status }}</span>
+<span class="ui-meta-value">{{ service.item }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Priority</span>
+<span class="ui-meta-value">{{ service.priority|capitalize }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Estimated Cost</span>
+<span class="ui-meta-value">₹{{ service.approx_cost.min }} - ₹{{ service.approx_cost.max }}</span>
+</div>
+</div>
+<p class="section-copy">{{ service.reason }}</p>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+{% if result.not_required %}
+<div class="service-result-section">
+<h3 class="section-heading">Not Required / Monitor</h3>
+{% for service in result.not_required %}
+<div class="simple-list-card service-result-card">
+<h4>{{ service.item }}</h4>
+<p class="section-copy"><strong>{{ service.status }}:</strong> {{ service.reason }}</p>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+<p class="calc-muted">{{ result.disclaimer }}</p>
 {% else %}
 <p class="calc-label">Ready</p>
-<h2>Plan service budget</h2>
-<p class="calc-muted">Enter age, odometer and service type to estimate a maintenance cost range.</p>
+<h2>Estimate service needs</h2>
+<p class="calc-muted">Enter km, age, usage and a service query to see what should be replaced, monitored, or avoided.</p>
 {% endif %}
 </div>
 </div>
