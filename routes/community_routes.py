@@ -4,7 +4,7 @@ import os
 from types import SimpleNamespace
 from urllib import error, parse, request as urllib_request
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from models.models import CarCommunity, Comment, Post, User, Vote, db
 from sqlalchemy import or_
@@ -312,6 +312,116 @@ def refresh_author_stats(user):
 
     user.posts_count = posts_count
     user.reputation = max(0, (posts_count * 5) + (comments_count * 2) + (vote_count * 3))
+
+
+def _isoformat(value):
+    return value.isoformat() if hasattr(value, "isoformat") else value
+
+
+def _serialize_comment(comment):
+    author_name = getattr(comment, "author_name", None)
+    user = getattr(comment, "user", None)
+    if not author_name and user:
+        author_name = getattr(user, "username", None)
+
+    return {
+        "id": str(getattr(comment, "id", "")),
+        "content": getattr(comment, "content", "") or "",
+        "created_at": _isoformat(getattr(comment, "created_at", None)),
+        "author": {
+            "id": getattr(comment, "user_id", None),
+            "name": author_name or "Community Member",
+            "badge": getattr(comment, "author_badge", None) or getattr(user, "badge", "Member"),
+            "profile_photo": getattr(comment, "author_avatar_url", None),
+        },
+        "replies": [_serialize_comment(reply) for reply in getattr(comment, "replies", [])],
+    }
+
+
+def _serialize_post(post):
+    return {
+        "id": str(getattr(post, "id", "")),
+        "remote_id": getattr(post, "remote_id", None),
+        "is_remote": bool(getattr(post, "is_remote", False)),
+        "title": getattr(post, "title", "") or "",
+        "content": getattr(post, "content", "") or "",
+        "created_at": _isoformat(getattr(post, "created_at", None)),
+        "image_url": getattr(post, "image_url", None),
+        "detail_url": getattr(post, "detail_url", None),
+        "share_url": getattr(post, "share_url", None),
+        "vote_count": getattr(post, "vote_count", 0) or 0,
+        "reply_count": getattr(post, "reply_count", 0) or 0,
+        "community": {
+            "name": getattr(post, "community_name", "General Community"),
+            "slug": getattr(post, "community_slug", None),
+        },
+        "author": {
+            "name": getattr(post, "author_display_name", "Community Member"),
+            "badge": getattr(post, "author_badge", "Member"),
+            "reputation": getattr(post, "author_reputation", 0) or 0,
+            "city": getattr(post, "author_city", None),
+            "profile_photo": getattr(post, "author_avatar_url", None),
+        },
+        "comments": [_serialize_comment(comment) for comment in getattr(post, "reply_threads", [])],
+    }
+
+
+def _community_feed(limit=50, include_remote=False):
+    local_query = (
+        Post.query
+        .options(
+            selectinload(Post.author),
+            selectinload(Post.car_community),
+            selectinload(Post.votes),
+            selectinload(Post.comments).selectinload(Comment.user),
+        )
+        .order_by(Post.id.desc())
+        .limit(limit)
+    )
+    local_posts = [_decorate_local_post(post) for post in local_query.all()]
+    remote_posts = _load_remote_posts() if include_remote else []
+    posts = sorted(
+        local_posts + remote_posts,
+        key=lambda post: str(getattr(post, "created_at", "") or ""),
+        reverse=True,
+    )
+    return posts[:limit]
+
+
+@community_bp.route("/api/community/posts")
+def api_community_posts():
+    limit = min(max(request.args.get("limit", default=50, type=int) or 50, 1), 100)
+    include_remote = request.args.get("include_remote", "").strip().lower() == "true"
+    posts = _community_feed(limit=limit, include_remote=include_remote)
+    return jsonify({
+        "status": "success",
+        "source": "website",
+        "include_remote": include_remote,
+        "posts": [_serialize_post(post) for post in posts],
+    })
+
+
+@community_bp.route("/api/community/posts/<int:post_id>")
+def api_community_post_detail(post_id):
+    post = (
+        Post.query
+        .options(
+            selectinload(Post.author),
+            selectinload(Post.car_community),
+            selectinload(Post.votes),
+            selectinload(Post.comments).selectinload(Comment.user),
+        )
+        .get_or_404(post_id)
+    )
+    return jsonify({"status": "success", "post": _serialize_post(_decorate_local_post(post))})
+
+
+@community_bp.route("/api/community/remote/<int:remote_post_id>")
+def api_remote_community_post_detail(remote_post_id):
+    post = _load_remote_post(remote_post_id)
+    if not post:
+        return jsonify({"status": "error", "message": "post not found"}), 404
+    return jsonify({"status": "success", "post": _serialize_post(post)})
 
 
 @community_bp.route("/community")

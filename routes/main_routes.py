@@ -1,6 +1,6 @@
 import os
 
-from flask import Blueprint, current_app, render_template, request, redirect, flash, url_for
+from flask import Blueprint, current_app, jsonify, render_template, request, redirect, flash, url_for
 from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
@@ -22,6 +22,54 @@ def _is_admin_account(user):
         user.is_authenticated
         and (user.email or "").strip().lower() in ADMIN_EMAIL_SET
     )
+
+
+def _isoformat(value):
+    return value.isoformat() if hasattr(value, "isoformat") else value
+
+
+def _serialize_mechanic(mechanic, include_reviews=False):
+    metrics = refresh_mechanic_reputation(mechanic)
+    payload = {
+        "id": mechanic.id,
+        "business_name": mechanic.business_name,
+        "owner_name": mechanic.owner_name,
+        "email": mechanic.email,
+        "phone": mechanic.phone,
+        "city": mechanic.city,
+        "state": mechanic.state,
+        "country": mechanic.country,
+        "pincode": mechanic.pincode,
+        "address": mechanic.address,
+        "specialties": mechanic.specialties,
+        "service_types": mechanic.service_types,
+        "experience_years": mechanic.experience_years,
+        "about": mechanic.about,
+        "trust_score": mechanic.trust_score,
+        "trust_level": mechanic.trust_level,
+        "is_featured": bool(mechanic.is_featured),
+        "is_verified": bool(mechanic.is_verified),
+        "accepts_emergency": bool(mechanic.accepts_emergency),
+        "pickup_drop_available": bool(mechanic.pickup_drop_available),
+        "created_at": _isoformat(mechanic.created_at),
+        "review_count": metrics["review_count"],
+        "average_rating": metrics["average_rating"],
+    }
+    if include_reviews:
+        payload["reviews"] = [
+            {
+                "id": review.id,
+                "rating": review.rating,
+                "review_text": review.review_text,
+                "created_at": _isoformat(review.created_at),
+                "author": {
+                    "id": review.user_id,
+                    "name": review.author.username if review.author else "Member",
+                },
+            }
+            for review in mechanic.reviews
+        ]
+    return payload
 
 
 def _static_image_url_if_exists(folder, filename, fallback=None):
@@ -302,6 +350,45 @@ def garage_network():
         city_mode=city_mode,
         city_groups=city_groups
     )
+
+
+@main_bp.route("/api/garages")
+def api_garages():
+    city = (request.args.get("city") or "").strip()
+    include_unverified = _is_admin_account(current_user) and request.args.get("include_unverified") == "true"
+
+    query = MechanicProfile.query
+    if not include_unverified:
+        query = query.filter_by(is_verified=True)
+    if city:
+        query = query.filter(MechanicProfile.city.ilike(f"%{city}%"))
+
+    mechanics = (
+        query
+        .order_by(
+            MechanicProfile.is_featured.desc(),
+            MechanicProfile.trust_score.desc(),
+            MechanicProfile.id.desc(),
+        )
+        .limit(100)
+        .all()
+    )
+    return jsonify({
+        "status": "success",
+        "garages": [_serialize_mechanic(mechanic) for mechanic in mechanics],
+    })
+
+
+@main_bp.route("/api/garages/<int:mechanic_id>")
+def api_garage_detail(mechanic_id):
+    mechanic = MechanicProfile.query.get_or_404(mechanic_id)
+    if not mechanic.is_verified and not _is_admin_account(current_user):
+        return jsonify({"status": "error", "message": "garage not found"}), 404
+
+    return jsonify({
+        "status": "success",
+        "garage": _serialize_mechanic(mechanic, include_reviews=True),
+    })
 
 
 @main_bp.route("/garage-network/<int:mechanic_id>")
