@@ -132,11 +132,11 @@
 {% if page_metrics %}
 <div class="admin-table-wrap">
 <table class="admin-analytics-table">
-<thead><tr><th>Page</th><th>Views</th><th>Unique</th><th>Logged-in</th><th>Guests</th><th>Clicks</th><th>Last Visit</th></tr></thead>
+<thead><tr><th>Page</th><th>Views</th><th>30d</th><th>Unique</th><th>Logged-in</th><th>Guests</th><th>Clicks</th><th>Last Visit</th></tr></thead>
 <tbody>
 {% for page in page_metrics %}
 <tr>
-<td>{{ page.path }}</td><td>{{ page.views }}</td><td>{{ page.unique }}</td><td>{{ page.logged_in }}</td><td>{{ page.guest }}</td><td>{{ page.clicks }}</td>
+<td>{{ page.path }}</td><td>{{ page.views }}</td><td>{{ page.views_30d }}</td><td>{{ page.unique }}</td><td>{{ page.logged_in }}</td><td>{{ page.guest }}</td><td>{{ page.clicks }}</td>
 <td>{{ page.last_visit.strftime("%d %b %H:%M") if page.last_visit else "N/A" }}</td>
 </tr>
 {% endfor %}

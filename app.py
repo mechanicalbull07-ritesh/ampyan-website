@@ -1116,7 +1116,7 @@ def track_visit():
             ip_address=request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip(),
             visitor_id=visitor_id,
             user_id=current_user.id if current_user.is_authenticated else None,
-            path=request.path,
+            path=(request.path or "/")[:500],
             method=request.method,
             referrer=request.referrer,
             user_agent=user_agent[:500],

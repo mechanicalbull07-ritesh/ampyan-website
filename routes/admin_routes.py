@@ -85,6 +85,11 @@ def _visitor_key(visit):
     return f"ip-{visit.ip_address or visit.id}"
 
 
+def _analytics_path(value):
+    value = (value or "").strip()
+    return value if value else "Legacy tracked page"
+
+
 def _period_user_stats(visits, period_start):
     period_visits = [visit for visit in visits if visit.visit_time and visit.visit_time >= period_start]
     visitor_counts = Counter(_visitor_key(visit) for visit in period_visits)
@@ -178,7 +183,6 @@ def _build_admin_analytics_context(section="overview"):
     )
     admin_visits_query = tracked_visits.filter(WebsiteVisit.user_id.in_(admin_user_ids)) if admin_user_ids else tracked_visits.filter(False)
     visit_count = public_visits_query.count()
-    today_page_views = tracked_visits.filter(WebsiteVisit.visit_time >= today_start).count()
     today_page_views = public_visits_query.filter(WebsiteVisit.visit_time >= today_start).count()
     yesterday_page_views = public_visits_query.filter(
         WebsiteVisit.visit_time >= yesterday_start,
@@ -196,15 +200,6 @@ def _build_admin_analytics_context(section="overview"):
         (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).scalar() or 0
 
-    top_pages = db.session.query(
-        WebsiteVisit.path,
-        db.func.count(WebsiteVisit.id).label("views")
-    ).filter(
-        WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.path.isnot(None),
-        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
-    ).group_by(WebsiteVisit.path).order_by(db.func.count(WebsiteVisit.id).desc()).limit(20).all()
-
     device_breakdown = db.session.query(
         WebsiteVisit.device_type,
         db.func.count(WebsiteVisit.id).label("views")
@@ -221,6 +216,12 @@ def _build_admin_analytics_context(section="overview"):
         .limit(5000)
         .all()
     )
+    total_unique_visitors = len({_visitor_key(visit) for visit in all_public_visit_rows})
+    today_unique_visitors = len({
+        _visitor_key(visit)
+        for visit in all_public_visit_rows
+        if visit.visit_time and visit.visit_time >= today_start
+    })
     admin_visit_rows = admin_visits_query.filter(WebsiteVisit.visit_time >= last_30d).all()
     visits_24h = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_24h]
     visits_30d = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_30d]
@@ -254,16 +255,20 @@ def _build_admin_analytics_context(section="overview"):
     top_referrers = referrer_counter.most_common(20)
 
     page_metrics = []
-    for page in top_pages:
-        page_visits = [visit for visit in visits_30d if visit.path == page.path]
-        page_clicks = sum(1 for event in click_events if event.path == page.path)
+    page_visit_groups = defaultdict(list)
+    for visit in all_public_visit_rows:
+        page_visit_groups[_analytics_path(visit.path)].append(visit)
+    page_click_groups = Counter(_analytics_path(event.path) for event in click_events)
+    for path, page_visits in sorted(page_visit_groups.items(), key=lambda item: len(item[1]), reverse=True)[:20]:
+        page_visits_30d = [visit for visit in page_visits if visit.visit_time and visit.visit_time >= last_30d]
         page_metrics.append({
-            "path": page.path or "Unknown",
-            "views": page.views,
-            "unique": len({visit.visitor_id for visit in page_visits if visit.visitor_id}),
+            "path": path,
+            "views": len(page_visits),
+            "views_30d": len(page_visits_30d),
+            "unique": len({_visitor_key(visit) for visit in page_visits}),
             "logged_in": sum(1 for visit in page_visits if visit.is_authenticated),
             "guest": sum(1 for visit in page_visits if not visit.is_authenticated),
-            "clicks": page_clicks,
+            "clicks": page_click_groups[path],
             "last_visit": _to_ist(max((visit.visit_time for visit in page_visits if visit.visit_time), default=None)),
         })
 
@@ -467,14 +472,6 @@ def admin_dashboard():
     ).scalar() or 0
     logged_in_views = public_visits_query.filter_by(is_authenticated=True).count()
     guest_views = public_visits_query.filter_by(is_authenticated=False).count()
-    top_pages = db.session.query(
-        WebsiteVisit.path,
-        db.func.count(WebsiteVisit.id).label("views")
-    ).filter(
-        WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.path.isnot(None),
-        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
-    ).group_by(WebsiteVisit.path).order_by(db.func.count(WebsiteVisit.id).desc()).limit(8).all()
     device_breakdown = db.session.query(
         WebsiteVisit.device_type,
         db.func.count(WebsiteVisit.id).label("views")
@@ -490,6 +487,18 @@ def admin_dashboard():
     approved_garages_count = MechanicProfile.query.filter_by(is_verified=True).count()
     featured_garages_count = MechanicProfile.query.filter_by(is_featured=True).count()
     recent_visit_rows = public_visits_query.filter(WebsiteVisit.visit_time >= last_365d).all()
+    all_public_visit_rows = (
+        public_visits_query
+        .order_by(WebsiteVisit.visit_time.desc())
+        .limit(5000)
+        .all()
+    )
+    total_unique_visitors = len({_visitor_key(visit) for visit in all_public_visit_rows})
+    today_unique_visitors = len({
+        _visitor_key(visit)
+        for visit in all_public_visit_rows
+        if visit.visit_time and visit.visit_time >= today_start
+    })
     visits_24h = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_24h]
     visits_30d = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_30d]
     hourly_traffic = _count_by_hour(visits_24h)
@@ -516,16 +525,20 @@ def admin_dashboard():
     top_referrers = referrer_counter.most_common(8)
 
     page_metrics = []
-    for page in top_pages:
-        page_visits = [visit for visit in visits_30d if visit.path == page.path]
-        page_clicks = sum(1 for event in click_events if event.path == page.path)
+    page_visit_groups = defaultdict(list)
+    for visit in all_public_visit_rows:
+        page_visit_groups[_analytics_path(visit.path)].append(visit)
+    page_click_groups = Counter(_analytics_path(event.path) for event in click_events)
+    for path, page_visits in sorted(page_visit_groups.items(), key=lambda item: len(item[1]), reverse=True)[:8]:
+        page_visits_30d = [visit for visit in page_visits if visit.visit_time and visit.visit_time >= last_30d]
         page_metrics.append({
-            "path": page.path or "Unknown",
-            "views": page.views,
-            "unique": len({visit.visitor_id for visit in page_visits if visit.visitor_id}),
+            "path": path,
+            "views": len(page_visits),
+            "views_30d": len(page_visits_30d),
+            "unique": len({_visitor_key(visit) for visit in page_visits}),
             "logged_in": sum(1 for visit in page_visits if visit.is_authenticated),
             "guest": sum(1 for visit in page_visits if not visit.is_authenticated),
-            "clicks": page_clicks,
+            "clicks": page_click_groups[path],
             "last_visit": max((visit.visit_time for visit in page_visits if visit.visit_time), default=None),
         })
 
@@ -605,7 +618,7 @@ def admin_dashboard():
         today_unique_visitors=today_unique_visitors,
         logged_in_views=logged_in_views,
         guest_views=guest_views,
-        top_pages=top_pages,
+        top_pages=page_metrics,
         page_metrics=page_metrics,
         device_breakdown=device_breakdown,
         hourly_traffic=hourly_traffic,
