@@ -191,6 +191,23 @@
 </main>
 
 <aside class="ampyan-right-sidebar" aria-label="AMPYAN widgets">
+<section class="ampyan-widget ampyan-video-widget">
+<h3><span class="ampyan-badge">Video</span> AMPYAN Videos</h3>
+{% if latest_videos %}
+{% for video in latest_videos[:2] %}
+<a href="/videos#video-{{ video.id }}" class="ampyan-video-mini">
+<iframe src="{{ video.embed_url }}" title="{{ video.title }}" loading="lazy" allowfullscreen></iframe>
+<strong>{{ video.title }}</strong>
+</a>
+{% endfor %}
+{% else %}
+<a href="/videos" class="ampyan-video-empty">
+<i class="fa-brands fa-youtube"></i>
+<span>Videos will appear here when added.</span>
+</a>
+{% endif %}
+</section>
+
 <section class="ampyan-widget">
 <h3><span class="ampyan-badge">Popular</span> Trending Problems</h3>
 {% for problem in trending_problems[:8] %}

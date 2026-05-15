@@ -110,6 +110,8 @@ def home():
         "Inspect battery health before summer and long trips.",
     ]
 
+    latest_videos = Video.query.order_by(Video.created_at.desc()).limit(2).all()
+
     upcoming_service = None
     if default_car:
         vehicle_name = f"{default_car.brand or 'Your car'} {default_car.model or ''}".strip()
@@ -130,6 +132,7 @@ def home():
         trending_problems=trending_problems,
         popular_problems=popular_problems,
         service_tips=service_tips,
+        latest_videos=latest_videos,
         upcoming_service=upcoming_service
     )
 

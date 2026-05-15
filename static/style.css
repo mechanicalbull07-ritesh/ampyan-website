@@ -1019,6 +1019,49 @@ background:linear-gradient(160deg,rgba(255,90,54,0.22),rgba(255,200,87,0.08),rgb
 border-color:rgba(255,123,41,0.18);
 }
 
+.ampyan-video-widget{
+background:linear-gradient(180deg,rgba(15,26,43,0.92),rgba(9,18,31,0.86));
+}
+
+.ampyan-video-mini{
+display:block;
+padding:0 0 12px;
+margin-bottom:12px;
+border-bottom:1px solid var(--border);
+position:relative;
+z-index:1;
+}
+
+.ampyan-video-mini iframe{
+width:100%;
+aspect-ratio:16 / 9;
+border:0;
+border-radius:10px;
+background:rgba(255,255,255,0.05);
+display:block;
+margin-bottom:8px;
+}
+
+.ampyan-video-mini strong{
+font-size:13px;
+line-height:1.35;
+margin:0;
+}
+
+.ampyan-video-empty{
+display:flex;
+align-items:center;
+gap:10px;
+color:var(--text-secondary);
+position:relative;
+z-index:1;
+}
+
+.ampyan-video-empty i{
+color:#ff5a36;
+font-size:20px;
+}
+
 body.light .ampyan-left-sidebar,
 body.light .ampyan-portal-hero,
 body.light .ampyan-section,
