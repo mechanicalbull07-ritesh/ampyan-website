@@ -314,6 +314,74 @@ def refresh_author_stats(user):
     user.reputation = max(0, (posts_count * 5) + (comments_count * 2) + (vote_count * 3))
 
 
+def _create_local_post(title, content, community_id=None, new_community_name="", image_filename=None, external_image_url=None):
+    car_community = None
+    if new_community_name:
+        car_community = _get_or_create_car_community(new_community_name, user=current_user)
+    elif community_id:
+        car_community = CarCommunity.query.get(community_id)
+
+    post = Post(
+        title=title,
+        content=content,
+        image=image_filename,
+        user_id=current_user.id,
+        community_id=car_community.id if car_community else None,
+    )
+    db.session.add(post)
+    db.session.flush()
+
+    current_user.posts_count = (current_user.posts_count or 0) + 1
+    current_user.reputation = (current_user.reputation or 0) + 5
+    _sync_user_profile(current_user)
+    _safe_remote_call(
+        "/community/posts",
+        method="POST",
+        payload={
+            "source": "website",
+            "external_id": f"web-post-{post.id}",
+            "email": current_user.email,
+            "fullName": current_user.username,
+            "mobile": current_user.mobile or "",
+            "location": current_user.city or "Website",
+            "text": f"{title}\n\n{content}",
+            "imageUrl": external_image_url,
+            "community": car_community.name if car_community else "General Community",
+        },
+    )
+    db.session.commit()
+    return post
+
+
+def _create_local_comment(post_id, content, parent_id=None):
+    if parent_id and not Comment.query.filter_by(id=parent_id, post_id=post_id).first():
+        parent_id = None
+
+    new_comment = Comment(content=content, user_id=current_user.id, post_id=post_id, parent_id=parent_id)
+    db.session.add(new_comment)
+    db.session.flush()
+    _sync_user_profile(current_user)
+
+    remote_post_id = _find_remote_post_id_for_website_post(post_id)
+    if remote_post_id:
+        _safe_remote_call(
+            f"/community/posts/{remote_post_id}/replies",
+            method="POST",
+            payload={
+                "source": "website",
+                "external_id": f"web-reply-{new_comment.id}",
+                "email": current_user.email,
+                "fullName": current_user.username,
+                "mobile": current_user.mobile or "",
+                "location": current_user.city or "Website",
+                "text": content,
+            },
+        )
+
+    db.session.commit()
+    return new_comment
+
+
 def _isoformat(value):
     return value.isoformat() if hasattr(value, "isoformat") else value
 
@@ -401,6 +469,35 @@ def api_community_posts():
     })
 
 
+@community_bp.route("/api/community/posts", methods=["POST"])
+def api_create_community_post():
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "authentication required"}), 401
+
+    payload = request.get_json(silent=True) or request.form
+    title = (payload.get("title") or "").strip()
+    content = (payload.get("content") or payload.get("text") or "").strip()
+    community_id = payload.get("community_id")
+    new_community_name = (payload.get("new_community_name") or payload.get("community") or "").strip()
+
+    if not title or not content:
+        return jsonify({"status": "error", "message": "title and content are required"}), 400
+
+    try:
+        post = _create_local_post(
+            title=title,
+            content=content,
+            community_id=community_id,
+            new_community_name=new_community_name,
+        )
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("API community post create failed: %s", exc.__class__.__name__)
+        return jsonify({"status": "error", "message": "post could not be created"}), 500
+
+    return jsonify({"status": "success", "post": _serialize_post(_decorate_local_post(post))}), 201
+
+
 @community_bp.route("/api/community/posts/<int:post_id>")
 def api_community_post_detail(post_id):
     post = (
@@ -414,6 +511,30 @@ def api_community_post_detail(post_id):
         .get_or_404(post_id)
     )
     return jsonify({"status": "success", "post": _serialize_post(_decorate_local_post(post))})
+
+
+@community_bp.route("/api/community/posts/<int:post_id>/replies", methods=["POST"])
+def api_create_community_reply(post_id):
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "authentication required"}), 401
+
+    payload = request.get_json(silent=True) or request.form
+    content = (payload.get("content") or payload.get("text") or "").strip()
+    parent_id = payload.get("parent_id")
+
+    if not content:
+        return jsonify({"status": "error", "message": "content is required"}), 400
+    if not Post.query.get(post_id):
+        return jsonify({"status": "error", "message": "post not found"}), 404
+
+    try:
+        comment = _create_local_comment(post_id, content, parent_id=parent_id)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("API community reply create failed: %s", exc.__class__.__name__)
+        return jsonify({"status": "error", "message": "reply could not be created"}), 500
+
+    return jsonify({"status": "success", "reply": _serialize_comment(_decorate_local_comment(comment))}), 201
 
 
 @community_bp.route("/api/community/remote/<int:remote_post_id>")
@@ -586,42 +707,14 @@ def create_post():
             image.save(upload_path)
             external_image_url = url_for("static", filename=f"post_images/{filename}", _external=True)
 
-        car_community = None
-        if new_community_name:
-            car_community = _get_or_create_car_community(new_community_name, user=current_user)
-        elif community_id:
-            car_community = CarCommunity.query.get(community_id)
-
-        post = Post(
+        post = _create_local_post(
             title=title,
             content=content,
-            image=filename,
-            user_id=current_user.id,
-            community_id=car_community.id if car_community else None,
+            community_id=community_id,
+            new_community_name=new_community_name,
+            image_filename=filename,
+            external_image_url=external_image_url,
         )
-        db.session.add(post)
-        db.session.flush()
-
-        current_user.posts_count += 1
-        current_user.reputation += 5
-        _sync_user_profile(current_user)
-        _safe_remote_call(
-            "/community/posts",
-            method="POST",
-            payload={
-                "source": "website",
-                "external_id": f"web-post-{post.id}",
-                "email": current_user.email,
-                "fullName": current_user.username,
-                "mobile": current_user.mobile or "",
-                "location": current_user.city or "Website",
-                "text": f"{title}\n\n{content}",
-                "imageUrl": external_image_url,
-                "community": car_community.name if car_community else "General Community",
-            },
-        )
-
-        db.session.commit()
         flash("Post created successfully")
         return redirect("/community")
 
@@ -731,28 +824,7 @@ def add_comment(post_id):
     content = (request.form.get("content") or "").strip()
     parent_id = request.form.get("parent_id") or None
     if content:
-        if parent_id and not Comment.query.filter_by(id=parent_id, post_id=post_id).first():
-            parent_id = None
-        new_comment = Comment(content=content, user_id=current_user.id, post_id=post_id, parent_id=parent_id)
-        db.session.add(new_comment)
-        db.session.flush()
-        _sync_user_profile(current_user)
-        remote_post_id = _find_remote_post_id_for_website_post(post_id)
-        if remote_post_id:
-            _safe_remote_call(
-                f"/community/posts/{remote_post_id}/replies",
-                method="POST",
-                payload={
-                    "source": "website",
-                    "external_id": f"web-reply-{new_comment.id}",
-                    "email": current_user.email,
-                    "fullName": current_user.username,
-                    "mobile": current_user.mobile or "",
-                    "location": current_user.city or "Website",
-                    "text": content,
-                },
-            )
-        db.session.commit()
+        _create_local_comment(post_id, content, parent_id=parent_id)
     return redirect(url_for("community.post_detail", post_id=post_id))
 
 
