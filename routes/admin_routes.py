@@ -4,12 +4,11 @@ from datetime import datetime, time, timedelta
 from flask import Blueprint, current_app, render_template, redirect, flash, request
 from flask_login import login_required, current_user
 from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEvent, MechanicProfile, MechanicReview, Car
-from routes.auth_routes import ADMIN_EMAILS
+from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
 from services.garage_network_service import refresh_mechanic_reputation
 
 admin_bp = Blueprint("admin", __name__)
 IST_OFFSET = timedelta(hours=5, minutes=30)
-ADMIN_EMAIL_SET = {email.lower() for email in ADMIN_EMAILS}
 
 
 @admin_bp.before_request
@@ -18,7 +17,18 @@ def ensure_whitelisted_admin_role():
         return
 
     email = (current_user.email or "").strip().lower()
-    if email not in ADMIN_EMAIL_SET or current_user.role == "admin":
+    if email not in ADMIN_EMAIL_SET:
+        if current_user.role == "admin":
+            try:
+                current_user.role = "user"
+                db.session.commit()
+                current_app.logger.warning("Removed admin role before admin route: %s", email)
+            except Exception as exc:
+                db.session.rollback()
+                current_app.logger.warning("Admin route cleanup skipped: %s", exc.__class__.__name__)
+        return
+
+    if current_user.role == "admin":
         return
 
     try:
@@ -149,7 +159,7 @@ def _require_admin():
     if not current_user.is_authenticated:
         return False
     email = (current_user.email or "").strip().lower()
-    return current_user.role == "admin" or email in ADMIN_EMAIL_SET
+    return email in ADMIN_EMAIL_SET
 
 
 def _build_admin_analytics_context(section="overview"):

@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from models.models import db, Post, News, Car, User, MechanicProfile, MechanicReview, MarketplaceListing, MarketplaceMessage, Video
+from routes.auth_routes import ADMIN_EMAIL_SET
 from services.car_health_engine import calculate_car_health
 from services.garage_network_service import (
     calculate_trust_profile_score,
@@ -14,6 +15,13 @@ from services.garage_network_service import (
 from services.india_car_catalog import catalog_image_path
 
 main_bp = Blueprint("main", __name__)
+
+
+def _is_admin_account(user):
+    return (
+        user.is_authenticated
+        and (user.email or "").strip().lower() in ADMIN_EMAIL_SET
+    )
 
 
 def _static_image_url_if_exists(folder, filename, fallback=None):
@@ -301,7 +309,7 @@ def garage_profile(mechanic_id):
 
     mechanic = MechanicProfile.query.get_or_404(mechanic_id)
 
-    if not mechanic.is_verified and (not current_user.is_authenticated or current_user.role != "admin"):
+    if not mechanic.is_verified and not _is_admin_account(current_user):
         flash("This garage profile is awaiting admin approval.")
         return redirect(url_for("main.garage_network"))
 
@@ -449,10 +457,10 @@ def register_garage():
             accepts_emergency=form_data["accepts_emergency"],
             pickup_drop_available=form_data["pickup_drop_available"],
             is_verified=False,
-            is_featured=True if current_user.is_authenticated and current_user.role == "admin" else False
+            is_featured=True if _is_admin_account(current_user) else False
         )
 
-        if current_user.is_authenticated:
+        if current_user.is_authenticated and not _is_admin_account(current_user):
             current_user.role = "mechanic"
 
         db.session.add(profile)

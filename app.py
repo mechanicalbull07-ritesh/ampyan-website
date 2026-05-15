@@ -78,7 +78,7 @@ from routes.main_routes import main_bp
 from routes.garage_routes import garage_bp
 from routes.tools_routes import tools_bp
 from routes.user_routes import user_bp
-from routes.auth_routes import ADMIN_EMAILS
+from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
 from ai_engine.response_formatter import enrich_diagnosis_results
 from services.diagnosis_safety import safe_diagnose_vehicle
 
@@ -266,16 +266,6 @@ def save_uploaded_image(image_file, folder, prefix):
 
     compress_image(upload_path)
     return filename
-ADMIN_EMAILS = [
-"dabasdeepak676@gmail.com",
-"riteshsingh1609@gmail.com",
-"channelspeed16@gmail.com",
-"mechanicalbull@gmail.com",
-"mechanicalbull07@gmail.com"
-]
-
-ADMIN_EMAIL_SET = {email.lower() for email in ADMIN_EMAILS}
-
 @app.context_processor
 def inject_admin_emails():
     return dict(ADMIN_EMAILS=ADMIN_EMAILS)
@@ -862,9 +852,12 @@ def google_callback():
             )
             commit_new_user_with_id_fallback(user)
 
-        # ✅ Admin assignment after user exists
-        if user.email in ADMIN_EMAILS:
+        # Admin assignment after user exists: one explicit email only.
+        if email in ADMIN_EMAIL_SET:
             user.role = "admin"
+            db.session.commit()
+        elif user.role == "admin":
+            user.role = "user"
             db.session.commit()
 
         login_user(user)
@@ -1036,7 +1029,18 @@ def restore_whitelisted_admin_role():
         return
 
     email = (current_user.email or "").strip().lower()
-    if email not in ADMIN_EMAIL_SET or current_user.role == "admin":
+    if email not in ADMIN_EMAIL_SET:
+        if current_user.role == "admin":
+            try:
+                current_user.role = "user"
+                db.session.commit()
+                app.logger.warning("Removed admin role from non-whitelisted email: %s", email)
+            except Exception as exc:
+                db.session.rollback()
+                app.logger.warning("Non-whitelisted admin cleanup skipped: %s", exc.__class__.__name__)
+        return
+
+    if current_user.role == "admin":
         return
 
     try:
@@ -2278,12 +2282,20 @@ def initialize_database():
             raise
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
+        non_admin_users = User.query.filter(
+            User.role == "admin",
+            ~User.email.in_(ADMIN_EMAILS),
+        ).all()
         changed = False
 
         for admin_user in admin_users:
             if admin_user.role != "admin":
                 admin_user.role = "admin"
                 changed = True
+
+        for non_admin_user in non_admin_users:
+            non_admin_user.role = "user"
+            changed = True
 
         if changed:
             db.session.commit()

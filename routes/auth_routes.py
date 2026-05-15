@@ -18,12 +18,9 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MIN_PASSWORD_LENGTH = 8
 
 ADMIN_EMAILS = [
-    "dabasdeepak676@gmail.com",
-    "riteshsingh1609@gmail.com",
-    "channelspeed16@gmail.com",
-    "mechanicalbull@gmail.com",
     "mechanicalbull07@gmail.com",
 ]
+ADMIN_EMAIL_SET = {email.lower() for email in ADMIN_EMAILS}
 
 
 def _ampyan_api_base_url():
@@ -158,8 +155,12 @@ def login():
         user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
 
         if user and check_password_hash(user.password, password):
-            if user.email in ADMIN_EMAILS:
+            email = (user.email or "").strip().lower()
+            if email in ADMIN_EMAIL_SET:
                 user.role = "admin"
+                db.session.commit()
+            elif user.role == "admin":
+                user.role = "user"
                 db.session.commit()
 
             if user.is_banned:
