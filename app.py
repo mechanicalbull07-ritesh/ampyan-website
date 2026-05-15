@@ -936,8 +936,6 @@ def normalize_event_url(value):
 def record_website_event(event_type, label="", target_url="", severity="info", path=None):
     try:
         if not database_initialized:
-            if IS_PRODUCTION:
-                return
             initialize_database()
         visitor_id = request.cookies.get("ampyan_visitor_id") or getattr(g, "set_visitor_cookie", None)
         event = WebsiteEvent(
@@ -1100,8 +1098,6 @@ def track_visit():
             return
 
         if not database_initialized:
-            if IS_PRODUCTION:
-                return
             initialize_database()
 
         visitor_id = request.cookies.get("ampyan_visitor_id")
@@ -2373,10 +2369,6 @@ def ensure_database_ready():
         return
     if request.path.startswith("/static") or "." in request.path.rsplit("/", 1)[-1]:
         return
-    if IS_PRODUCTION and not database_initialized:
-        app.logger.info("Database initialization is still warming in background; request continues.")
-        return
-
     try:
         initialize_database()
     except Exception as e:
