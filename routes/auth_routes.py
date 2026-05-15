@@ -5,7 +5,7 @@ import secrets
 import re
 from urllib import request as urllib_request
 
-from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
 from flask_login import login_user, logout_user
 from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -45,6 +45,36 @@ def _sync_profile(name, email, phone=""):
     except Exception as exc:
         current_app.logger.warning("AMPYAN auth/profile sync failed: %s", exc)
         return False
+
+
+def _apply_admin_policy(user):
+    email = (user.email or "").strip().lower()
+    if email in ADMIN_EMAIL_SET:
+        user.role = "admin"
+        return True
+    if user.role == "admin":
+        user.role = "user"
+        return True
+    return False
+
+
+def _api_user_payload(user):
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "mobile": user.mobile,
+        "role": user.role,
+        "city": user.city,
+        "state": user.state,
+        "country": user.country,
+        "pincode": user.pincode,
+        "badge": user.badge,
+        "reputation": user.reputation,
+        "posts_count": user.posts_count,
+        "email_verified": user.email_verified,
+        "profile_photo": user.profile_photo,
+    }
 
 
 def _commit_new_user_with_id_fallback(user):
@@ -155,12 +185,7 @@ def login():
         user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
 
         if user and check_password_hash(user.password, password):
-            email = (user.email or "").strip().lower()
-            if email in ADMIN_EMAIL_SET:
-                user.role = "admin"
-                db.session.commit()
-            elif user.role == "admin":
-                user.role = "user"
+            if _apply_admin_policy(user):
                 db.session.commit()
 
             if user.is_banned:
@@ -181,6 +206,43 @@ def login():
         flash("Invalid credentials")
 
     return render_template("auth.html")
+
+
+@auth_bp.route("/api/login", methods=["POST"])
+def api_login():
+    payload = request.get_json(silent=True) or request.form
+    username = (payload.get("username") or payload.get("email") or "").strip()
+    password = payload.get("password") or ""
+
+    if not username or not password:
+        return jsonify({"status": "error", "message": "username/email and password are required"}), 400
+
+    user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
+    if not user or not check_password_hash(user.password, password):
+        return jsonify({"status": "error", "message": "invalid credentials"}), 401
+
+    if _apply_admin_policy(user):
+        db.session.commit()
+
+    if user.is_banned:
+        return jsonify({"status": "error", "message": "account banned"}), 403
+
+    if _email_verification_required() and not user.email_verified:
+        return jsonify({"status": "error", "message": "email verification required"}), 403
+
+    login_user(user)
+    _sync_profile(user.username, user.email, user.mobile or "")
+    return jsonify({
+        "status": "success",
+        "authenticated": True,
+        "user": _api_user_payload(user),
+    })
+
+
+@auth_bp.route("/api/logout", methods=["POST"])
+def api_logout():
+    logout_user()
+    return jsonify({"status": "success", "authenticated": False})
 
 
 @auth_bp.route("/logout")
