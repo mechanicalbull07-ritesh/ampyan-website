@@ -273,6 +273,9 @@ ADMIN_EMAILS = [
 "mechanicalbull@gmail.com",
 "mechanicalbull07@gmail.com"
 ]
+
+ADMIN_EMAIL_SET = {email.lower() for email in ADMIN_EMAILS}
+
 @app.context_processor
 def inject_admin_emails():
     return dict(ADMIN_EMAILS=ADMIN_EMAILS)
@@ -1021,6 +1024,28 @@ def security_guard():
         if wants_json_response():
             return jsonify({"status": "error", "message": "Too many requests. Please try again soon."}), 429
         return "Too many requests. Please try again soon.", 429
+
+
+@app.before_request
+def restore_whitelisted_admin_role():
+    if request.endpoint in {"health", "healthz", "version"} or request.path in {"/health", "/healthz", "/version"}:
+        return
+    if request.path.startswith("/static"):
+        return
+    if not current_user.is_authenticated:
+        return
+
+    email = (current_user.email or "").strip().lower()
+    if email not in ADMIN_EMAIL_SET or current_user.role == "admin":
+        return
+
+    try:
+        current_user.role = "admin"
+        db.session.commit()
+        app.logger.info("Restored admin role for whitelisted email: %s", email)
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("Admin role restore skipped: %s", exc.__class__.__name__)
 
 # ================= WEBSITE VISIT TRACKER =================
 

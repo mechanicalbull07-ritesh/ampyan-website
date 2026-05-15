@@ -1,13 +1,33 @@
 from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta
 
-from flask import Blueprint, render_template, redirect, flash, request
+from flask import Blueprint, current_app, render_template, redirect, flash, request
 from flask_login import login_required, current_user
 from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEvent, MechanicProfile, MechanicReview, Car
+from routes.auth_routes import ADMIN_EMAILS
 from services.garage_network_service import refresh_mechanic_reputation
 
 admin_bp = Blueprint("admin", __name__)
 IST_OFFSET = timedelta(hours=5, minutes=30)
+ADMIN_EMAIL_SET = {email.lower() for email in ADMIN_EMAILS}
+
+
+@admin_bp.before_request
+def ensure_whitelisted_admin_role():
+    if not current_user.is_authenticated:
+        return
+
+    email = (current_user.email or "").strip().lower()
+    if email not in ADMIN_EMAIL_SET or current_user.role == "admin":
+        return
+
+    try:
+        current_user.role = "admin"
+        db.session.commit()
+        current_app.logger.info("Restored admin role before admin route: %s", email)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("Admin route role restore skipped: %s", exc.__class__.__name__)
 
 
 def _to_ist(value):
@@ -126,7 +146,10 @@ def _referrer_source(referrer):
 
 
 def _require_admin():
-    return current_user.is_authenticated and current_user.role == "admin"
+    if not current_user.is_authenticated:
+        return False
+    email = (current_user.email or "").strip().lower()
+    return current_user.role == "admin" or email in ADMIN_EMAIL_SET
 
 
 def _build_admin_analytics_context(section="overview"):
@@ -387,7 +410,7 @@ def admin_analytics(section="overview"):
 @admin_bp.route("/admin")
 @login_required
 def admin_dashboard():
-    if current_user.role != "admin":
+    if not _require_admin():
         return "Access Denied", 403
 
     users = User.query.order_by(User.id.desc()).limit(300).all()
@@ -612,7 +635,7 @@ def admin_dashboard():
 @login_required
 def delete_user(user_id):
 
-    if current_user.role != "admin":
+    if not _require_admin():
         return "Access Denied"
 
     user = User.query.get_or_404(user_id)
@@ -643,7 +666,7 @@ def delete_user(user_id):
 @login_required
 def ban_user(user_id):
 
-    if current_user.role != "admin":
+    if not _require_admin():
         return "Access Denied"
 
     user = User.query.get_or_404(user_id)
@@ -660,7 +683,7 @@ def ban_user(user_id):
 @login_required
 def unban_user(user_id):
 
-    if current_user.role != "admin":
+    if not _require_admin():
         return "Access Denied"
 
     user = User.query.get_or_404(user_id)
@@ -677,7 +700,7 @@ def unban_user(user_id):
 @login_required
 def remove_admin(user_id):
 
-    if current_user.role != "admin":
+    if not _require_admin():
         return "Access Denied"
 
     user = User.query.get_or_404(user_id)
@@ -692,7 +715,7 @@ def remove_admin(user_id):
 @login_required
 def approve_garage(mechanic_id):
 
-    if current_user.role != "admin":
+    if not _require_admin():
         return "Access Denied"
 
     mechanic = MechanicProfile.query.get_or_404(mechanic_id)
@@ -708,7 +731,7 @@ def approve_garage(mechanic_id):
 @login_required
 def reject_garage(mechanic_id):
 
-    if current_user.role != "admin":
+    if not _require_admin():
         return "Access Denied"
 
     mechanic = MechanicProfile.query.get_or_404(mechanic_id)
@@ -725,7 +748,7 @@ def reject_garage(mechanic_id):
 @login_required
 def feature_garage(mechanic_id):
 
-    if current_user.role != "admin":
+    if not _require_admin():
         return "Access Denied"
 
     mechanic = MechanicProfile.query.get_or_404(mechanic_id)
@@ -741,7 +764,7 @@ def feature_garage(mechanic_id):
 @login_required
 def unfeature_garage(mechanic_id):
 
-    if current_user.role != "admin":
+    if not _require_admin():
         return "Access Denied"
 
     mechanic = MechanicProfile.query.get_or_404(mechanic_id)

@@ -265,7 +265,7 @@ AMPYAN
 
 <div class="dropdown-divider"></div>
 
-{% if current_user.role == "admin" %}
+{% if current_user.role == "admin" or current_user.email|lower in ADMIN_EMAILS %}
 
 <a href="/admin">
 <i class="fa-solid fa-user-shield"></i> Admin Panel
