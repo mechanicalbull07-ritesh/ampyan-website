@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+import json
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -1432,6 +1433,20 @@ def api_diagnosis():
             "use_as_router_only": item.get("use_as_router_only", False),
         })
 
+    if current_user.is_authenticated and api_results:
+        try:
+            learning = DiagnosticLearning(
+                user_id=current_user.id,
+                problem=problem[:255],
+                answers=json.dumps(answers if isinstance(answers, dict) else {}, ensure_ascii=True),
+                final_issue=(api_results[0].get("issue") or api_results[0].get("problem") or "Unknown")[:255],
+            )
+            db.session.add(learning)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            app.logger.warning("Diagnosis history save skipped: %s", exc.__class__.__name__)
+
     return jsonify({
         "status": "success",
         "problem": problem,
@@ -1439,6 +1454,54 @@ def api_diagnosis():
         "questions": questions,
         "disclaimer": api_results[0]["disclaimer"] if api_results else ""
     })
+
+
+def serialize_diagnosis_history(item):
+    answers = {}
+    if item.answers:
+        try:
+            answers = json.loads(item.answers)
+        except Exception:
+            answers = {}
+
+    return {
+        "id": item.id,
+        "problem": item.problem,
+        "answers": answers,
+        "final_issue": item.final_issue,
+        "created_at": item.created_at.isoformat() if hasattr(item.created_at, "isoformat") else item.created_at,
+    }
+
+
+@app.route("/api/diagnosis/history")
+def api_diagnosis_history():
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "authentication required"}), 401
+
+    limit = min(max(request.args.get("limit", default=20, type=int) or 20, 1), 100)
+    items = (
+        DiagnosticLearning.query
+        .filter_by(user_id=current_user.id)
+        .order_by(DiagnosticLearning.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return jsonify({
+        "status": "success",
+        "diagnoses": [serialize_diagnosis_history(item) for item in items],
+    })
+
+
+@app.route("/api/diagnosis/history/<int:diagnosis_id>")
+def api_diagnosis_history_detail(diagnosis_id):
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "authentication required"}), 401
+
+    item = DiagnosticLearning.query.get_or_404(diagnosis_id)
+    if item.user_id != current_user.id:
+        return jsonify({"status": "error", "message": "diagnosis not found"}), 404
+
+    return jsonify({"status": "success", "diagnosis": serialize_diagnosis_history(item)})
 
 
 
