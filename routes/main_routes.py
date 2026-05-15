@@ -30,6 +30,7 @@ def _attach_listing_catalog_image(listing):
 
 @main_bp.route("/")
 def home():
+    # AMPYAN HOME PAGE REDESIGN START
 
     cars = []
     default_car = None
@@ -46,105 +47,90 @@ def home():
         if default_car:
             default_car.health = calculate_car_health(default_car)
 
-    # COMMUNITY POSTS
-    recent_posts = Post.query.order_by(Post.id.desc()).limit(5).all()
+    latest_news_records = News.query.order_by(News.created_at.desc()).limit(6).all()
+    latest_news = [
+        {
+            "title": news.title,
+            "summary": (news.content or "Read the latest AMPYAN automotive update.")[:120],
+            "url": f"/news/{news.id}",
+            "image_url": url_for("static", filename=f"news_images/{news.image}") if news.image else None,
+            "meta": news.created_at.strftime("%d %b %Y") if news.created_at else "AMPYAN News",
+        }
+        for news in latest_news_records
+    ]
 
-    # NEWS
-    latest_news = News.query.order_by(News.id.desc()).limit(5).all()
+    if not latest_news:
+        latest_news = [
+            {"title": "What to check before a long highway drive", "summary": "Tyres, fluids, lights and service history should be checked before a long trip.", "url": "/news", "image_url": None, "meta": "Ownership Guide"},
+            {"title": "Understanding service estimate line items", "summary": "Learn which workshop items are routine and which should be approved only after inspection.", "url": "/news", "image_url": None, "meta": "Service Awareness"},
+            {"title": "Used car checklist for city buyers", "summary": "Documents, accident signs, tyres, clutch feel and maintenance records matter before purchase.", "url": "/news", "image_url": None, "meta": "Used Car Guide"},
+        ]
 
-    # VIDEOS
-    latest_videos = Video.query.order_by(Video.created_at.desc()).limit(3).all()
-
-    # MARKETPLACE
-    marketplace_listings = (
-        MarketplaceListing.query
-        .filter_by(is_active=True)
-        .order_by(MarketplaceListing.created_at.desc())
-        .limit(4)
-        .all()
-    )
-    for listing in marketplace_listings:
-        _attach_listing_catalog_image(listing)
-
-    # ACTIVITY FEED
-    activity_items = []
-    for post in Post.query.order_by(Post.created_at.desc()).limit(4).all():
-        activity_items.append({
-            "type": "Community",
-            "icon": "fa-solid fa-message",
+    recent_post_records = Post.query.order_by(Post.created_at.desc()).limit(8).all()
+    community_threads = [
+        {
             "title": post.title,
-            "meta": f"{post.author.username if post.author else 'Member'} started a discussion",
+            "summary": (post.content or "Community discussion on AMPYAN.")[:120],
             "url": f"/post/{post.id}",
-            "created_at": post.created_at,
-        })
+            "image_url": url_for("static", filename=f"post_images/{post.image}") if post.image else None,
+            "meta": post.created_at.strftime("%d %b") if post.created_at else "Community",
+        }
+        for post in recent_post_records
+    ]
 
-    for car in Car.query.order_by(Car.created_at.desc()).limit(3).all():
-        activity_items.append({
-            "type": "Garage",
-            "icon": "fa-solid fa-car-side",
-            "title": f"{car.brand or 'Vehicle'} {car.model or ''}".strip(),
-            "meta": "New vehicle added to AMPYAN garage",
-            "url": "/garage-dashboard",
-            "created_at": car.created_at,
-        })
+    if not community_threads:
+        community_threads = [
+            {"title": "Engine vibration at idle after service", "summary": "Owners discuss mounts, plugs, idle RPM and recent service checks.", "url": "/create-post", "image_url": None, "meta": "Start discussion"},
+            {"title": "Brake noise after monsoon driving", "summary": "A practical thread about dust, pads, discs and when inspection is needed.", "url": "/create-post", "image_url": None, "meta": "Community"},
+            {"title": "Best maintenance routine for daily city use", "summary": "Compare real owner routines for tyres, fluids, filters and battery care.", "url": "/create-post", "image_url": None, "meta": "Community"},
+        ]
 
-    for video in latest_videos:
-        activity_items.append({
-            "type": "Video",
-            "icon": "fa-brands fa-youtube",
-            "title": video.title,
-            "meta": "New AMPYAN video available",
-            "url": "/videos",
-            "created_at": video.created_at,
-        })
+    trending_problems = [
+        "Engine vibration at idle",
+        "AC cooling weak in traffic",
+        "Brake noise while slowing",
+        "Low pickup on acceleration",
+        "Battery drain overnight",
+        "Steering vibration at speed",
+        "Mileage dropped suddenly",
+        "Warning light after service",
+    ][:8]
 
-    recent_activity = sorted(
-        activity_items,
-        key=lambda item: item.get("created_at") or 0,
-        reverse=True
-    )[:6]
+    popular_problems = [
+        {"title": "Engine misfire or rough idle", "url": "/tools/ai-diagnosis"},
+        {"title": "Clutch slip and burning smell", "url": "/tools/ai-diagnosis"},
+        {"title": "Suspension thud on bad roads", "url": "/tools/ai-diagnosis"},
+        {"title": "Overheating in slow traffic", "url": "/tools/ai-diagnosis"},
+    ]
 
-    # LEADERBOARD
-    top_contributors = User.query.order_by(User.reputation.desc()).limit(5).all()
+    service_tips = [
+        "Check tyre pressure monthly and before highway drives.",
+        "Keep service bills and odometer readings in My Garage.",
+        "Do not approve add-on cleaning jobs without a clear reason.",
+        "Inspect battery health before summer and long trips.",
+    ]
 
-    # GARAGE NETWORK
-    nearby_mechanics = []
-    mechanic_query = MechanicProfile.query.filter_by(is_verified=True).order_by(
-        MechanicProfile.is_featured.desc(),
-        MechanicProfile.trust_score.desc(),
-        MechanicProfile.id.desc()
-    )
+    upcoming_service = None
+    if default_car:
+        vehicle_name = f"{default_car.brand or 'Your car'} {default_car.model or ''}".strip()
+        if default_car.next_service_km and default_car.current_km:
+            km_left = max(default_car.next_service_km - default_car.current_km, 0)
+            upcoming_service = f"{vehicle_name}: {km_left} km to next service"
+        elif default_car.next_service_date:
+            upcoming_service = f"{vehicle_name}: service due on {default_car.next_service_date.strftime('%d %b %Y')}"
 
-    if current_user.is_authenticated and current_user.city:
-        nearby_mechanics = mechanic_query.filter_by(city=current_user.city).limit(4).all()
-
-    if not nearby_mechanics:
-        nearby_mechanics = mechanic_query.limit(4).all()
-
-    for mechanic in nearby_mechanics:
-        refresh_mechanic_reputation(mechanic)
-
-    ecosystem_stats = {
-        "owners": User.query.filter(User.role != "mechanic").count(),
-        "mechanics": MechanicProfile.query.count(),
-        "posts": Post.query.count(),
-        "diagnostics": len(recent_activity),
-        "reviews": MechanicReview.query.count(),
-        "car_profiles": Car.query.count()
-    }
-
+    # AMPYAN HOME PAGE REDESIGN END
     return render_template(
         "home.html",
         cars=cars,
         default_car=default_car,
-        recent_posts=recent_posts,
+        recent_posts=recent_post_records,
         latest_news=latest_news,
-        latest_videos=latest_videos,
-        marketplace_listings=marketplace_listings,
-        recent_activity=recent_activity,
-        top_contributors=top_contributors,
-        nearby_mechanics=nearby_mechanics,
-        ecosystem_stats=ecosystem_stats
+        community_threads=community_threads,
+        trending_problems=trending_problems,
+        popular_problems=popular_problems,
+        service_tips=service_tips,
+        upcoming_service=upcoming_service
     )
 
 

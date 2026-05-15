@@ -1,777 +1,232 @@
 {% extends "base.html" %}
 {% block content %}
 
-{% macro feature_card(href, color, icon, title, description) -%}
-<a href="{{ href }}" class="feature-nav-card {{ color }}">
-<i class="{{ icon }}"></i>
-<strong>{{ title }}</strong>
-</a>
-{%- endmacro %}
-
-<section class="feature-nav-section feature-nav-section-top">
-<div class="feature-nav-head">
-<p class="page-kicker">EXPLORE AMPYAN</p>
-</div>
-
-<div class="feature-nav-grid" aria-label="Explore AMPYAN features">
-<div class="feature-nav-track">
+<!-- AMPYAN HOME PAGE REDESIGN START -->
+<section class="ampyan-how-strip" aria-label="How to use AMPYAN">
+<div class="ampyan-how-track">
 {% for repeat in range(2) %}
-<div class="feature-nav-group" {% if repeat == 1 %}aria-hidden="true"{% endif %}>
-{{ feature_card("/tools/ai-diagnosis", "feature-red", "fa-solid fa-car-burst", "Vehicle Check", "Find likely car issues") }}
-{{ feature_card("/garage-dashboard", "feature-blue", "fa-solid fa-car-side", "My Garage", "Health, service, records") }}
-{{ feature_card("/tools/fuel-cost", "feature-green", "fa-solid fa-gas-pump", "Fuel Cost", "Trip and monthly spend") }}
-{{ feature_card("/tools/emi-calculator", "feature-blue", "fa-solid fa-file-invoice-dollar", "EMI Calculator", "Loan EMI and interest") }}
-{{ feature_card("/tools/depreciation-calculator", "feature-yellow", "fa-solid fa-chart-line", "Depreciation", "Estimate used-car value") }}
-{{ feature_card("/tools/maintenance-cost", "feature-orange", "fa-solid fa-screwdriver-wrench", "Cost Estimator", "Service budget range") }}
-{{ feature_card("/tools/car-suggestion", "feature-purple", "fa-solid fa-route", "Car Suggestion", "Match car to usage") }}
-{{ feature_card("/garage-network", "feature-green", "fa-solid fa-shop", "Garage Network", "Find local workshops") }}
-{{ feature_card("/community", "feature-blue", "fa-solid fa-people-group", "Community", "Ask owners and experts") }}
-{{ feature_card("/marketplace?type=buy", "feature-green", "fa-solid fa-cart-shopping", "Car Buy", "Find owner listings") }}
-{{ feature_card("/marketplace?type=sell", "feature-red", "fa-solid fa-tags", "Car Sell", "List your car") }}
-{{ feature_card("/tools", "feature-orange", "fa-solid fa-toolbox", "Tools", "All ownership utilities") }}
-{{ feature_card("/platform", "feature-purple", "fa-solid fa-compass", "Explore", "AMPYAN platform map") }}
-{{ feature_card("/garage-dashboard", "feature-yellow", "fa-solid fa-calendar-check", "Maintenance", "Service reminders") }}
-{{ feature_card("/news", "feature-red", "fa-solid fa-newspaper", "News", "Automotive updates") }}
-{{ feature_card("/videos", "feature-red", "fa-brands fa-youtube", "Videos", "Watch explainers") }}
-{{ feature_card("/leaderboard", "feature-yellow", "fa-solid fa-trophy", "Leaderboard", "Top contributors") }}
-{{ feature_card("/profile", "feature-blue", "fa-solid fa-user-gear", "Profile", "Manage account") }}
-{{ feature_card("/help", "feature-green", "fa-solid fa-headset", "Help", "Report issue") }}
-</div>
+<span><i class="fa-solid fa-stethoscope"></i> Describe car symptom</span>
+<span><i class="fa-solid fa-car-side"></i> Add your car in My Garage</span>
+<span><i class="fa-solid fa-indian-rupee-sign"></i> Check repair estimate</span>
+<span><i class="fa-solid fa-comments"></i> Ask AMPYAN community</span>
+<span><i class="fa-solid fa-newspaper"></i> Read auto news and tips</span>
 {% endfor %}
-</div>
 </div>
 </section>
 
-<section class="home-news-ticker" aria-label="Latest news ticker">
-<div class="ticker-label"><i class="fa-solid fa-newspaper"></i> AMPYAN NEWS</div>
-<div class="ticker-window">
-<div class="ticker-track">
-{% if latest_news %}
-{% for repeat in range(2) %}
-{% for news in latest_news %}
-<a href="/news/{{ news.id }}">{{ news.title }}</a>
-{% endfor %}
-{% endfor %}
-{% else %}
-<span>Latest automotive updates will run here.</span>
-<span>Follow AMPYAN News for launches, recalls and ownership alerts.</span>
-{% endif %}
+<div class="ampyan-home">
+<button class="ampyan-feature-toggle" type="button" onclick="toggleHomeFeatures()" aria-expanded="false">
+<i class="fa-solid fa-layer-group"></i> AMPYAN Features
+</button>
+<aside class="ampyan-left-sidebar" aria-label="AMPYAN features">
+<div class="ampyan-sidebar-brand">
+<strong>AMPYAN</strong>
+<span>Smart Automotive Ecosystem</span>
 </div>
-</div>
-</section>
-
-<section class="home-wow-hero" aria-label="AMPYAN automotive intelligence overview">
-<div class="home-wow-content">
-<div class="home-wow-badges">
-<span><i class="fa-solid fa-bolt"></i> Live Ecosystem</span>
-<span><i class="fa-solid fa-shield-heart"></i> Owner First</span>
-<span><i class="fa-solid fa-wand-magic-sparkles"></i> AI Powered</span>
-</div>
-
-<h1>AMPYAN makes car ownership smarter, safer and easier.</h1>
-<p>Diagnose symptoms, track your garage, learn from owners, compare costs and discover trusted automotive help in one energetic platform.</p>
-
-<div class="home-wow-actions">
-<a href="/tools/ai-diagnosis" class="home-wow-primary"><i class="fa-solid fa-car-burst"></i> Check My Car</a>
-<a href="/garage-dashboard" class="home-wow-secondary"><i class="fa-solid fa-car-side"></i> Open Garage</a>
-<a href="/community" class="home-wow-secondary"><i class="fa-solid fa-comments"></i> Ask Community</a>
-</div>
-
-<div class="home-wow-stats" aria-label="AMPYAN platform statistics">
-<div><strong>{{ ecosystem_stats.owners }}</strong><span>Owners</span></div>
-<div><strong>{{ ecosystem_stats.posts }}</strong><span>Posts</span></div>
-<div><strong>{{ ecosystem_stats.car_profiles }}</strong><span>Cars</span></div>
-<div><strong>{{ ecosystem_stats.mechanics }}</strong><span>Garages</span></div>
-</div>
-</div>
-
-<div class="home-wow-panel">
-<div class="home-wow-panel-top">
-<span>Today on AMPYAN</span>
-<i class="fa-solid fa-gauge-high"></i>
-</div>
-<a href="/tools/ai-diagnosis" class="home-wow-panel-row row-red">
-<i class="fa-solid fa-stethoscope"></i>
-<span><strong>Vehicle Check</strong><small>Symptoms to likely causes</small></span>
-</a>
-<a href="/tools/maintenance-cost" class="home-wow-panel-row row-yellow">
-<i class="fa-solid fa-indian-rupee-sign"></i>
-<span><strong>Repair Estimate</strong><small>Cost clarity before service</small></span>
-</a>
-<a href="/garage-network" class="home-wow-panel-row row-green">
-<i class="fa-solid fa-shop"></i>
-<span><strong>Garage Network</strong><small>Find trusted local support</small></span>
-</a>
-</div>
-</section>
-
-<section class="ampyan-cockpit-section">
-<aside class="cockpit-rail">
-<a href="/news"><i class="fa-solid fa-newspaper"></i><span>News</span></a>
-<a href="/community"><i class="fa-solid fa-people-group"></i><span>Community</span></a>
-<a href="/tools/ai-diagnosis"><i class="fa-solid fa-car-burst"></i><span>Car Check</span></a>
+<a href="/" class="active"><i class="fa-solid fa-house"></i><span>Home</span></a>
+<a href="/tools/ai-diagnosis"><i class="fa-solid fa-car-burst"></i><span>AI Car Diagnosis</span></a>
 <a href="/garage-dashboard"><i class="fa-solid fa-car-side"></i><span>My Garage</span></a>
-<a href="/marketplace"><i class="fa-solid fa-cart-shopping"></i><span>Buy/Sell</span></a>
-<a href="/garage-network"><i class="fa-solid fa-shop"></i><span>Garages</span></a>
+<a href="/garage-dashboard"><i class="fa-solid fa-calendar-check"></i><span>Service Reminders</span></a>
+<a href="/community"><i class="fa-solid fa-people-group"></i><span>Car Community</span></a>
+<a href="/news"><i class="fa-solid fa-newspaper"></i><span>Auto News</span></a>
+<a href="/videos"><i class="fa-solid fa-video"></i><span>Dashcam</span></a>
+<a href="/tools/maintenance-cost"><i class="fa-solid fa-indian-rupee-sign"></i><span>Repair Cost Estimate</span></a>
+<a href="/tools/depreciation-calculator"><i class="fa-solid fa-car-rear"></i><span>Used Car Guide</span></a>
+<a href="/garage-network"><i class="fa-solid fa-triangle-exclamation"></i><span>Emergency Help</span></a>
+<a href="/videos"><i class="fa-brands fa-youtube"></i><span>Videos</span></a>
+<a href="/help"><i class="fa-solid fa-comment-dots"></i><span>Feedback</span></a>
+<a href="/about"><i class="fa-solid fa-circle-info"></i><span>About AMPYAN</span></a>
 </aside>
 
-<div class="cockpit-feed">
-<div class="cockpit-post-composer">
-<span><i class="fa-solid fa-pen-to-square"></i> Owner Hub</span>
-<a href="/create-post">Ask or share with AMPYAN owners</a>
-<a href="/tools/ai-diagnosis">Check car issue</a>
-</div>
-
-<div class="cockpit-main-card">
-<div class="cockpit-card-top">
-<span><i class="fa-solid fa-bolt-lightning"></i> Live Ownership Feed</span>
-<a href="/community">Open Community</a>
-</div>
-{% if recent_posts %}
-{% for post in recent_posts[:2] %}
-<a href="/post/{{ post.id }}" class="cockpit-discussion-row">
-<strong>{{ post.title }}</strong>
-<small>{{ post.author.username if post.author else "Member" }} · {{ post.comments|length }} replies · {{ post.votes|length }} boosts</small>
-<p>{{ post.content[:115] }}{% if post.content|length > 115 %}...{% endif %}</p>
-</a>
-{% endfor %}
-{% else %}
-<a href="/create-post" class="cockpit-discussion-row">
-<strong>Start the first owner discussion</strong>
-<small>Community · 0 replies</small>
-<p>Ask about mileage, service, buying advice, warning lights or daily ownership problems.</p>
-</a>
-{% endif %}
-</div>
-</div>
-
-<aside class="cockpit-side">
-<div class="cockpit-widget">
-<h3>Platform Snapshot</h3>
-<div class="cockpit-stat-grid">
-<div><span>Owners</span><strong>{{ ecosystem_stats.owners }}</strong></div>
-<div><span>Posts</span><strong>{{ ecosystem_stats.posts }}</strong></div>
-<div><span>Cars</span><strong>{{ ecosystem_stats.car_profiles }}</strong></div>
-<div><span>Garages</span><strong>{{ ecosystem_stats.mechanics }}</strong></div>
-</div>
-</div>
-
-<div class="cockpit-widget">
-<h3>Latest News</h3>
-{% if latest_news %}
-{% for news in latest_news[:3] %}
-<a href="/news/{{ news.id }}" class="cockpit-link-row">{{ news.title }}</a>
-{% endfor %}
-{% else %}
-<a href="/news" class="cockpit-link-row">News updates will appear here</a>
-{% endif %}
-</div>
-
-<div class="cockpit-widget cockpit-tool-strip">
-<a href="/tools/fuel-cost"><i class="fa-solid fa-gas-pump"></i><span>Fuel</span></a>
-<a href="/tools/emi-calculator"><i class="fa-solid fa-file-invoice-dollar"></i><span>EMI</span></a>
-<a href="/tools/depreciation-calculator"><i class="fa-solid fa-chart-line"></i><span>Value</span></a>
-</div>
-</aside>
-</section>
-
-<section class="ampyan-command-hero">
-<div class="ampyan-hero-shell">
-<div class="ampyan-hero-copy">
-<div class="ampyan-live-row">
-<span>AMPYAN Live</span>
-<span>{{ ecosystem_stats.owners }} owners</span>
-<span>{{ ecosystem_stats.mechanics }} garages</span>
-</div>
-
-<p class="ampyan-hero-kicker">India's First</p>
-<h1>Automotive Intelligence Ecosystem</h1>
-<p>Vehicle intelligence checks, smart garage tracking, repair cost tools, local garage discovery and real owner discussions in one automotive platform.</p>
-
-<div class="hero-attention-grid">
-<a href="/news" class="hero-attention-card attention-news">
-<i class="fa-solid fa-newspaper"></i>
-<span>News</span>
-<strong>Live updates</strong>
-</a>
-<a href="/community" class="hero-attention-card attention-community">
-<i class="fa-solid fa-people-group"></i>
-<span>Community</span>
-<strong>Ask owners</strong>
-</a>
-<a href="/tools/ai-diagnosis" class="hero-attention-card attention-check">
-<i class="fa-solid fa-car-burst"></i>
-<span>Car Check</span>
-<strong>Diagnose now</strong>
-</a>
-<a href="/garage-dashboard" class="hero-attention-card attention-garage">
-<i class="fa-solid fa-car-side"></i>
-<span>My Garage</span>
-<strong>Track service</strong>
-</a>
-</div>
-
-<form action="/tools/ai-diagnosis" method="POST" class="ampyan-hero-search">
-<i class="fa-solid fa-car-burst"></i>
-<input type="text" id="problem-input" name="problem" placeholder="Type your car problem, example: engine vibration..." autocomplete="off" required>
-<button type="submit">Diagnose</button>
-</form>
-<div id="suggestions-box"></div>
-
+<main class="ampyan-home-main">
+<section class="ampyan-portal-hero">
+<div>
+<p class="ampyan-eyebrow"><span>AI</span> AMPYAN Automotive Ecosystem</p>
+<h1>Your Smart Automotive Assistant</h1>
+<p>Diagnose car problems, manage your garage, track service reminders, read auto news, and connect with the car community — all in one place.</p>
 <div class="ampyan-hero-actions">
-<a href="/tools/ai-diagnosis" class="ampyan-primary-action"><i class="fa-solid fa-wand-magic-sparkles"></i> Start Vehicle Check</a>
-<a href="/community" class="ampyan-secondary-action"><i class="fa-solid fa-comments"></i> Ask Community</a>
-<a href="/garage-dashboard" class="ampyan-secondary-action"><i class="fa-solid fa-car-side"></i> Open Garage</a>
+<a href="/tools/ai-diagnosis" class="ampyan-action-primary"><i class="fa-solid fa-stethoscope"></i> Start AI Diagnosis</a>
+<a href="/garage-dashboard" class="ampyan-action-secondary"><i class="fa-solid fa-plus"></i> Add My Car</a>
 </div>
 </div>
-
-<div class="ampyan-hero-console">
-<div class="console-top">
-<span>Ownership Command Center</span>
-<strong>Today</strong>
-</div>
-<div class="console-diagnosis">
-<i class="fa-solid fa-microchip"></i>
-<div>
-<span>Vehicle Intelligence Check</span>
-<strong>Symptoms to likely causes</strong>
-</div>
-</div>
-<div class="console-grid">
-<a href="/tools/maintenance-cost"><span>Repair Cost</span><strong>Estimate</strong></a>
-<a href="/tools/car-suggestion"><span>Next Car</span><strong>Match</strong></a>
-<a href="/garage-network"><span>Garages</span><strong>Find</strong></a>
-<a href="/videos"><span>Videos</span><strong>Learn</strong></a>
-</div>
-<div class="console-community">
-<span>Community Pulse</span>
-{% if recent_posts %}
-<strong>{{ recent_posts[0].title }}</strong>
-<small>{{ recent_posts[0].content[:92] }}{% if recent_posts[0].content|length > 92 %}...{% endif %}</small>
-{% else %}
-<strong>Ask your first ownership question</strong>
-<small>Real owners and experts can help with practical checks.</small>
-{% endif %}
-</div>
-</div>
+<div class="ampyan-hero-meter" aria-label="AMPYAN quick tools">
+<span>Owner cockpit</span>
+<strong>No AI calls on page load</strong>
+<a href="/tools/maintenance-cost"><i class="fa-solid fa-wrench"></i> Repair estimate</a>
+<a href="/community"><i class="fa-solid fa-comments"></i> Ask community</a>
+<a href="/news"><i class="fa-solid fa-bolt"></i> Latest updates</a>
 </div>
 </section>
 
-<section class="home-highlights-section">
-<div class="home-highlights-row top">
-<div class="home-highlight-panel">
-<div class="home-highlight-head">
-<div>
-<p class="page-kicker">NEWS HIGHLIGHTS</p>
-<h2>Latest automotive updates</h2>
-</div>
-<a href="/news">View All</a>
-</div>
-
-{% if latest_news %}
-<div class="home-highlight-list">
-{% for news in latest_news[:3] %}
-<a href="/news/{{ news.id }}" class="home-highlight-item">
-<i class="fa-solid fa-newspaper"></i>
-<span>
-<strong>{{ news.title }}</strong>
-<small>{{ news.content[:90] if news.content else "Read the latest AMPYAN update." }}{% if news.content and news.content|length > 90 %}...{% endif %}</small>
-</span>
+<section class="ampyan-feature-panel" aria-label="AMPYAN feature cards">
+<a href="/tools/ai-diagnosis" class="ampyan-feature-card feature-ai">
+<span class="ampyan-badge">AI</span>
+<i class="fa-solid fa-car-burst"></i>
+<strong>AI Car Diagnosis</strong>
+<small>Symptoms to likely causes</small>
 </a>
-{% endfor %}
-</div>
-{% else %}
-<p class="home-empty-note">No news published yet.</p>
-{% endif %}
-</div>
-
-<div class="home-highlight-panel">
-<div class="home-highlight-head">
-<div>
-<p class="page-kicker">COMMUNITY HIGHLIGHTS</p>
-<h2>Recent owner discussions</h2>
-</div>
-<a href="/community">Open</a>
-</div>
-
-{% if recent_posts %}
-<div class="home-highlight-list">
-{% for post in recent_posts[:3] %}
-<a href="/post/{{ post.id }}" class="home-highlight-item community-highlight-item">
-<i class="fa-solid fa-bolt-lightning"></i>
-<span>
-<strong>{{ post.title }}</strong>
-<small>{{ post.author.username if post.author else "Member" }} - {{ post.comments|length }} replies - {{ post.votes|length }} boosts</small>
-<em>{{ post.content[:82] if post.content else "Joined the conversation." }}{% if post.content and post.content|length > 82 %}...{% endif %}</em>
-</span>
-</a>
-{% endfor %}
-</div>
-{% else %}
-<p class="home-empty-note">No discussions yet.</p>
-{% endif %}
-</div>
-</div>
-
-<div class="home-highlights-row bottom">
-<div class="home-highlight-panel video-panel">
-<div class="home-highlight-head">
-<div>
-<p class="page-kicker">VIDEO HIGHLIGHTS</p>
-<h2>Watch AMPYAN explainers</h2>
-</div>
-<a href="/videos">Videos</a>
-</div>
-
-{% if latest_videos %}
-<div class="home-video-strip">
-{% for video in latest_videos[:3] %}
-<a href="/videos" class="home-video-card">
-<iframe src="{{ video.embed_url }}" title="{{ video.title }}" loading="lazy" allowfullscreen></iframe>
-<strong>{{ video.title }}</strong>
-</a>
-{% endfor %}
-</div>
-{% else %}
-<p class="home-empty-note">No videos added yet.</p>
-{% endif %}
-</div>
-
-<div class="home-highlight-panel activity-panel">
-<div class="home-highlight-head">
-<div>
-<p class="page-kicker">RECENT ACTIVITY</p>
-<h2>What users are doing</h2>
-</div>
-</div>
-
-{% if recent_activity %}
-<div class="home-activity-list">
-{% for item in recent_activity %}
-<a href="{{ item.url }}" class="home-activity-item">
-<i class="{{ item.icon }}"></i>
-<span>
-<strong>{{ item.type }}</strong>
-<small>{{ item.meta }} - {{ item.title }}</small>
-</span>
-</a>
-{% endfor %}
-</div>
-{% else %}
-<p class="home-empty-note">No recent activity yet.</p>
-{% endif %}
-</div>
-</div>
-</section>
-
-<section class="tool-graphics-section">
-<div class="launch-section-head">
-<p class="page-kicker">OWNERSHIP CALCULATORS</p>
-<h2 class="section-heading">Quick visual checks for cost, EMI and depreciation.</h2>
-<p class="section-copy">Graph-style cards help users jump into the right calculator without scrolling through menus.</p>
-</div>
-
-<div class="tool-graphics-grid">
-<a href="/tools/fuel-cost" class="tool-graphic-card fuel-graphic">
-<div class="tool-graphic-icon"><i class="fa-solid fa-gas-pump"></i></div>
-<div>
-<span>Fuel Cost</span>
-<strong>Daily / Monthly Spend</strong>
-</div>
-<div class="mini-bar-chart"><i style="height:36%;"></i><i style="height:62%;"></i><i style="height:82%;"></i><i style="height:48%;"></i></div>
-</a>
-<a href="/tools/emi-calculator" class="tool-graphic-card emi-graphic">
-<div class="tool-graphic-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
-<div>
-<span>Car EMI Check</span>
-<strong>Loan and interest view</strong>
-</div>
-<div class="emi-ring"><b>EMI</b></div>
-</a>
-<a href="/tools/depreciation-calculator" class="tool-graphic-card depreciation-graphic">
-<div class="tool-graphic-icon"><i class="fa-solid fa-chart-line"></i></div>
-<div>
-<span>Depreciation</span>
-<strong>Used car value drop</strong>
-</div>
-<div class="mini-line-chart"><i></i></div>
-</a>
-</div>
-</section>
-
-<section class="marketplace-home-section">
-<div class="marketplace-home-card">
-<div class="marketplace-home-copy">
-<p class="page-kicker">CAR BUY & SELL</p>
-<h2 class="section-heading">Connect directly with owners for used car buying and selling.</h2>
-<p class="section-copy">Create a listing with your name, location and contact option. Interested users can message through AMPYAN inbox.</p>
-<div class="app-actions">
-<a href="/marketplace?type=buy" class="widget-btn">Browse Buy Requests</a>
-<a href="/marketplace/create" class="app-secondary-btn">Sell or Request Car</a>
-</div>
-</div>
-<div class="marketplace-list-preview">
-{% if marketplace_listings %}
-{% for listing in marketplace_listings[:3] %}
-<a href="/marketplace/{{ listing.id }}" class="marketplace-mini-card">
-<span>{{ listing.listing_type|upper }}</span>
-<strong>{{ listing.title }}</strong>
-<small>{{ listing.user.username if listing.user else "Owner" }} - {{ listing.location or "Location N/A" }}</small>
-</a>
-{% endfor %}
-{% else %}
-<a href="/marketplace/create" class="marketplace-mini-card">
-<span>START</span>
-<strong>Create the first buy/sell listing</strong>
-<small>Owner-to-owner connection begins here.</small>
-</a>
-{% endif %}
-</div>
-</div>
-</section>
-
-<section class="launch-section">
-<div class="launch-section-head">
-<p class="page-kicker">WHY AMPYAN?</p>
-<h2 class="section-heading">Built for confident car ownership, not generic tech browsing.</h2>
-<p class="section-copy">AMPYAN brings diagnosis, repair awareness, garage tracking and community learning into one automotive-first product.</p>
-</div>
-
-<div class="launch-card-grid">
-<div class="launch-card">
-<i class="fa-solid fa-microchip"></i>
-<h3>Vehicle Intelligence Check</h3>
-<p>Describe symptoms and get structured guidance on likely issues before you make repair decisions.</p>
-</div>
-
-<div class="launch-card">
-<i class="fa-solid fa-indian-rupee-sign"></i>
-<h3>Repair Cost Insights</h3>
-<p>Understand possible repair direction and cost context so workshop conversations become clearer.</p>
-</div>
-
-<div class="launch-card">
-<i class="fa-solid fa-gauge-high"></i>
-<h3>Smart Garage Tracking</h3>
-<p>Track vehicles, service records, reminders and ownership history inside your AMPYAN garage.</p>
-</div>
-
-<div class="launch-card">
-<i class="fa-solid fa-users-gear"></i>
-<h3>Automotive Community</h3>
-<p>Connect with real users, enthusiasts and experts for practical ownership knowledge.</p>
-</div>
-</div>
-</section>
-
-<section class="coming-soon-section">
-<div class="coming-soon-card">
-<div class="coming-soon-copy">
-<p class="page-kicker">PLANNED FEATURES</p>
-<h2 class="section-heading">Coming soon on the AMPYAN roadmap</h2>
-<p class="section-copy">These features are planned for future releases as AMPYAN grows toward a richer driver safety and ownership platform.</p>
-</div>
-
-<div class="coming-soon-grid">
-<div><i class="fa-solid fa-video"></i><span>Dashcam integration</span><small>Coming soon</small></div>
-<div><i class="fa-solid fa-triangle-exclamation"></i><span>Smart safety alerts</span><small>Coming soon</small></div>
-<div><i class="fa-solid fa-calendar-check"></i><span>Maintenance prediction</span><small>Coming soon</small></div>
-<div><i class="fa-solid fa-location-dot"></i><span>Emergency/parking connect features</span><small>Coming soon</small></div>
-</div>
-</div>
-</section>
-
-<section class="app-showcase">
-<div class="app-showcase-card">
-<div class="app-copy">
-<p class="app-label">AMPYAN MOBILE APP</p>
-<h2>Android and iOS apps are coming soon.</h2>
-<p>AMPYAN is preparing a mobile experience for faster garage access, owner tools, diagnosis history and community updates on the go.</p>
-
-<div class="app-highlights">
-<div class="app-feature">
-<strong>Smart Garage</strong>
-<span>Keep your vehicles, service reminders and diagnosis records close.</span>
-</div>
-<div class="app-feature">
-<strong>Community Access</strong>
-<span>Ask questions, follow discussions and learn from real owners.</span>
-</div>
-<div class="app-feature">
-<strong>Garage Network</strong>
-<span>Find trusted local service support from your phone.</span>
-</div>
-</div>
-</div>
-
-<div class="app-store-panel">
-<div class="app-store-badge">
-<i class="fa-brands fa-android"></i>
-<div>
-<span>Android App</span>
-<strong>Coming Soon</strong>
-</div>
-</div>
-<div class="app-store-badge">
-<i class="fa-brands fa-apple"></i>
-<div>
-<span>iOS App</span>
-<strong>Coming Soon</strong>
-</div>
-</div>
-</div>
-</div>
-</section>
-
-<section class="comparison-spotlight">
-<div class="comparison-spotlight-card">
-<div class="comparison-copy">
-<p class="page-kicker">CAR SUGGESTION TOOL</p>
-<h2 class="section-heading">Not sure which car suits your life? Let your usage decide.</h2>
-<p class="section-copy">Tell AMPYAN whether your driving is city-heavy or highway-heavy, how much you run daily, whether the car is for family or solo use, and what you need on some special days. The tool will recommend cars that fit better.</p>
-
-<div class="comparison-feature-grid">
-<div class="comparison-feature-card">
-<strong>City vs Highway</strong>
-<span>Choose the driving environment that matters most.</span>
-</div>
-<div class="comparison-feature-card">
-<strong>Daily Run Logic</strong>
-<span>High running users get more efficiency-focused matches.</span>
-</div>
-<div class="comparison-feature-card">
-<strong>Family vs Solo Fit</strong>
-<span>Space, comfort and practicality adjust to your users.</span>
-</div>
-<div class="comparison-feature-card">
-<strong>Special Need Days</strong>
-<span>Road trips, rough roads and luggage days are included too.</span>
-</div>
-</div>
-<div class="app-actions">
-<a href="/tools/car-suggestion" class="widget-btn">Open Car Suggestion Tool</a>
-<a href="/tools" class="app-secondary-btn">Explore All Tools</a>
-</div>
-</div>
-
-<div class="comparison-preview-card">
-<p class="hero-guide-label">Example Profile</p>
-<div class="comparison-preview-list">
-<div class="comparison-preview-row"><span>Usage</span><strong>Mixed City + Highway</strong></div>
-<div class="comparison-preview-row"><span>Daily Run</span><strong>45 km/day</strong></div>
-<div class="comparison-preview-row"><span>User Type</span><strong>Family + Solo</strong></div>
-<div class="comparison-preview-row"><span>Special Need</span><strong>Weekend Road Trips</strong></div>
-<div class="comparison-preview-row"><span>Suggested Direction</span><strong>Balanced hatchback / compact SUV</strong></div>
-</div>
-</div>
-</div>
-</section>
-
-<section class="ownership-journey">
-<div class="ownership-copy">
-<p class="page-kicker">OWNER JOURNEY</p>
-<h2 class="section-heading">AMPYAN helps before buying, while driving, and when something goes wrong.</h2>
-<p class="section-copy">From car selection to daily running, issue detection and workshop trust, the platform is designed around the full ownership cycle.</p>
-</div>
-
-<div class="ownership-grid">
-<div class="ownership-step">
-<span>01</span>
-<h3>Choose smarter</h3>
-<p>Use the car suggestion tool to filter what actually matches your real driving life.</p>
-</div>
-<div class="ownership-step">
-<span>02</span>
-<h3>Track your car</h3>
-<p>Add mileage, service details and vehicle history into your AMPYAN garage profile.</p>
-</div>
-<div class="ownership-step">
-<span>03</span>
-<h3>Understand problems</h3>
-<p>Use vehicle intelligence checks and community patterns to narrow likely causes with better explanations.</p>
-</div>
-<div class="ownership-step">
-<span>04</span>
-<h3>Find trusted help</h3>
-<p>Discover verified garages and mechanics when the issue needs real hands-on support.</p>
-</div>
-</div>
-</section>
-
-<section class="ecosystem-story">
-<div class="ecosystem-story-copy">
-<p class="page-kicker">AUTOMOTIVE ECOSYSTEM</p>
-<h2 class="section-heading">Not just a website. A focused automotive operating system.</h2>
-<p class="section-copy">AMPYAN is being built as one connected ecosystem for owners, independent mechanics, workshops, creators and automotive communities.</p>
-</div>
-
-<div class="ecosystem-story-grid">
-<div class="ecosystem-story-card">
-<span>For Owners</span>
-<h3>Ask, diagnose and compare</h3>
-<p>Understand your car, shortlist your next one and reduce guesswork around service decisions.</p>
-</div>
-<div class="ecosystem-story-card">
-<span>For Mechanics</span>
-<h3>Get discovered with trust</h3>
-<p>Join the AMPYAN Garage Network, build a profile and connect with local users looking for reliable service help.</p>
-</div>
-<div class="ecosystem-story-card">
-<span>For The Market</span>
-<h3>One connected graph</h3>
-<p>Cars, owners, garages, problems and solutions start living in one structured product ecosystem.</p>
-</div>
-</div>
-</section>
-
-<section class="garage-network-preview">
-<div class="garage-network-head">
-<div>
-<p class="page-kicker">LOCAL GARAGE NETWORK</p>
-<h2 class="section-heading">Nearby garages can register and grow trust on AMPYAN</h2>
-<p class="section-copy">Mechanics and workshops can create a profile, show specialties, support emergency service and build trust through reviews and approval.</p>
-</div>
-
-<div class="ui-button-row">
-<a href="/garage-network" class="ui-button-secondary">Browse Garages</a>
-<a href="/garage-network/register" class="auth-button">Register Garage</a>
-</div>
-</div>
-
-{% if nearby_mechanics %}
-<div class="garage-network-grid">
-{% for mechanic in nearby_mechanics %}
-<div class="garage-network-card">
-<div class="garage-trust-top">
-<span class="garage-trust-level">{{ mechanic.trust_level }}</span>
-<span class="garage-trust-score">Trust {{ mechanic.trust_score }}/100</span>
-</div>
-<h3>{{ mechanic.business_name }}</h3>
-<p class="garage-owner-name">{{ mechanic.owner_name }}</p>
-<p class="garage-location">{{ mechanic.city }}{% if mechanic.state %}, {{ mechanic.state }}{% endif %}</p>
-<p class="garage-meta">{{ mechanic.specialties or "General automotive service" }}</p>
-<div class="ui-pill-row">
-{% if mechanic.accepts_emergency %}
-<span class="ui-pill">Emergency Support</span>
-{% endif %}
-{% if mechanic.pickup_drop_available %}
-<span class="ui-pill">Pickup & Drop</span>
-{% endif %}
-{% if mechanic.is_verified %}
-<span class="ui-pill">Verified Account</span>
-{% endif %}
-</div>
-</div>
-{% endfor %}
-</div>
-{% else %}
-<div class="empty-state">No garages listed yet. Be the first to register your workshop on AMPYAN.</div>
-{% endif %}
-</section>
-
-<section class="platform-map">
-<h2>Explore the AMPYAN Ecosystem</h2>
-<div class="platform-grid">
-<a href="/tools/ai-diagnosis" class="platform-card">
-<i class="fa-solid fa-robot"></i>
-<h3>Vehicle Intelligence</h3>
-<p>Analyze car problems using AMPYAN intelligence</p>
-</a>
-
-<a href="/tools/car-suggestion" class="platform-card">
+<a href="/garage-dashboard" class="ampyan-feature-card feature-garage">
+<span class="ampyan-badge">Popular</span>
 <i class="fa-solid fa-car-side"></i>
-<h3>Car Suggestion Tool</h3>
-<p>Get a shortlist based on your real-life usage</p>
+<strong>My Garage</strong>
+<small>Cars, records and health</small>
 </a>
-
-<a href="/garage-dashboard" class="platform-card">
-<i class="fa-solid fa-car"></i>
-<h3>Smart Garage</h3>
-<p>Track vehicle health and service timeline</p>
+<a href="/garage-dashboard" class="ampyan-feature-card feature-service">
+<span class="ampyan-badge">New</span>
+<i class="fa-solid fa-calendar-check"></i>
+<strong>Service Reminders</strong>
+<small>Never miss service checks</small>
 </a>
-
-<a href="/community" class="platform-card">
-<i class="fa-solid fa-users"></i>
-<h3>AMPYAN Community</h3>
-<p>Learn from real automotive owners</p>
+<a href="/community" class="ampyan-feature-card feature-community">
+<span class="ampyan-badge">Live</span>
+<i class="fa-solid fa-people-group"></i>
+<strong>Community</strong>
+<small>Ask owners and experts</small>
 </a>
-
-<a href="/garage-network" class="platform-card">
-<i class="fa-solid fa-screwdriver-wrench"></i>
-<h3>Garage Network</h3>
-<p>Discover trusted local workshops and mechanics</p>
-</a>
-
-<a href="/news" class="platform-card">
+<a href="/news" class="ampyan-feature-card feature-news">
+<span class="ampyan-badge">Fresh</span>
 <i class="fa-solid fa-newspaper"></i>
-<h3>Automotive News</h3>
-<p>Latest launches and industry updates</p>
+<strong>Auto News</strong>
+<small>Updates and ownership tips</small>
 </a>
+<a href="/videos" class="ampyan-feature-card feature-dashcam">
+<span class="ampyan-badge">Beta</span>
+<i class="fa-solid fa-video"></i>
+<strong>Dashcam</strong>
+<small>Safety tools in progress</small>
+</a>
+<a href="/tools/maintenance-cost" class="ampyan-feature-card feature-cost">
+<span class="ampyan-badge">Tool</span>
+<i class="fa-solid fa-indian-rupee-sign"></i>
+<strong>Repair Cost Estimate</strong>
+<small>Know cost ranges early</small>
+</a>
+<a href="/garage-network" class="ampyan-feature-card feature-help">
+<span class="ampyan-badge">SOS</span>
+<i class="fa-solid fa-triangle-exclamation"></i>
+<strong>Emergency Help</strong>
+<small>Find support faster</small>
+</a>
+</section>
+
+<section class="ampyan-section">
+<div class="ampyan-section-head">
+<div>
+<p class="ampyan-eyebrow">Auto News</p>
+<h2>Latest Auto News</h2>
+</div>
+<a href="/news">View all</a>
+</div>
+<div class="ampyan-news-grid">
+{% for item in latest_news[:6] %}
+<a href="{{ item.url }}" class="ampyan-news-card">
+{% if item.image_url %}
+<img src="{{ item.image_url }}" alt="{{ item.title }}" loading="lazy">
+{% endif %}
+<div class="ampyan-news-body">
+<span>{{ item.meta }}</span>
+<strong>{{ item.title }}</strong>
+<p>{{ item.summary }}{% if item.summary|length >= 120 %}...{% endif %}</p>
+</div>
+</a>
+{% endfor %}
 </div>
 </section>
 
-<section class="dual-audience-strip">
-<div class="audience-card owner-card">
-<p class="page-kicker">USER SIDE</p>
-<h3>Owners, Drivers, Enthusiasts</h3>
-<p>Use AMPYAN like a high-trust automotive Reddit + Quora + smart garage assistant built around your own car profile and buying decisions.</p>
+<section class="ampyan-section">
+<div class="ampyan-section-head">
+<div>
+<p class="ampyan-eyebrow">Community</p>
+<h2>Trending Community Questions</h2>
 </div>
-
-<div class="audience-card mechanic-card">
-<p class="page-kicker">MECHANIC SIDE</p>
-<h3>Mechanics, Workshops, Garage Teams</h3>
-<p>Build a visible profile, earn trust, collect local demand and become part of a stronger automotive service network.</p>
+<a href="/community">Open community</a>
 </div>
-</section>
-
-<section class="brand-hero-strip brand-hero-strip-bottom">
-<div class="brand-hero-copy">
-<p class="brand-kicker">AMPYAN Automotive Intelligence Platform</p>
-<h2>Powered by Speed 16</h2>
-<p>Built by Ritesh Singh for smarter diagnostics, stronger ownership clarity and a connected automotive ecosystem.</p>
-</div>
-
-<div class="brand-hero-badge">
-<span>Speed 16</span>
-<strong>Ritesh Singh</strong>
+<div class="ampyan-thread-list">
+{% for thread in community_threads[:8] %}
+<a href="{{ thread.url }}" class="ampyan-thread-card">
+{% if thread.image_url %}
+<img src="{{ thread.image_url }}" alt="{{ thread.title }}" loading="lazy">
+{% else %}
+<i class="fa-solid fa-message"></i>
+{% endif %}
+<span>
+<strong>{{ thread.title }}</strong>
+<small>{{ thread.meta }} · {{ thread.summary }}{% if thread.summary|length >= 120 %}...{% endif %}</small>
+</span>
+</a>
+{% endfor %}
 </div>
 </section>
 
-<section class="founder">
-<h3>Built for the automotive community</h3>
-<p>AMPYAN is founded by Ritesh Singh, focused on building a more useful and trusted automotive product ecosystem.</p>
+<section class="ampyan-split-grid">
+<div class="ampyan-section compact">
+<div class="ampyan-section-head">
+<div>
+<p class="ampyan-eyebrow">Diagnosis</p>
+<h2>Popular Car Problems</h2>
+</div>
+</div>
+<div class="ampyan-problem-grid">
+{% for problem in popular_problems %}
+<a href="{{ problem.url }}"><i class="fa-solid fa-screwdriver-wrench"></i>{{ problem.title }}</a>
+{% endfor %}
+</div>
+</div>
+
+<div class="ampyan-section compact">
+<div class="ampyan-section-head">
+<div>
+<p class="ampyan-eyebrow">Maintenance</p>
+<h2>Service Reminder Tips</h2>
+</div>
+</div>
+<ul class="ampyan-tip-list">
+{% for tip in service_tips %}
+<li><i class="fa-solid fa-check"></i>{{ tip }}</li>
+{% endfor %}
+</ul>
+</div>
 </section>
 
+</main>
+
+<aside class="ampyan-right-sidebar" aria-label="AMPYAN widgets">
+<section class="ampyan-widget">
+<h3><span class="ampyan-badge">Popular</span> Trending Problems</h3>
+{% for problem in trending_problems[:8] %}
+<a href="/tools/ai-diagnosis">{{ problem }}</a>
+{% endfor %}
+</section>
+
+<section class="ampyan-widget">
+<h3><span class="ampyan-badge">Live</span> Hot Community Threads</h3>
+{% for thread in community_threads[:4] %}
+<a href="{{ thread.url }}">{{ thread.title }}</a>
+{% endfor %}
+</section>
+
+<section class="ampyan-widget beta">
+<h3><span class="ampyan-badge">Beta</span> App Beta Testing</h3>
+<p>AMPYAN mobile beta is being prepared for faster garage access, alerts and community updates.</p>
+<a href="/help" class="ampyan-widget-button">Join beta interest</a>
+</section>
+
+<section class="ampyan-widget feedback">
+<h3><span class="ampyan-badge">New</span> Feedback Request</h3>
+<p>Found a missing feature, bug or useful automotive topic?</p>
+<a href="/help" class="ampyan-widget-button">Send Feedback</a>
+</section>
+</aside>
+</div>
 <script>
-const text = "Know your car problems, estimate repair cost, track your garage, and connect with real users & experts.";
-let index = 0;
-
-function typeAI(){
-const target = document.getElementById("aiText");
-if(target && index < text.length){
-target.innerHTML += text.charAt(index);
-index++;
-setTimeout(typeAI, 24);
-}
-}
-
-typeAI();
-</script>
-
-<script>
-const input = document.getElementById("problem-input");
-const box = document.getElementById("suggestions-box");
-
-if(input){
-input.addEventListener("input", function(){
-let query = input.value.trim();
-
-if(query.length < 2){
-box.innerHTML="";
-return;
-}
-});
+function toggleHomeFeatures(){
+const shell=document.querySelector(".ampyan-home");
+const button=document.querySelector(".ampyan-feature-toggle");
+if(!shell || !button) return;
+const isOpen=shell.classList.toggle("features-open");
+button.setAttribute("aria-expanded", isOpen ? "true" : "false");
 }
 </script>
+<!-- AMPYAN HOME PAGE REDESIGN END -->
 
 {% endblock %}

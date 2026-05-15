@@ -88,10 +88,23 @@
 AMPYAN
 </a>
 
+<!-- AMPYAN HOME PAGE REDESIGN START -->
+<button class="mobile-menu-toggle" type="button" onclick="toggleMobileNav()" aria-label="Open AMPYAN menu" aria-expanded="false">
+<i class="fa-solid fa-bars"></i>
+</button>
+<!-- AMPYAN HOME PAGE REDESIGN END -->
+
 
 <!-- CENTER MENU -->
 
 <div class="nav-center">
+
+<!-- AMPYAN HOME PAGE REDESIGN START -->
+<form class="navbar-search" action="/community" method="GET" role="search">
+<i class="fa-solid fa-magnifying-glass"></i>
+<input type="search" name="q" placeholder="Search car problems, news, community..." aria-label="Search AMPYAN">
+</form>
+<!-- AMPYAN HOME PAGE REDESIGN END -->
 
 <!-- HOME -->
 
@@ -520,6 +533,16 @@ menu.style.display="block";
 }
 
 }
+
+// AMPYAN HOME PAGE REDESIGN START
+function toggleMobileNav(){
+const nav=document.querySelector(".navbar");
+const button=document.querySelector(".mobile-menu-toggle");
+if(!nav || !button) return;
+const isOpen=nav.classList.toggle("nav-open");
+button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+// AMPYAN HOME PAGE REDESIGN END
 
 </script>
 
