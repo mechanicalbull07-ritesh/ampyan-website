@@ -234,8 +234,9 @@ AMPYAN
 <div class="nav-profile">
 
 <div class="profile-badge">
-{% if current_user.profile_photo %}
-<img src="{{ url_for('static', filename='profile_images/' + current_user.profile_photo) }}" alt="{{ current_user.username }}">
+{% set current_profile_photo_url = profile_image_url(current_user.profile_photo) %}
+{% if current_profile_photo_url %}
+<img src="{{ current_profile_photo_url }}" alt="{{ current_user.username }}">
 {% else %}
 {{ current_user.username[0] | upper }}
 {% endif %}

@@ -243,6 +243,8 @@ def save_uploaded_image(image_file, folder, prefix):
             pass
         return None
 
+    return filename
+
     compress_image(upload_path)
     return filename
 ADMIN_EMAILS = [
@@ -372,7 +374,8 @@ def story_response(title, subtitle, body, footer="Read full on AMPYAN", source_u
 @app.context_processor
 def inject_image_helpers():
     return dict(
-        news_image_url=lambda filename: static_image_url_if_exists("news_images", filename)
+        news_image_url=lambda filename: static_image_url_if_exists("news_images", filename),
+        profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename)
     )
     
 from flask_mail import Mail, Message

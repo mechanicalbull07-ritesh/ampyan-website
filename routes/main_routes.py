@@ -1,5 +1,8 @@
-from flask import Blueprint, render_template, request, redirect, flash, url_for
+import os
+
+from flask import Blueprint, current_app, render_template, request, redirect, flash, url_for
 from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
 
 from models.models import db, Post, News, Car, User, MechanicProfile, MechanicReview, MarketplaceListing, MarketplaceMessage, Video
 from services.car_health_engine import calculate_car_health
@@ -11,6 +14,22 @@ from services.garage_network_service import (
 from services.india_car_catalog import catalog_image_path
 
 main_bp = Blueprint("main", __name__)
+
+
+def _static_image_url_if_exists(folder, filename, fallback=None):
+    if filename:
+        candidates = []
+        for candidate in (filename, secure_filename(filename)):
+            if candidate and candidate not in candidates:
+                candidates.append(candidate)
+
+        for candidate in candidates:
+            relative_path = os.path.join(folder, candidate)
+            absolute_path = os.path.join(current_app.static_folder, relative_path)
+            if os.path.isfile(absolute_path):
+                return url_for("static", filename=relative_path.replace(os.sep, "/"))
+
+    return url_for("static", filename=fallback) if fallback else None
 
 
 def _safe_int(value):
@@ -53,17 +72,22 @@ def home():
             "title": news.title,
             "summary": (news.content or "Read the latest AMPYAN automotive update.")[:120],
             "url": f"/news/{news.id}",
-            "image_url": url_for("static", filename=f"news_images/{news.image}") if news.image else None,
+            "image_url": _static_image_url_if_exists(
+                "news_images",
+                news.image,
+                fallback="news_images/AMPYAN_-_Powering_Intelligent_Mobility.png"
+            ),
             "meta": news.created_at.strftime("%d %b %Y") if news.created_at else "AMPYAN News",
         }
         for news in latest_news_records
     ]
 
     if not latest_news:
+        fallback_news_image = url_for("static", filename="news_images/AMPYAN_-_Powering_Intelligent_Mobility.png")
         latest_news = [
-            {"title": "What to check before a long highway drive", "summary": "Tyres, fluids, lights and service history should be checked before a long trip.", "url": "/news", "image_url": None, "meta": "Ownership Guide"},
-            {"title": "Understanding service estimate line items", "summary": "Learn which workshop items are routine and which should be approved only after inspection.", "url": "/news", "image_url": None, "meta": "Service Awareness"},
-            {"title": "Used car checklist for city buyers", "summary": "Documents, accident signs, tyres, clutch feel and maintenance records matter before purchase.", "url": "/news", "image_url": None, "meta": "Used Car Guide"},
+            {"title": "What to check before a long highway drive", "summary": "Tyres, fluids, lights and service history should be checked before a long trip.", "url": "/news", "image_url": fallback_news_image, "meta": "Ownership Guide"},
+            {"title": "Understanding service estimate line items", "summary": "Learn which workshop items are routine and which should be approved only after inspection.", "url": "/news", "image_url": fallback_news_image, "meta": "Service Awareness"},
+            {"title": "Used car checklist for city buyers", "summary": "Documents, accident signs, tyres, clutch feel and maintenance records matter before purchase.", "url": "/news", "image_url": fallback_news_image, "meta": "Used Car Guide"},
         ]
 
     recent_post_records = Post.query.order_by(Post.created_at.desc()).limit(8).all()

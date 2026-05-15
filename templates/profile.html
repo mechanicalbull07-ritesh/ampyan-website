@@ -19,8 +19,9 @@
 
 <div class="profile-header ui-card">
 
-{% if current_user.profile_photo %}
-<img src="{{ url_for('static', filename='profile_images/' + current_user.profile_photo) }}" class="profile-avatar">
+{% set current_profile_photo_url = profile_image_url(current_user.profile_photo) %}
+{% if current_profile_photo_url %}
+<img src="{{ current_profile_photo_url }}" class="profile-avatar">
 {% else %}
 <div class="author-avatar-letter profile-avatar">
 {{ current_user.username[0] | upper }}
