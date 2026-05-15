@@ -1,5 +1,6 @@
 import json
 import os
+from datetime import datetime
 from types import SimpleNamespace
 from urllib import error, request as urllib_request
 
@@ -54,6 +55,67 @@ def _sync_current_user_profile():
             "user_email": current_user.email,
         },
     )
+
+
+def _safe_int(value, default=None):
+    try:
+        if value in [None, ""]:
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _safe_date(value):
+    try:
+        if not value:
+            return None
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except (TypeError, ValueError):
+        return None
+
+
+def _payload_value(payload, *names, default=None):
+    for name in names:
+        value = payload.get(name)
+        if value not in [None, ""]:
+            return value
+    return default
+
+
+def _apply_car_payload(car, payload):
+    service_interval = 10000
+
+    car.brand = _payload_value(payload, "brand", default=car.brand)
+    car.model = _payload_value(payload, "model", default=car.model)
+    car.year = _safe_int(_payload_value(payload, "year", default=car.year))
+    car.fuel_type = _payload_value(payload, "fuel_type", "fuel", default=car.fuel_type)
+    car.mileage = _safe_int(_payload_value(payload, "mileage", default=car.mileage))
+    car.current_km = _safe_int(_payload_value(payload, "current_km", default=car.current_km), 0)
+    car.last_service_km = _safe_int(_payload_value(payload, "last_service_km", default=car.last_service_km))
+    car.daily_km = _safe_int(_payload_value(payload, "daily_km", default=car.daily_km))
+    car.brake_replaced_km = _safe_int(_payload_value(payload, "brake_replaced_km", default=car.brake_replaced_km))
+    car.tyre_replaced_km = _safe_int(_payload_value(payload, "tyre_replaced_km", default=car.tyre_replaced_km))
+    car.clutch_replaced_km = _safe_int(_payload_value(payload, "clutch_replaced_km", default=car.clutch_replaced_km))
+    car.battery_replaced_year = _safe_int(_payload_value(payload, "battery_replaced_year", default=car.battery_replaced_year))
+
+    if "insurance_expiry" in payload:
+        car.insurance_expiry = _safe_date(payload.get("insurance_expiry"))
+    if "pollution_expiry" in payload:
+        car.pollution_expiry = _safe_date(payload.get("pollution_expiry"))
+    if "last_service_date" in payload:
+        car.last_service_date = _safe_date(payload.get("last_service_date"))
+    if "next_service_date" in payload:
+        car.next_service_date = _safe_date(payload.get("next_service_date"))
+
+    car.next_service_km = car.last_service_km + service_interval if car.last_service_km else None
+    return car
+
+
+def _require_api_auth():
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "authentication required"}), 401
+    return None
 
 
 def _load_remote_profile_posts():
@@ -170,8 +232,11 @@ def api_session():
 
 
 @user_bp.route("/api/profile", methods=["GET", "POST"])
-@login_required
 def api_profile():
+    auth_error = _require_api_auth()
+    if auth_error:
+        return auth_error
+
     if request.method == "POST":
         payload = request.get_json(silent=True) or request.form
         current_user.mobile = payload.get("mobile")
@@ -185,8 +250,66 @@ def api_profile():
     return jsonify({"status": "success", "user": serialize_user(current_user)})
 
 
-@user_bp.route("/api/cars")
-@login_required
+@user_bp.route("/api/cars", methods=["GET", "POST"])
 def api_cars():
+    auth_error = _require_api_auth()
+    if auth_error:
+        return auth_error
+
+    if request.method == "POST":
+        payload = request.get_json(silent=True) or request.form
+        if not (payload.get("brand") or payload.get("model")):
+            return jsonify({"status": "error", "message": "brand or model is required"}), 400
+
+        car = Car(owner_id=current_user.id)
+        _apply_car_payload(car, payload)
+        if payload.get("is_default") or not Car.query.filter_by(owner_id=current_user.id).first():
+            Car.query.filter_by(owner_id=current_user.id).update({"is_default": False})
+            car.is_default = True
+
+        db.session.add(car)
+        db.session.commit()
+        return jsonify({"status": "success", "car": serialize_car(car)}), 201
+
     cars = Car.query.filter_by(owner_id=current_user.id).order_by(Car.id.desc()).all()
     return jsonify({"status": "success", "cars": [serialize_car(car) for car in cars]})
+
+
+@user_bp.route("/api/cars/<int:car_id>", methods=["GET", "PUT", "PATCH", "DELETE"])
+def api_car_detail(car_id):
+    auth_error = _require_api_auth()
+    if auth_error:
+        return auth_error
+
+    car = Car.query.get_or_404(car_id)
+    if car.owner_id != current_user.id:
+        return jsonify({"status": "error", "message": "car not found"}), 404
+
+    if request.method == "GET":
+        return jsonify({"status": "success", "car": serialize_car(car)})
+
+    if request.method in {"PUT", "PATCH"}:
+        payload = request.get_json(silent=True) or request.form
+        _apply_car_payload(car, payload)
+        db.session.commit()
+        return jsonify({"status": "success", "car": serialize_car(car)})
+
+    db.session.delete(car)
+    db.session.commit()
+    return jsonify({"status": "success"})
+
+
+@user_bp.route("/api/cars/<int:car_id>/default", methods=["POST"])
+def api_set_default_car(car_id):
+    auth_error = _require_api_auth()
+    if auth_error:
+        return auth_error
+
+    car = Car.query.get_or_404(car_id)
+    if car.owner_id != current_user.id:
+        return jsonify({"status": "error", "message": "car not found"}), 404
+
+    Car.query.filter_by(owner_id=current_user.id).update({"is_default": False})
+    car.is_default = True
+    db.session.commit()
+    return jsonify({"status": "success", "car": serialize_car(car)})
