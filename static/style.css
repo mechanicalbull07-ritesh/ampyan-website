@@ -1086,6 +1086,7 @@ grid-template-columns:repeat(3,minmax(0,1fr));
 @media(max-width:900px){
 .ampyan-home{
 grid-template-columns:1fr;
+gap:14px;
 }
 
 .ampyan-left-sidebar{
@@ -1107,21 +1108,65 @@ grid-template-columns:1fr 1fr;
 }
 
 @media(max-width:620px){
+.ampyan-how-strip{
+margin:10px 0;
+border-radius:12px;
+}
+
+.ampyan-how-track{
+padding:8px 10px;
+gap:8px;
+animation-duration:24s;
+}
+
+.ampyan-how-track span{
+padding:7px 10px;
+font-size:12px;
+}
+
 .ampyan-home{
-padding-top:16px;
+padding-top:10px;
+gap:12px;
 }
 
 .ampyan-feature-toggle{
 display:flex;
+width:100%;
+position:sticky;
+top:76px;
+z-index:20;
+backdrop-filter:blur(14px);
 }
 
 .ampyan-left-sidebar{
 grid-template-columns:1fr;
 display:none;
+padding:12px;
+border-radius:14px;
 }
 
 .ampyan-home.features-open .ampyan-left-sidebar{
 display:grid;
+}
+
+.ampyan-sidebar-brand{
+padding:10px;
+}
+
+.ampyan-sidebar-brand strong{
+font-size:22px;
+}
+
+.ampyan-left-sidebar a{
+min-height:38px;
+padding:9px 10px;
+font-size:13px;
+}
+
+.ampyan-portal-hero{
+grid-template-columns:1fr;
+gap:14px;
+border-radius:16px;
 }
 
 .ampyan-news-grid,
@@ -1131,11 +1176,128 @@ grid-template-columns:1fr;
 
 .ampyan-portal-hero,
 .ampyan-section{
-padding:16px;
+padding:14px;
 }
 
 .ampyan-portal-hero h1{
-font-size:34px;
+font-size:clamp(30px, 10vw, 36px);
+line-height:1.02;
+overflow-wrap:anywhere;
+}
+
+.ampyan-portal-hero p{
+font-size:14px;
+line-height:1.45;
+}
+
+.ampyan-hero-actions{
+display:grid;
+grid-template-columns:1fr;
+gap:10px;
+}
+
+.ampyan-action-primary,
+.ampyan-action-secondary{
+width:100%;
+min-height:44px;
+}
+
+.ampyan-hero-meter{
+padding:10px;
+gap:8px;
+}
+
+.ampyan-feature-panel{
+gap:8px;
+padding-bottom:6px;
+}
+
+.ampyan-feature-card{
+min-width:168px;
+min-height:68px;
+padding:10px;
+}
+
+.ampyan-feature-card i{
+width:34px;
+height:34px;
+font-size:15px;
+}
+
+.ampyan-feature-card strong{
+font-size:12px;
+padding-right:26px;
+}
+
+.ampyan-feature-card .ampyan-badge{
+font-size:8px;
+padding:2px 6px;
+}
+
+.ampyan-section-head{
+align-items:flex-start;
+gap:8px;
+}
+
+.ampyan-section-head h2{
+font-size:20px;
+}
+
+.ampyan-news-card{
+min-height:auto;
+}
+
+.ampyan-news-card img{
+height:150px;
+}
+
+.ampyan-thread-card{
+padding:10px;
+gap:10px;
+}
+
+.ampyan-split-grid{
+grid-template-columns:1fr;
+gap:12px;
+}
+
+.ampyan-right-sidebar{
+display:grid;
+gap:12px;
+}
+
+.ampyan-widget{
+padding:14px;
+border-radius:14px;
+}
+
+.ampyan-video-mini iframe{
+max-height:190px;
+}
+}
+
+@media(max-width:430px){
+.ampyan-portal-hero,
+.ampyan-section,
+.ampyan-widget{
+border-radius:12px;
+}
+
+.ampyan-portal-hero h1{
+font-size:30px;
+}
+
+.ampyan-section-head{
+display:grid;
+grid-template-columns:1fr auto;
+}
+
+.ampyan-news-card img{
+height:132px;
+}
+
+.ampyan-widget h3{
+font-size:16px;
 }
 }
 /* AMPYAN HOME PAGE REDESIGN END */
