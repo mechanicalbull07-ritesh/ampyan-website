@@ -15,6 +15,7 @@ fi
 echo "Starting AMPYAN website on 0.0.0.0:${PORT}"
 
 exec gunicorn app:app \
+  --preload \
   --workers "${WEB_CONCURRENCY:-1}" \
   --threads "${GUNICORN_THREADS:-2}" \
   --timeout "${GUNICORN_TIMEOUT:-120}" \
