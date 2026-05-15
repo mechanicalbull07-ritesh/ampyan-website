@@ -1317,6 +1317,63 @@ def diagnosis_followup():
     )
 
 
+@app.route("/api/diagnosis", methods=["POST"])
+def api_diagnosis():
+    data = request.get_json(silent=True) or {}
+    problem = (data.get("problem") or data.get("message") or data.get("symptoms") or "").strip()
+    answers = data.get("answers") or {}
+
+    if not problem:
+        return jsonify({
+            "status": "error",
+            "message": "problem is required"
+        }), 400
+
+    car = None
+    car_id = data.get("car_id")
+    if car_id:
+        car = Car.query.get(car_id)
+
+    results, questions = safe_diagnose_vehicle(
+        problem,
+        answers=answers if isinstance(answers, dict) else {},
+        car=car,
+        route_name="api_diagnosis",
+    )
+    diagnosis_view = enrich_diagnosis_results(results, problem)
+
+    api_results = []
+    for item in diagnosis_view["results"]:
+        api_results.append({
+            "problem": item.get("problem") or item.get("issue"),
+            "issue": item.get("issue"),
+            "system": item.get("system"),
+            "component": item.get("component"),
+            "severity": item.get("severity"),
+            "urgency": item.get("urgency"),
+            "probability_score": item.get("probability_score"),
+            "confidence_percent": item.get("confidence_percent", item.get("confidence")),
+            "top_matched_symptoms": item.get("top_matched_symptoms", []),
+            "questions": item.get("questions", []),
+            "user_checks": item.get("user_checks", []),
+            "repair_cost": item.get("repair_cost"),
+            "safety_message": item.get("safety_message", ""),
+            "disclaimer": item.get("disclaimer", ""),
+            "group_id": item.get("group_id"),
+            "aliases": item.get("aliases", []),
+            "is_generic": item.get("is_generic", False),
+            "use_as_router_only": item.get("use_as_router_only", False),
+        })
+
+    return jsonify({
+        "status": "success",
+        "problem": problem,
+        "results": api_results,
+        "questions": questions,
+        "disclaimer": api_results[0]["disclaimer"] if api_results else ""
+    })
+
+
 
 
 

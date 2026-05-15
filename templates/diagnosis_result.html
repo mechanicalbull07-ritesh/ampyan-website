@@ -74,8 +74,22 @@
 <p class="section-copy"><strong>{{ t.urgency }}:</strong> {{ results[0].urgency_summary }}</p>
 <p class="section-copy"><strong>{{ t.driveability }}:</strong> {{ results[0].driveability }}</p>
 <p class="section-copy"><strong>Next priority:</strong> {{ results[0].urgency_next_step }}</p>
+{% if results[0].safety_message %}
+<p class="section-copy diagnosis-safety-message"><strong>Safety:</strong> {{ results[0].safety_message }}</p>
+{% endif %}
 </div>
 </div>
+
+{% if results[0].top_matched_symptoms %}
+<div class="ui-card card-spacer">
+<h3 class="section-heading">Top Matched Symptoms</h3>
+<ul class="ui-list">
+{% for symptom in results[0].top_matched_symptoms %}
+<li>{{ symptom }}</li>
+{% endfor %}
+</ul>
+</div>
+{% endif %}
 
 {% if results[0].explanation %}
 <div class="ui-card card-spacer">
@@ -177,6 +191,9 @@
 </form>
 {% endif %}
 <a href="/tools/ai-diagnosis" class="diagnosis-cta">{{ t.retry }}</a>
+{% if results and results[0].disclaimer %}
+<p class="section-copy diagnosis-disclaimer">{{ results[0].disclaimer }}</p>
+{% endif %}
 </div>
 
 </section>

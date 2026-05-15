@@ -93,6 +93,16 @@ URGENCY_DETAILS = {
         "summary": "The problem should be inspected soon before it grows into a bigger repair.",
         "next_step": "Book service in the next few days."
     },
+    "repair_immediately": {
+        "label": "Repair Immediately",
+        "summary": "This may affect safety or reliability and should be inspected as soon as possible.",
+        "next_step": "Avoid unnecessary driving and get the vehicle inspected as soon as possible."
+    },
+    "stop_driving": {
+        "label": "Stop Driving",
+        "summary": "The symptom can create immediate safety risk or major mechanical damage.",
+        "next_step": "Stop safely and contact a qualified mechanic or roadside assistance."
+    },
     "urgent": {
         "label": "Urgent",
         "summary": "The issue needs fast attention to reduce safety risk or prevent further damage.",
@@ -116,6 +126,19 @@ DEFAULT_NEXT_STEPS = [
     "Avoid aggressive driving until the symptom is confirmed.",
     "If the symptom repeats, visit a trusted mechanic."
 ]
+
+DEFAULT_DISCLAIMER = (
+    "AMPYAN provides informational guidance only. Confirm the issue with a qualified mechanic "
+    "before making repair or safety decisions."
+)
+
+STOP_DRIVING_MESSAGE = (
+    "Do not drive the vehicle. Stop safely and contact a qualified mechanic or roadside assistance."
+)
+
+REPAIR_IMMEDIATELY_MESSAGE = (
+    "This may affect safety or reliability. Get the vehicle inspected as soon as possible."
+)
 
 
 ROMAN_HINDI_HINTS = ["nahi", "gaadi", "awaaz", "garam", "start", "band", "jerk", "pickup"]
@@ -174,6 +197,14 @@ def _localized_step(result):
     return deepcopy(DEFAULT_NEXT_STEPS)
 
 
+def _safety_message_for(urgency):
+    if urgency == "stop_driving":
+        return STOP_DRIVING_MESSAGE
+    if urgency == "repair_immediately":
+        return REPAIR_IMMEDIATELY_MESSAGE
+    return ""
+
+
 def enrich_diagnosis_results(results, problem_text):
     language_code = detect_response_language(problem_text)
     ui_text = get_ui_strings(language_code)
@@ -185,18 +216,37 @@ def enrich_diagnosis_results(results, problem_text):
         failure = _find_failure(item.get("issue"))
 
         if failure:
+            item["problem"] = item.get("problem") or failure.get("problem")
+            item["system"] = item.get("system") or failure.get("system")
+            item["component"] = item.get("component") or failure.get("component")
             item["severity"] = (item.get("severity") or failure.get("severity") or "unknown").lower()
-            item["urgency"] = (failure.get("urgency") or "unknown").lower()
+            item["urgency"] = (item.get("urgency") or failure.get("urgency") or "unknown").lower()
             item["repair_cost"] = item.get("repair_cost") or failure.get("repair_cost")
+            item["questions"] = item.get("questions") or failure.get("questions", [])
             item["user_checks"] = item.get("user_checks") or failure.get("user_checks", [])
             item["advice"] = item.get("advice") or failure.get("advice")
+            item["top_matched_symptoms"] = item.get("top_matched_symptoms") or []
+            item["group_id"] = item.get("group_id") or failure.get("group_id")
+            item["aliases"] = item.get("aliases") or failure.get("aliases", [])
+            item["is_generic"] = item.get("is_generic", failure.get("is_generic", False))
+            item["use_as_router_only"] = item.get("use_as_router_only", failure.get("use_as_router_only", False))
+            item["safety_message"] = item.get("safety_message") or failure.get("safety_message") or _safety_message_for(item["urgency"])
+            item["disclaimer"] = item.get("disclaimer") or failure.get("disclaimer") or DEFAULT_DISCLAIMER
         else:
+            item["problem"] = item.get("problem") or item.get("issue")
+            item["system"] = item.get("system") or "unknown"
+            item["component"] = item.get("component") or "unknown"
             item["severity"] = (item.get("severity") or "unknown").lower()
-            item["urgency"] = "unknown"
+            item["urgency"] = (item.get("urgency") or "unknown").lower()
+            item["safety_message"] = item.get("safety_message") or _safety_message_for(item["urgency"])
+            item["disclaimer"] = item.get("disclaimer") or DEFAULT_DISCLAIMER
 
         severity_details = SEVERITY_DETAILS.get(item["severity"], SEVERITY_DETAILS["unknown"])
         urgency_details = URGENCY_DETAILS.get(item["urgency"], URGENCY_DETAILS["unknown"])
 
+        item["issue"] = item.get("issue") or item.get("problem")
+        item["probability_score"] = item.get("probability_score", item.get("confidence", 0))
+        item["confidence_percent"] = item.get("confidence_percent", item.get("confidence", 0))
         item["severity_label"] = severity_details["label"]
         item["severity_summary"] = severity_details["summary"]
         item["urgency_label"] = urgency_details["label"]

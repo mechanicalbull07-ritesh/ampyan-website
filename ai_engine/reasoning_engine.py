@@ -31,6 +31,15 @@ def rank_failures(problem_text, failure_database):
 
     text = problem_text.lower()
 
+    def matched_symptoms_for(failure):
+        matched = []
+        for symptom in failure.get("symptoms", []):
+            symptom_text = (symptom or "").lower()
+            symptom_words = [word for word in symptom_text.split() if len(word) > 2]
+            if symptom_text in text or any(word in problem_words for word in symptom_words):
+                matched.append(symptom)
+        return matched[:5]
+
     # ------------------------------------------------
     # PROBABILITY BASED SCORING
     # ------------------------------------------------
@@ -91,6 +100,26 @@ def rank_failures(problem_text, failure_database):
                 score += 18
 
         # ------------------------------------
+        # CRITICAL BRAKE HYDRAULIC PRIORITY
+        # ------------------------------------
+
+        if "brake" in text and ("floor" in text or "sinking" in text or "pedal sinking" in text):
+            if failure.get("problem") == "Brake Pedal Goes To Floor":
+                score += 55
+            elif "brake fluid" in component or "brake system" in component:
+                score += 18
+
+        # ------------------------------------
+        # COOLING FAN SAFETY PRIORITY
+        # ------------------------------------
+
+        if "fan" in text and ("overheat" in text or "overheating" in text or "temperature" in text):
+            if failure.get("problem") in {"Fan Not Turning On", "Radiator Fan Failure", "Cooling Fan Relay Failure"}:
+                score += 45
+            elif "cooling" in system or "fan" in component:
+                score += 14
+
+        # ------------------------------------
         # SYMPTOM WEIGHT BOOST
         # ------------------------------------
 
@@ -132,13 +161,28 @@ def rank_failures(problem_text, failure_database):
         if score <= 5:
             continue
 
+        matched_symptoms = matched_symptoms_for(failure)
+
         matches.append({
 
             "issue": failure.get("problem"),
+            "problem": failure.get("problem"),
+            "system": failure.get("system"),
+            "component": failure.get("component"),
             "raw_score": score,
+            "probability_score": score,
             "severity": failure.get("severity"),
+            "urgency": failure.get("urgency"),
             "repair_cost": failure.get("repair_cost"),
+            "questions": failure.get("questions", []),
             "user_checks": failure.get("user_checks"),
+            "top_matched_symptoms": matched_symptoms,
+            "safety_message": failure.get("safety_message", ""),
+            "disclaimer": failure.get("disclaimer", ""),
+            "group_id": failure.get("group_id"),
+            "aliases": failure.get("aliases", []),
+            "is_generic": failure.get("is_generic", False),
+            "use_as_router_only": failure.get("use_as_router_only", False),
             "explanation": generate_explanation(problem_text, failure, {})
 
         })
@@ -162,6 +206,7 @@ def rank_failures(problem_text, failure_database):
         confidence = min(95, confidence)
 
         item["confidence"] = round(confidence)
+        item["confidence_percent"] = item["confidence"]
 
         del item["raw_score"]
 

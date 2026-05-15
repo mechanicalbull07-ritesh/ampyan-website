@@ -9355,4 +9355,268 @@ FAILURE_DATABASE = [
 "feedback":{"confirmed":0,"rejected":0}
 }]
 
-FAILURE_DATABASE = normalize_failure_database_entries(FAILURE_DATABASE)
+ALLOWED_URGENCY_VALUES = {"normal", "service_soon", "repair_immediately", "stop_driving"}
+ALLOWED_SEVERITY_VALUES = {"low", "medium", "high", "critical"}
+
+DIAGNOSIS_DISCLAIMER = (
+    "AMPYAN provides informational guidance only. Confirm the issue with a qualified mechanic "
+    "before making repair or safety decisions."
+)
+
+STOP_DRIVING_MESSAGE = (
+    "Do not drive the vehicle. Stop safely and contact a qualified mechanic or roadside assistance."
+)
+
+REPAIR_IMMEDIATELY_MESSAGE = (
+    "This may affect safety or reliability. Get the vehicle inspected as soon as possible."
+)
+
+
+def _slug(value):
+    return "".join(ch if ch.isalnum() else "_" for ch in (value or "").lower()).strip("_")
+
+
+KNOWN_DIAGNOSIS_GROUPS = {
+    "ignition_coil_failure": {
+        "problems": {"Ignition Coil Failure"},
+        "aliases": ["coil pack failure", "ignition coil weak", "engine misfire due to coil"],
+    },
+    "fuel_injector_clogged": {
+        "problems": {"Fuel Injector Clogged"},
+        "aliases": ["dirty fuel injector", "injector blockage", "fuel injector restriction"],
+    },
+    "engine_mount_worn": {
+        "problems": {"Engine Mount Worn"},
+        "aliases": ["engine mounting worn", "mount vibration", "engine support wear"],
+    },
+    "oxygen_sensor_fault": {
+        "problems": {"Oxygen Sensor Fault"},
+        "aliases": ["o2 sensor fault", "lambda sensor issue", "oxygen sensor failure"],
+    },
+    "horn_not_working": {
+        "problems": {"Horn Not Working"},
+        "aliases": ["horn failure", "horn fuse issue", "horn circuit fault"],
+    },
+    "brake_disc_vibration": {
+        "problems": {"Brake Disc Warped", "Brake Pedal Vibrates", "Car Shakes While Braking"},
+        "aliases": ["warped brake disc", "brake judder", "brake vibration"],
+    },
+    "cooling_fan_overheat": {
+        "problems": {"Radiator Fan Failure", "Fan Not Turning On", "Car Overheats In Traffic Only"},
+        "aliases": ["cooling fan not working", "radiator fan issue", "traffic overheating"],
+    },
+    "head_gasket_smoke_coolant": {
+        "problems": {"Engine Head Gasket Leak", "White Smoke From Exhaust", "Coolant Mixed With Oil"},
+        "aliases": ["white smoke coolant loss", "head gasket failure", "coolant entering cylinder"],
+    },
+    "brake_hydraulic_failure": {
+        "problems": {"Brake Pedal Goes To Floor", "Brake Fluid Low", "Brake Weak"},
+        "aliases": ["brake pedal sinking", "brake pressure loss", "hydraulic brake failure"],
+    },
+}
+
+STOP_DRIVING_PROBLEMS = {
+    "Brake Pedal Goes To Floor",
+    "Check Engine Light Flashing",
+    "Coolant Boiling",
+    "Engine Seized",
+    "Engine Head Gasket Leak",
+    "White Smoke From Exhaust",
+    "Coolant Mixed With Oil",
+    "Timing Belt Worn",
+    "Car Not Moving In Gear",
+}
+
+REPAIR_IMMEDIATELY_PROBLEMS = {
+    "Fuel Smell Inside Cabin",
+    "Fuel Injector Leak",
+    "Electric Power Steering Failure",
+    "Fan Not Turning On",
+    "Radiator Fan Failure",
+    "Cooling Fan Relay Failure",
+    "Car Overheats In Traffic Only",
+    "Brake Pedal Goes To Floor",
+    "Car Takes Longer To Stop",
+    "Car Feels Perfect But Brake Weak",
+    "Brake Pedal Goes To Floor",
+    "Brake Fluid Low",
+    "Brake Caliper Stuck",
+    "Car Shuts Off While Driving",
+    "Fuel Smell Inside Cabin",
+}
+
+GENERIC_ROUTER_PROBLEM_TOKENS = (
+    "unknown",
+    "general",
+    "multiple",
+    "feels perfect but",
+    "feels heavy",
+    "feels different",
+    "feels unbalanced",
+    "feels smooth",
+    "feels rough",
+    "no problem",
+)
+
+
+def _default_safety_message(urgency):
+    if urgency == "stop_driving":
+        return STOP_DRIVING_MESSAGE
+    if urgency == "repair_immediately":
+        return REPAIR_IMMEDIATELY_MESSAGE
+    return ""
+
+
+def _ensure_question_impact(entry):
+    for question in entry.get("questions", []):
+        question.setdefault("impact", {"yes": 1.5, "no": 0.6})
+
+
+def _apply_grouping(entry):
+    problem = entry.get("problem")
+    for group_id, config in KNOWN_DIAGNOSIS_GROUPS.items():
+        if problem in config["problems"]:
+            entry["group_id"] = group_id
+            existing_aliases = entry.get("aliases", [])
+            entry["aliases"] = sorted(set(existing_aliases + config["aliases"]))
+            return
+
+    entry.setdefault("group_id", _slug(problem))
+
+
+def _is_generic_router(entry):
+    problem = (entry.get("problem") or "").lower()
+    system = (entry.get("system") or "").lower()
+    component = (entry.get("component") or "").lower()
+    return (
+        any(token in problem for token in GENERIC_ROUTER_PROBLEM_TOKENS)
+        or system == "general"
+        or component in {"general", "multiple"}
+    )
+
+
+def harden_failure_database_entries(entries):
+    seen_problem_counts = {}
+
+    for entry in entries:
+        problem = entry.get("problem", "")
+
+        _ensure_question_impact(entry)
+        _apply_grouping(entry)
+
+        seen_problem_counts[problem] = seen_problem_counts.get(problem, 0) + 1
+        if seen_problem_counts[problem] > 1:
+            entry["is_duplicate_alias"] = True
+            entry.setdefault("canonical_problem", problem)
+
+        if problem in STOP_DRIVING_PROBLEMS:
+            entry["urgency"] = "stop_driving"
+            entry["severity"] = "critical"
+        elif problem in REPAIR_IMMEDIATELY_PROBLEMS:
+            entry["urgency"] = "repair_immediately"
+            if entry.get("severity") == "low":
+                entry["severity"] = "medium"
+
+        if entry.get("urgency") == "urgent":
+            entry["urgency"] = "repair_immediately"
+        elif entry.get("urgency") == "immediate":
+            entry["urgency"] = "repair_immediately"
+
+        if _is_generic_router(entry):
+            entry["is_generic"] = True
+            entry["use_as_router_only"] = True
+        else:
+            entry.setdefault("is_generic", False)
+            entry.setdefault("use_as_router_only", False)
+
+        entry.setdefault("safety_message", _default_safety_message(entry.get("urgency")))
+        if not entry["safety_message"]:
+            entry["safety_message"] = _default_safety_message(entry.get("urgency"))
+        entry.setdefault("disclaimer", DIAGNOSIS_DISCLAIMER)
+
+    return entries
+
+
+def validate_failure_database(entries=None):
+    entries = entries or FAILURE_DATABASE
+    report = {
+        "total_entries": len(entries),
+        "duplicate_problem_names": {},
+        "duplicate_symptom_overlap": [],
+        "missing_required_fields": [],
+        "missing_question_impact": [],
+        "invalid_urgency": [],
+        "invalid_severity": [],
+        "invalid_repair_cost": [],
+        "empty_symptoms": [],
+        "empty_questions": [],
+        "missing_id_ranges": [],
+    }
+
+    required_fields = {
+        "id", "problem", "system", "component", "severity", "urgency", "probability",
+        "symptoms", "questions", "user_checks", "repair_cost",
+    }
+    problem_map = {}
+    symptom_map = {}
+    ids = set()
+
+    for entry in entries:
+        entry_id = entry.get("id")
+        ids.add(entry_id)
+
+        missing = sorted(required_fields - set(entry.keys()))
+        if missing:
+            report["missing_required_fields"].append({"id": entry_id, "missing": missing})
+
+        problem = entry.get("problem", "")
+        problem_map.setdefault(problem.lower(), []).append(entry_id)
+
+        symptoms = entry.get("symptoms", [])
+        questions = entry.get("questions", [])
+        if not symptoms:
+            report["empty_symptoms"].append(entry_id)
+        if not questions:
+            report["empty_questions"].append(entry_id)
+
+        for question in questions:
+            impact = question.get("impact")
+            if not isinstance(impact, dict) or "yes" not in impact or "no" not in impact:
+                report["missing_question_impact"].append({"id": entry_id, "question_id": question.get("id")})
+
+        urgency = entry.get("urgency")
+        severity = entry.get("severity")
+        if urgency not in ALLOWED_URGENCY_VALUES:
+            report["invalid_urgency"].append({"id": entry_id, "urgency": urgency})
+        if severity not in ALLOWED_SEVERITY_VALUES:
+            report["invalid_severity"].append({"id": entry_id, "severity": severity})
+
+        repair_cost = entry.get("repair_cost", {})
+        if isinstance(repair_cost, dict) and repair_cost.get("min", 0) > repair_cost.get("max", 0):
+            report["invalid_repair_cost"].append({"id": entry_id, "repair_cost": repair_cost})
+
+        for symptom in symptoms:
+            symptom_map.setdefault(symptom, []).append(entry_id)
+
+    report["duplicate_problem_names"] = {
+        problem: entry_ids
+        for problem, entry_ids in problem_map.items()
+        if len(entry_ids) > 1
+    }
+    report["duplicate_symptom_overlap"] = [
+        {"symptom": symptom, "ids": entry_ids}
+        for symptom, entry_ids in symptom_map.items()
+        if len(entry_ids) > 8
+    ]
+
+    if ids:
+        for missing_id in range(min(ids), max(ids) + 1):
+            if missing_id not in ids:
+                report["missing_id_ranges"].append(missing_id)
+
+    return report
+
+
+FAILURE_DATABASE = harden_failure_database_entries(
+    normalize_failure_database_entries(FAILURE_DATABASE)
+)

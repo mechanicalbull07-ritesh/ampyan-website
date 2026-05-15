@@ -49,6 +49,9 @@ def diagnose_vehicle(problem_text, answers=None, car=None):
 
     results = rank_failures(problem_text, filtered_db)
 
+    if not results:
+        return [], []
+
     # =============================
     # 🔥 CONTEXT DETECTION
     # =============================
@@ -169,6 +172,12 @@ def diagnose_vehicle(problem_text, answers=None, car=None):
     # SORT
     # =============================
 
+    has_specific_results = any(not r.get("use_as_router_only") for r in results)
+    if has_specific_results:
+        for r in results:
+            if r.get("use_as_router_only"):
+                r["confidence"] *= 0.35
+
     results = sorted(results, key=lambda x: x["confidence"], reverse=True)
 
     # =============================
@@ -191,10 +200,11 @@ def diagnose_vehicle(problem_text, answers=None, car=None):
     # 🔥 NORMALIZATION
     # =============================
 
-    max_score = results[0]["confidence"]
+    max_score = results[0]["confidence"] or 1
 
     for r in results:
         r["confidence"] = int((r["confidence"] / max_score) * 100)
+        r["confidence_percent"] = r["confidence"]
 
     # =============================
     # QUESTIONS
@@ -213,9 +223,9 @@ def diagnose_vehicle(problem_text, answers=None, car=None):
 
         if not questions:
             questions = [
-                {"id": "q1", "text": "Does the problem appear during acceleration?"},
-                {"id": "q2", "text": "Does the issue happen while starting the car?"},
-                {"id": "q3", "text": "Do you hear any abnormal sound?"}
+                {"id": "q1", "text": "Does the problem appear during acceleration?", "impact": {"yes": 1.5, "no": 0.6}},
+                {"id": "q2", "text": "Does the issue happen while starting the car?", "impact": {"yes": 1.5, "no": 0.6}},
+                {"id": "q3", "text": "Do you hear any abnormal sound?", "impact": {"yes": 1.5, "no": 0.6}}
             ]
 
         questions = localize_questions(questions, question_language)
