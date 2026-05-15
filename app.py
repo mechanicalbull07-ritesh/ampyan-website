@@ -1,4 +1,16 @@
-print("STEP 1 START")
+import logging
+import os
+import sys
+
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger("ampyan")
+
+print("STEP 1 START", flush=True)
+logger.info("AMPYAN import started")
 
 # ================= ENV LOAD =================
 try:
@@ -52,7 +64,6 @@ print("Email service loaded")
 
 # ================= OTHER IMPORTS =================
 from flask import session
-import os
 from PIL import Image, ImageDraw, ImageFont
 from collections import defaultdict, deque
 import re
@@ -173,6 +184,14 @@ app.register_blueprint(tools_bp)
 app.register_blueprint(user_bp)
 
 print("Motrnoix AMPYAN server booting...")
+logger.info(
+    "Flask app object created: module=app object=app production=%s port=%s",
+    IS_PRODUCTION,
+    os.environ.get("PORT", "10000"),
+)
+
+def create_app():
+    return app
 
 # ================= FILE SIZE LIMIT =================
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
@@ -426,7 +445,21 @@ app.config["PROPAGATE_EXCEPTIONS"] = False
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+engine_options = {
+    "pool_pre_ping": True,
+    "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", "280")),
+}
+if database_url and database_url.startswith("postgresql://"):
+    engine_options["connect_args"] = {
+        "connect_timeout": int(os.environ.get("DB_CONNECT_TIMEOUT", "5")),
+    }
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
 db.init_app(app)
+logger.info(
+    "Database configured: backend=%s pool_pre_ping=%s",
+    "postgresql" if database_url else "sqlite",
+    engine_options["pool_pre_ping"],
+)
 
 # 🔐 Production Security Settings
 app.config["SESSION_COOKIE_HTTPONLY"] = True
@@ -906,6 +939,8 @@ def normalize_event_url(value):
 def record_website_event(event_type, label="", target_url="", severity="info", path=None):
     try:
         if not database_initialized:
+            if IS_PRODUCTION:
+                return
             initialize_database()
         visitor_id = request.cookies.get("ampyan_visitor_id") or getattr(g, "set_visitor_cookie", None)
         event = WebsiteEvent(
@@ -1001,6 +1036,7 @@ def should_track_page_visit():
         "/logout",
         "/register",
         "/google",
+        "/health",
         "/healthz",
         "/version",
         "/symptom-suggest",
@@ -1034,6 +1070,8 @@ def track_visit():
             return
 
         if not database_initialized:
+            if IS_PRODUCTION:
+                return
             initialize_database()
 
         visitor_id = request.cookies.get("ampyan_visitor_id")
@@ -2200,13 +2238,19 @@ def initialize_database():
         if database_initialized:
             return
 
-        db.create_all()
-        ensure_user_schema()
-        ensure_car_schema()
-        ensure_website_visit_schema()
-        ensure_reply_schema()
-        ensure_post_schema()
-        ensure_car_community_seed()
+        app.logger.info("Database initialization started.")
+        try:
+            db.create_all()
+            ensure_user_schema()
+            ensure_car_schema()
+            ensure_website_visit_schema()
+            ensure_reply_schema()
+            ensure_post_schema()
+            ensure_car_community_seed()
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("Database initialization failed.")
+            raise
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
         changed = False
@@ -2220,11 +2264,12 @@ def initialize_database():
             db.session.commit()
 
         database_initialized = True
+        app.logger.info("Database initialization finished.")
 
 
 @app.before_request
 def ensure_database_ready():
-    if request.endpoint in {"healthz", "version"} or request.path in {"/healthz", "/version"}:
+    if request.endpoint in {"health", "healthz", "version"} or request.path in {"/health", "/healthz", "/version"}:
         return
     if request.path.startswith("/static") or "." in request.path.rsplit("/", 1)[-1]:
         return
@@ -2313,6 +2358,15 @@ def mygarage_alias():
     return redirect("/garage-dashboard", code=301)
 
 
+@app.route("/health")
+def health():
+    return jsonify(
+        status="ok",
+        service="ampyan",
+        version=os.environ.get("RENDER_GIT_COMMIT", "local"),
+    )
+
+
 @app.route("/healthz")
 def healthz():
     return "ok"
@@ -2325,6 +2379,11 @@ def version():
 
 def start_background_database_init():
     if not IS_PRODUCTION or os.environ.get("ENABLE_BACKGROUND_DB_INIT", "").lower() != "true":
+        app.logger.info(
+            "Background database initialization disabled: production=%s enabled=%s",
+            IS_PRODUCTION,
+            os.environ.get("ENABLE_BACKGROUND_DB_INIT", "false"),
+        )
         return
 
     def runner():
@@ -2341,6 +2400,7 @@ def start_background_database_init():
 
 
 start_background_database_init()
+logger.info("AMPYAN import finished; WSGI app ready.")
 
 # ================= START SERVER =================
 
