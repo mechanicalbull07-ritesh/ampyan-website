@@ -429,8 +429,17 @@ pointer-events:none;
 }
 
 @media(max-width:720px){
+html,
+body{
+max-width:100%;
+overflow-x:hidden;
+}
+
 .main-container{
-width:min(100%, calc(100% - 24px));
+width:100%;
+max-width:100%;
+padding:0 12px;
+overflow-x:hidden;
 }
 
 .glow-text{

@@ -1108,9 +1108,26 @@ grid-template-columns:1fr 1fr;
 }
 
 @media(max-width:620px){
+.ampyan-how-strip,
+.ampyan-home,
+.ampyan-home-main,
+.ampyan-left-sidebar,
+.ampyan-right-sidebar,
+.ampyan-portal-hero,
+.ampyan-section,
+.ampyan-widget,
+.ampyan-news-grid,
+.ampyan-thread-list,
+.ampyan-split-grid{
+max-width:100%;
+min-width:0;
+overflow-x:hidden;
+}
+
 .ampyan-how-strip{
 margin:10px 0;
 border-radius:12px;
+min-height:42px;
 }
 
 .ampyan-how-track{
@@ -1127,6 +1144,8 @@ font-size:12px;
 .ampyan-home{
 padding-top:10px;
 gap:12px;
+width:100%;
+max-width:100%;
 }
 
 .ampyan-feature-toggle{
@@ -1169,6 +1188,12 @@ gap:14px;
 border-radius:16px;
 }
 
+.ampyan-portal-hero > div,
+.ampyan-hero-meter{
+min-width:0;
+max-width:100%;
+}
+
 .ampyan-news-grid,
 .ampyan-right-sidebar{
 grid-template-columns:1fr;
@@ -1183,6 +1208,7 @@ padding:14px;
 font-size:clamp(30px, 10vw, 36px);
 line-height:1.02;
 overflow-wrap:anywhere;
+word-break:normal;
 }
 
 .ampyan-portal-hero p{
@@ -1210,6 +1236,9 @@ gap:8px;
 .ampyan-feature-panel{
 gap:8px;
 padding-bottom:6px;
+max-width:100%;
+overflow-x:auto;
+overflow-y:hidden;
 }
 
 .ampyan-feature-card{
@@ -1241,14 +1270,24 @@ gap:8px;
 
 .ampyan-section-head h2{
 font-size:20px;
+overflow-wrap:anywhere;
 }
 
 .ampyan-news-card{
 min-height:auto;
+max-width:100%;
 }
 
 .ampyan-news-card img{
 height:150px;
+}
+
+.ampyan-news-card strong,
+.ampyan-news-card p,
+.ampyan-thread-card strong,
+.ampyan-thread-card small{
+overflow-wrap:anywhere;
+word-break:break-word;
 }
 
 .ampyan-thread-card{

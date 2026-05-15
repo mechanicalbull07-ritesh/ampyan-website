@@ -64,6 +64,27 @@ transition: transform 0.2s ease, box-shadow 0.3s ease;
         0 0 140px rgba(255,0,0,0.5);
 }
 
+@media(max-width:720px){
+.ai-orb{
+    width:54px;
+    height:54px;
+    right:16px;
+    bottom:78px;
+    box-shadow:0 0 22px rgba(255,0,0,0.55);
+}
+
+.ai-text{
+    font-size:13px;
+}
+
+.ai-chatbox{
+    width:calc(100% - 24px);
+    right:12px;
+    bottom:142px;
+    max-height:62vh;
+}
+}
+
 /* Animations */
 
 @keyframes floatOrb {
