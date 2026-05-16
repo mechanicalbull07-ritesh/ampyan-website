@@ -272,7 +272,9 @@ def save_uploaded_image(image_file, folder, prefix):
 def inject_admin_emails():
     return dict(ADMIN_EMAILS=ADMIN_EMAILS)
 
-def static_image_url_if_exists(folder, filename):
+def static_image_url_if_exists(folder, filename, fallback=None):
+    if not filename and fallback:
+        filename = fallback
     if not filename:
         return None
 
@@ -388,7 +390,11 @@ def story_response(title, subtitle, body, footer="Read full on AMPYAN", source_u
 @app.context_processor
 def inject_image_helpers():
     return dict(
-        news_image_url=lambda filename: static_image_url_if_exists("news_images", filename),
+        news_image_url=lambda filename: static_image_url_if_exists(
+            "news_images",
+            filename,
+            fallback="AMPYAN_-_Powering_Intelligent_Mobility.png",
+        ),
         profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename)
     )
     
@@ -1591,7 +1597,11 @@ def news_detail(news_id):
     news = News.query.get_or_404(news_id)
     news.reply_threads = [reply for reply in news.replies if reply.parent_id is None]
     news.reply_count = len(news.replies)
-    image_url = static_image_url_if_exists("news_images", news.image)
+    image_url = static_image_url_if_exists(
+        "news_images",
+        news.image,
+        fallback="AMPYAN_-_Powering_Intelligent_Mobility.png",
+    )
     meta_image = (
         url_for("static", filename=image_url.replace("/static/", "", 1), _external=True)
         if image_url

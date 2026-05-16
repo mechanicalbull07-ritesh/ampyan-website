@@ -32,7 +32,9 @@ def _request(method, path, **kwargs):
         return False
 
 
-def _absolute_static_url(folder, filename):
+def _absolute_static_url(folder, filename, fallback=None):
+    if not filename and fallback:
+        filename = fallback
     if not filename:
         return ""
     return url_for("static", filename=f"{folder}/{filename}", _external=True)
@@ -50,7 +52,11 @@ def sync_news_to_app(news):
         "body": body,
         "category": "Auto",
         "source": "AMPYAN",
-        "image_url": _absolute_static_url("news_images", news.image),
+        "image_url": _absolute_static_url(
+            "news_images",
+            news.image,
+            fallback="AMPYAN_-_Powering_Intelligent_Mobility.png",
+        ),
         "website_url": url_for("news_detail", news_id=news.id, _external=True),
         "published_at": news.created_at.isoformat() + "Z" if news.created_at else "",
     }
