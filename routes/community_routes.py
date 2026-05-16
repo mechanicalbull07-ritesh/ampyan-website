@@ -21,7 +21,7 @@ class RemoteSyncError(Exception):
 
 
 def _ampyan_api_base_url():
-    return (os.environ.get("AMPYAN_API_BASE_URL") or "https://api.ampyan.com").rstrip("/")
+    return (os.environ.get("AMPYAN_API_BASE_URL") or "https://ampyan-api.onrender.com").rstrip("/")
 
 
 def _ampyan_api_request(path, method="GET", payload=None, timeout=3):
