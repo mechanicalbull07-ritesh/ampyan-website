@@ -6,7 +6,7 @@ from flask_login import login_required, current_user
 from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEvent, MechanicProfile, MechanicReview, Car
 from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
 from services.garage_network_service import refresh_mechanic_reputation
-from services.app_api_sync import delete_garage_from_app, sync_garage_to_app
+from services.app_api_sync import delete_garage_from_app, sync_garage_to_app, sync_news_to_app
 
 admin_bp = Blueprint("admin", __name__)
 IST_OFFSET = timedelta(hours=5, minutes=30)
@@ -767,6 +767,25 @@ def reject_garage(mechanic_id):
     delete_garage_from_app(mechanic.id)
 
     flash("Garage moved back to pending state.")
+    return redirect("/admin")
+
+
+@admin_bp.route("/admin/sync-app-content")
+@login_required
+def sync_app_content():
+    if not _require_admin():
+        return "Access Denied"
+
+    news_items = News.query.order_by(News.id.asc()).all()
+    verified_mechanics = MechanicProfile.query.filter_by(is_verified=True).all()
+
+    news_synced = sum(1 for item in news_items if sync_news_to_app(item))
+    garages_synced = sum(1 for mechanic in verified_mechanics if sync_garage_to_app(mechanic))
+
+    flash(
+        f"App sync completed: {news_synced}/{len(news_items)} news, "
+        f"{garages_synced}/{len(verified_mechanics)} garages."
+    )
     return redirect("/admin")
 
 
