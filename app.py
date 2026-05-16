@@ -62,6 +62,7 @@ print("Admin routes loaded")
 # ================= SERVICES =================
 from services.email_service import send_email
 print("Email service loaded")
+from services.app_api_sync import delete_news_from_app, sync_news_to_app
 
 # ================= OTHER IMPORTS =================
 from flask import session
@@ -1743,6 +1744,7 @@ def create_news():
 
         db.session.add(news)
         db.session.commit()
+        sync_news_to_app(news)
 
         return redirect("/news")
 
@@ -1776,6 +1778,7 @@ def edit_news(news_id):
             news.image = filename
 
         db.session.commit()
+        sync_news_to_app(news)
 
         return redirect("/news")
 
@@ -1793,6 +1796,7 @@ def delete_news(news_id):
 
     db.session.delete(news)
     db.session.commit()
+    delete_news_from_app(news_id)
 
     return redirect("/news")
 # ================= LEGAL PAGES =================

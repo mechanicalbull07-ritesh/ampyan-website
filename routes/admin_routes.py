@@ -6,6 +6,7 @@ from flask_login import login_required, current_user
 from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEvent, MechanicProfile, MechanicReview, Car
 from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
 from services.garage_network_service import refresh_mechanic_reputation
+from services.app_api_sync import delete_garage_from_app, sync_garage_to_app
 
 admin_bp = Blueprint("admin", __name__)
 IST_OFFSET = timedelta(hours=5, minutes=30)
@@ -745,6 +746,7 @@ def approve_garage(mechanic_id):
     mechanic.is_verified = True
     refresh_mechanic_reputation(mechanic)
     db.session.commit()
+    sync_garage_to_app(mechanic)
 
     flash("Garage approved successfully.")
     return redirect("/admin")
@@ -762,6 +764,7 @@ def reject_garage(mechanic_id):
     mechanic.is_featured = False
     refresh_mechanic_reputation(mechanic)
     db.session.commit()
+    delete_garage_from_app(mechanic.id)
 
     flash("Garage moved back to pending state.")
     return redirect("/admin")

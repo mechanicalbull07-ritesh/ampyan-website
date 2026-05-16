@@ -12,6 +12,7 @@ from services.garage_network_service import (
     trust_level_from_score,
     refresh_mechanic_reputation,
 )
+from services.app_api_sync import sync_garage_to_app
 from services.india_car_catalog import catalog_image_path
 
 main_bp = Blueprint("main", __name__)
@@ -553,6 +554,7 @@ def register_garage():
         db.session.add(profile)
         refresh_mechanic_reputation(profile)
         db.session.commit()
+        sync_garage_to_app(profile)
 
         flash("Garage registered successfully. Your profile is now waiting for admin approval.")
         return redirect(url_for("main.garage_network"))
