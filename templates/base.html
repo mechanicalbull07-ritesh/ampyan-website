@@ -191,7 +191,7 @@ AMPYAN
 
 <a href="/news">News</a>
 <a href="/videos">Videos</a>
-<a href="/garage-network">Garage Network</a>
+<a href="/garages">Garages</a>
 <a href="/marketplace?type=buy">Car Buy</a>
 <a href="/marketplace?type=sell">Car Sell</a>
 <a href="/marketplace/inbox">Marketplace Inbox</a>
@@ -208,10 +208,10 @@ AMPYAN
 
 <div class="nav-right">
 
-<!-- MY GARAGE -->
+<!-- MY CAR HEALTH -->
 
-<a href="/garage-dashboard" class="nav-link highlight-garage">
-<i class="fa-solid fa-car"></i> My Garage
+<a href="/my-car-health" class="nav-link highlight-garage">
+<i class="fa-solid fa-heart-pulse"></i> My Car Health
 </a>
 
 <!-- NOTIFICATION -->
@@ -255,11 +255,12 @@ AMPYAN
 <i class="fa-solid fa-user"></i> Profile
 </a>
 
-<a href="/dashboard">
 {% if current_user.role == "mechanic" %}
+<a href="/mechanic-dashboard">
 <i class="fa-solid fa-screwdriver-wrench"></i> Dashboard
 {% else %}
-<i class="fa-solid fa-car"></i> My Garage
+<a href="/my-car-health">
+<i class="fa-solid fa-heart-pulse"></i> My Car Health
 {% endif %}
 </a>
 

@@ -5,13 +5,13 @@
 <section class="page-shell">
 <div class="page-header">
 <div class="page-header-copy">
-<p class="page-kicker">AMPYAN Garage Network</p>
-<h1 class="page-title">Trusted Mechanics & Local Garages</h1>
-<p class="page-subtitle">Discover local workshops, compare trust level and let mechanics grow inside the AMPYAN automotive ecosystem.</p>
+<p class="page-kicker">AMPYAN Garages</p>
+<h1 class="page-title">Nearby Garages & Mechanics</h1>
+<p class="page-subtitle">Find nearby workshops, compare trust level and register mechanic profiles inside the AMPYAN ecosystem.</p>
 </div>
 
 <div class="ui-button-row">
-<a href="/garage-network/register" class="auth-button">Register Garage</a>
+<a href="/garages/register" class="auth-button">Register Mechanic / Garage</a>
 </div>
 </div>
 
@@ -19,9 +19,9 @@
 <form method="GET" class="filter-bar">
 <input type="text" name="city" value="{{ selected_city }}" placeholder="Search by city">
 <button type="submit">Find Garages</button>
-<a href="/garage-network?view=map{% if selected_city %}&city={{ selected_city }}{% endif %}" class="sort-btn {% if city_mode == 'map' %}active-sort{% endif %}">Map View</a>
-<a href="/garage-network?view=list{% if selected_city %}&city={{ selected_city }}{% endif %}" class="sort-btn {% if city_mode != 'map' %}active-sort{% endif %}">List View</a>
-<a href="/garage-network" class="sort-btn">Reset</a>
+<a href="/garages?view=map{% if selected_city %}&city={{ selected_city }}{% endif %}" class="sort-btn {% if city_mode == 'map' %}active-sort{% endif %}">Map View</a>
+<a href="/garages?view=list{% if selected_city %}&city={{ selected_city }}{% endif %}" class="sort-btn {% if city_mode != 'map' %}active-sort{% endif %}">List View</a>
+<a href="/garages" class="sort-btn">Reset</a>
 </form>
 </div>
 
@@ -30,7 +30,7 @@
 <h2 class="section-heading">City Discovery</h2>
 <div class="city-cluster-grid">
 {% for city_name, city_mechanics in city_groups.items() %}
-<a href="/garage-network?city={{ city_name }}" class="city-cluster-card">
+<a href="/garages?city={{ city_name }}" class="city-cluster-card">
 <span>{{ city_name }}</span>
 <strong>{{ city_mechanics|length }} garages</strong>
 <p>Open local network</p>
@@ -55,7 +55,7 @@
 <p class="garage-owner-name">{{ mechanic.owner_name }}</p>
 <p class="section-copy">{{ mechanic.address or mechanic.city }}</p>
 <div class="ui-button-row">
-<a href="/garage-network/{{ mechanic.id }}" class="auth-button">View Profile</a>
+<a href="/garages/{{ mechanic.id }}" class="auth-button">View Profile</a>
 </div>
 </div>
 </article>
@@ -101,7 +101,7 @@
 {% endif %}
 </div>
 <div class="ui-button-row garage-card-actions">
-<a href="/garage-network/{{ mechanic.id }}" class="auth-button">View Profile</a>
+<a href="/garages/{{ mechanic.id }}" class="auth-button">View Profile</a>
 </div>
 </article>
 {% endfor %}

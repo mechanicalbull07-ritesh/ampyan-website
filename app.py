@@ -2546,7 +2546,10 @@ def sitemap_xml():
     <loc>https://ampyan.com/diagnosis</loc>
   </url>
   <url>
-    <loc>https://ampyan.com/mygarage</loc>
+    <loc>https://ampyan.com/my-car-health</loc>
+  </url>
+  <url>
+    <loc>https://ampyan.com/garages</loc>
   </url>
 </urlset>
 """
@@ -2559,6 +2562,7 @@ def diagnosis_alias():
 
 
 @app.route("/mygarage")
+@app.route("/my-car-health")
 def mygarage_alias():
     return redirect("/garage-dashboard", code=301)
 

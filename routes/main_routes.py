@@ -186,7 +186,7 @@ def home():
 
     service_tips = [
         "Check tyre pressure monthly and before highway drives.",
-        "Keep service bills and odometer readings in My Garage.",
+        "Keep service bills and odometer readings in My Car Health.",
         "Do not approve add-on cleaning jobs without a clear reason.",
         "Inspect battery health before summer and long trips.",
     ]
@@ -320,6 +320,7 @@ def leaderboard():
     return render_template("leaderboard.html", users=users)
 
 
+@main_bp.route("/garages")
 @main_bp.route("/garage-network")
 def garage_network():
 
@@ -392,6 +393,7 @@ def api_garage_detail(mechanic_id):
     })
 
 
+@main_bp.route("/garages/<int:mechanic_id>")
 @main_bp.route("/garage-network/<int:mechanic_id>")
 def garage_profile(mechanic_id):
 
@@ -419,6 +421,7 @@ def garage_profile(mechanic_id):
     )
 
 
+@main_bp.route("/garages/<int:mechanic_id>/review", methods=["POST"])
 @main_bp.route("/garage-network/<int:mechanic_id>/review", methods=["POST"])
 @login_required
 def submit_garage_review(mechanic_id):
@@ -494,6 +497,7 @@ def mechanic_dashboard():
     )
 
 
+@main_bp.route("/garages/register", methods=["GET", "POST"])
 @main_bp.route("/garage-network/register", methods=["GET", "POST"])
 def register_garage():
 

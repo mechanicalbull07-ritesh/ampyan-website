@@ -50,6 +50,7 @@ def garage():
 
 # ================= GARAGE DASHBOARD =================
 
+@garage_bp.route("/my-car-health")
 @garage_bp.route("/garage-dashboard")
 @login_required
 def garage_dashboard():

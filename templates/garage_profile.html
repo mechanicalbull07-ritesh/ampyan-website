@@ -51,7 +51,7 @@
 </div>
 
 {% if current_user.is_authenticated and current_user.role != "mechanic" %}
-<form method="POST" action="/garage-network/{{ mechanic.id }}/review" class="mechanic-review-form">
+<form method="POST" action="/garages/{{ mechanic.id }}/review" class="mechanic-review-form">
 <h3 class="section-heading">Rate This Garage</h3>
 <select name="rating" class="profile-input" required>
 <option value="">Choose rating</option>
