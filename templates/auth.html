@@ -36,7 +36,7 @@
 
         <!-- Google Login -->
         <div class="google-login">
-            <a href="/login/google" class="google-btn">
+            <a href="{{ url_for('google_login', next=request.args.get('next')) if request.args.get('next') else url_for('google_login') }}" class="google-btn">
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google">
                 Continue with Google
             </a>

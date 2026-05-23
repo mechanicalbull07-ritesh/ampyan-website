@@ -766,6 +766,19 @@ def commit_new_user_with_id_fallback(user):
         db.session.add(user)
         db.session.commit()
 
+
+def is_safe_local_redirect(target):
+    if not target:
+        return False
+    parsed = urlparse(target)
+    return not parsed.netloc and parsed.path.startswith("/") and not parsed.path.startswith("//")
+
+
+def remember_login_next(target):
+    if is_safe_local_redirect(target):
+        session["login_next"] = target
+
+
 # ================= LOGIN =================
 
 @login_manager.user_loader
@@ -779,6 +792,8 @@ def load_user(user_id):
 
 @app.route("/login/google")
 def google_login():
+    remember_login_next(request.args.get("next"))
+
     missing_env = [
         key for key in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "SECRET_KEY")
         if not os.environ.get(key)
@@ -870,6 +885,9 @@ def google_callback():
 
         login_user(user)
 
+        next_page = session.pop("login_next", None)
+        if is_safe_local_redirect(next_page):
+            return redirect(next_page)
         return redirect("/community")
     except Exception as e:
         db.session.rollback()
