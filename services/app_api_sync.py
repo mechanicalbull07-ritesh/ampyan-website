@@ -11,6 +11,11 @@ APP_API_BASE_URL = os.environ.get(
 APP_API_TIMEOUT_SECONDS = float(os.environ.get("APP_API_TIMEOUT_SECONDS", "3"))
 APP_NEWS_ID_OFFSET = int(os.environ.get("APP_NEWS_ID_OFFSET", "100000"))
 APP_GARAGE_ID_OFFSET = int(os.environ.get("APP_GARAGE_ID_OFFSET", "100000"))
+NEWS_CATEGORY_LABELS = {
+    "auto-news": "Auto News",
+    "car-review": "Car Review",
+    "tips-and-tricks": "Tips and Tricks",
+}
 
 
 def _request(method, path, **kwargs):
@@ -50,7 +55,7 @@ def sync_news_to_app(news):
         "title": news.title or "",
         "summary": summary,
         "body": body,
-        "category": "Auto",
+        "category": NEWS_CATEGORY_LABELS.get(getattr(news, "category", None), "Auto News"),
         "source": "AMPYAN",
         "image_url": _absolute_static_url(
             "news_images",

@@ -22,6 +22,13 @@ style="height:200px"
 required
 >{{ news.content }}</textarea>
 
+<label>Category</label>
+<select name="category" class="auth-input" required>
+{% for key, label in news_categories %}
+<option value="{{ key }}" {% if news.category == key %}selected{% endif %}>{{ label }}</option>
+{% endfor %}
+</select>
+
 <label>Change Image</label>
 
 <input

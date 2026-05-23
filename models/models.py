@@ -198,6 +198,8 @@ class News(db.Model):
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
 
+    category = db.Column(db.String(40), default="auto-news")
+
     image = db.Column(db.String(200))
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)

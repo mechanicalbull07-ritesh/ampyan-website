@@ -395,7 +395,8 @@ def inject_image_helpers():
             filename,
             fallback="AMPYAN_-_Powering_Intelligent_Mobility.png",
         ),
-        profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename)
+        profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename),
+        news_category_label=news_category_label,
     )
     
 from flask_mail import Mail, Message
@@ -1604,10 +1605,52 @@ def symptom_suggest():
 
 # ================= NEWS =================
 
+NEWS_CATEGORIES = [
+    ("auto-news", "Auto News"),
+    ("car-review", "Car Review"),
+    ("tips-and-tricks", "Tips and Tricks"),
+]
+NEWS_CATEGORY_LABELS = dict(NEWS_CATEGORIES)
+
+
+def normalize_news_category(value):
+    normalized = (value or "").strip().lower().replace("_", "-")
+    aliases = {
+        "auto": "auto-news",
+        "automotive": "auto-news",
+        "automotive-news": "auto-news",
+        "news": "auto-news",
+        "review": "car-review",
+        "car-reviews": "car-review",
+        "reviews": "car-review",
+        "tips": "tips-and-tricks",
+        "tips-tricks": "tips-and-tricks",
+        "tips-and-trick": "tips-and-tricks",
+        "tips-and-tricks": "tips-and-tricks",
+    }
+    normalized = aliases.get(normalized, normalized)
+    if normalized not in NEWS_CATEGORY_LABELS:
+        return "auto-news"
+    return normalized
+
+
+def news_category_label(value):
+    return NEWS_CATEGORY_LABELS.get(normalize_news_category(value), "Auto News")
+
+
 @app.route("/news")
 def news_list():
-    news_items = News.query.order_by(News.id.desc()).limit(50).all()
-    return render_template("news.html", news_items=news_items)
+    active_category = normalize_news_category(request.args.get("category")) if request.args.get("category") else ""
+    query = News.query
+    if active_category:
+        query = query.filter(News.category == active_category)
+    news_items = query.order_by(News.id.desc()).limit(50).all()
+    return render_template(
+        "news.html",
+        news_items=news_items,
+        news_categories=NEWS_CATEGORIES,
+        active_category=active_category,
+    )
 
 
 @app.route("/news/<int:news_id>")
@@ -1767,6 +1810,7 @@ def create_news():
         news = News(
             title=request.form["title"],
             content=request.form["content"],
+            category=normalize_news_category(request.form.get("category")),
             image=filename
         )
 
@@ -1776,7 +1820,7 @@ def create_news():
 
         return redirect("/news")
 
-    return render_template("create_news.html")
+    return render_template("create_news.html", news_categories=NEWS_CATEGORIES)
 
 
 import requests
@@ -1795,6 +1839,7 @@ def edit_news(news_id):
 
         news.title = request.form["title"]
         news.content = request.form["content"]
+        news.category = normalize_news_category(request.form.get("category"))
 
         image_file = request.files.get("image")
 
@@ -1810,7 +1855,8 @@ def edit_news(news_id):
 
         return redirect("/news")
 
-    return render_template("edit_news.html", news=news)
+    news.category = normalize_news_category(getattr(news, "category", None))
+    return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES)
 # ================= DELETE NEWS =================
 
 @app.route("/admin/news/delete/<int:news_id>")
@@ -2188,6 +2234,19 @@ def ensure_post_schema():
     db.session.commit()
 
 
+def ensure_news_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("news"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("news")}
+    if "category" not in existing_columns:
+        db.session.execute(text("ALTER TABLE news ADD COLUMN category VARCHAR(40) DEFAULT 'auto-news'"))
+
+    db.session.execute(text("UPDATE news SET category = 'auto-news' WHERE category IS NULL OR category = ''"))
+    db.session.commit()
+
+
 def ensure_car_community_seed():
     seed_communities = [
         ("General Owners", "General car ownership questions, buying advice and everyday driving help."),
@@ -2366,6 +2425,7 @@ def initialize_database():
             ensure_website_visit_schema()
             ensure_reply_schema()
             ensure_post_schema()
+            ensure_news_schema()
             ensure_car_community_seed()
         except Exception:
             db.session.rollback()

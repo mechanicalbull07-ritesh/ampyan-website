@@ -15,6 +15,13 @@
 {% endif %}
 </div>
 
+<div class="news-filter-row">
+<a href="{{ url_for('news_list') }}" class="news-filter-chip {% if not active_category %}active{% endif %}">All</a>
+{% for key, label in news_categories %}
+<a href="{{ url_for('news_list', category=key) }}" class="news-filter-chip {% if active_category == key %}active{% endif %}">{{ label }}</a>
+{% endfor %}
+</div>
+
 {% if news_items %}
 <div class="news-grid">
 {% for news in news_items %}
@@ -26,6 +33,7 @@
 {% endif %}
 
 <div class="news-card-body">
+<span class="news-category-badge">{{ news_category_label(news.category) }}</span>
 <h3 class="news-card-title">{{ news.title }}</h3>
 <p class="news-card-date">{{ news.created_at.strftime('%d %b %Y') }}</p>
 </div>
@@ -42,7 +50,7 @@
 {% endfor %}
 </div>
 {% else %}
-<div class="empty-state">No news available right now.</div>
+<div class="empty-state">No news available in this category right now.</div>
 {% endif %}
 
 </section>

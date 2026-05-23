@@ -23,6 +23,13 @@ style="height:200px"
 required
 ></textarea>
 
+<label>Category</label>
+<select name="category" class="auth-input" required>
+{% for key, label in news_categories %}
+<option value="{{ key }}">{{ label }}</option>
+{% endfor %}
+</select>
+
 <label>Upload Image</label>
 
 <input

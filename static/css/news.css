@@ -160,3 +160,41 @@ border-radius:8px;
 text-decoration:none;
 font-weight:600;
 }
+
+.news-filter-row{
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+margin:22px 0 8px;
+}
+
+.news-filter-chip{
+display:inline-flex;
+align-items:center;
+justify-content:center;
+padding:9px 14px;
+border:1px solid rgba(255,90,54,0.35);
+border-radius:999px;
+color:#f4f4f5;
+text-decoration:none;
+background:rgba(255,255,255,0.04);
+font-weight:700;
+}
+
+.news-filter-chip:hover,
+.news-filter-chip.active{
+background:#ff3b30;
+border-color:#ff3b30;
+color:#fff;
+}
+
+.news-category-badge{
+display:inline-flex;
+margin-bottom:10px;
+padding:5px 10px;
+border-radius:999px;
+background:rgba(255,90,54,0.12);
+color:#ff6b4a;
+font-size:12px;
+font-weight:800;
+}
