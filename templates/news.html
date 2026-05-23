@@ -33,7 +33,7 @@
 {% endif %}
 
 <div class="news-card-body">
-<span class="news-category-badge">{{ news_category_label(news.category) }}</span>
+<span class="news-category-badge">{{ news_category_label(effective_news_category(news)) }}</span>
 <h3 class="news-card-title">{{ news.title }}</h3>
 <p class="news-card-date">{{ news.created_at.strftime('%d %b %Y') }}</p>
 </div>

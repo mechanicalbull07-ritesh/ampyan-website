@@ -397,6 +397,7 @@ def inject_image_helpers():
         ),
         profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename),
         news_category_label=news_category_label,
+        effective_news_category=effective_news_category,
     )
     
 from flask_mail import Mail, Message
@@ -1638,13 +1639,33 @@ def news_category_label(value):
     return NEWS_CATEGORY_LABELS.get(normalize_news_category(value), "Auto News")
 
 
+def infer_news_category(news):
+    text_value = f"{getattr(news, 'title', '')} {getattr(news, 'content', '')}".lower()
+    if any(keyword in text_value for keyword in ("review", "road test", "test drive", "pros and cons", "ownership review")):
+        return "car-review"
+    if any(keyword in text_value for keyword in ("tip", "tips", "trick", "guide", "checklist", "how to", "maintenance", "mileage", "save petrol", "fuel bills", "cooling")):
+        return "tips-and-tricks"
+    return "auto-news"
+
+
+def effective_news_category(news):
+    stored_category = normalize_news_category(getattr(news, "category", None))
+    if stored_category == "auto-news":
+        return infer_news_category(news)
+    return stored_category
+
+
 @app.route("/news")
 def news_list():
     active_category = normalize_news_category(request.args.get("category")) if request.args.get("category") else ""
-    query = News.query
+    query = News.query.order_by(News.id.desc()).limit(50)
+    news_items = query.all()
     if active_category:
-        query = query.filter(News.category == active_category)
-    news_items = query.order_by(News.id.desc()).limit(50).all()
+        news_items = [
+            news
+            for news in news_items
+            if effective_news_category(news) == active_category
+        ]
     return render_template(
         "news.html",
         news_items=news_items,

@@ -18,6 +18,22 @@ NEWS_CATEGORY_LABELS = {
 }
 
 
+def _infer_news_category(news):
+    text_value = f"{getattr(news, 'title', '')} {getattr(news, 'content', '')}".lower()
+    if any(keyword in text_value for keyword in ("review", "road test", "test drive", "pros and cons", "ownership review")):
+        return "car-review"
+    if any(keyword in text_value for keyword in ("tip", "tips", "trick", "guide", "checklist", "how to", "maintenance", "mileage", "save petrol", "fuel bills", "cooling")):
+        return "tips-and-tricks"
+    return "auto-news"
+
+
+def _effective_news_category(news):
+    category = getattr(news, "category", None) or "auto-news"
+    if category == "auto-news":
+        return _infer_news_category(news)
+    return category
+
+
 def _request(method, path, **kwargs):
     try:
         response = requests.request(
@@ -55,7 +71,7 @@ def sync_news_to_app(news):
         "title": news.title or "",
         "summary": summary,
         "body": body,
-        "category": NEWS_CATEGORY_LABELS.get(getattr(news, "category", None), "Auto News"),
+        "category": NEWS_CATEGORY_LABELS.get(_effective_news_category(news), "Auto News"),
         "source": "AMPYAN",
         "image_url": _absolute_static_url(
             "news_images",
