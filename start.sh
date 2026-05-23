@@ -13,6 +13,7 @@ if [[ "${RENDER:-}" == "true" && -z "${SECRET_KEY:-}" ]]; then
 fi
 
 echo "Starting AMPYAN website on 0.0.0.0:${PORT}"
+echo "Gunicorn workers=${WEB_CONCURRENCY:-2} threads=${GUNICORN_THREADS:-4} timeout=${GUNICORN_TIMEOUT:-120}"
 
 exec gunicorn app:app \
   --workers "${WEB_CONCURRENCY:-2}" \
