@@ -30,7 +30,7 @@ from failure_database import FAILURE_DATABASE
 print("Failure database loaded")
 
 # ================= FLASK =================
-from flask import Flask, Response, g, render_template, request, redirect, flash, url_for, jsonify, send_file
+from flask import Flask, Response, g, render_template, request, redirect, flash, url_for, jsonify, send_file, send_from_directory, abort
 from sqlalchemy import func, inspect, text
 print("Flask core loaded")
 
@@ -264,8 +264,6 @@ def save_uploaded_image(image_file, folder, prefix):
             pass
         return None
 
-    return filename
-
     compress_image(upload_path)
     return filename
 @app.context_processor
@@ -284,6 +282,13 @@ def static_image_url_if_exists(folder, filename, fallback=None):
             candidates.append(candidate)
 
     for candidate in candidates:
+        if folder == "news_images":
+            upload_folder = app.config.get("UPLOAD_FOLDER")
+            if upload_folder and os.path.isabs(upload_folder):
+                upload_path = os.path.join(upload_folder, candidate)
+                if os.path.isfile(upload_path):
+                    return url_for("uploaded_news_image", filename=candidate)
+
         relative_path = os.path.join(folder, candidate)
         absolute_path = os.path.join(app.static_folder, relative_path)
         if os.path.isfile(absolute_path):
@@ -486,7 +491,7 @@ google = oauth.register(
 )
 
 
-UPLOAD_FOLDER = "static/news_images"
+UPLOAD_FOLDER = os.environ.get("NEWS_IMAGE_UPLOAD_DIR") or "static/news_images"
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
 # POST IMAGE UPLOAD FOLDER
@@ -519,6 +524,18 @@ if not os.path.exists(PROFILE_UPLOAD):
 
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
+
+@app.route("/uploads/news/<path:filename>")
+def uploaded_news_image(filename):
+    upload_folder = app.config.get("UPLOAD_FOLDER")
+    if not upload_folder or not os.path.isabs(upload_folder):
+        abort(404)
+
+    safe_filename = secure_filename(os.path.basename(filename))
+    if not safe_filename:
+        abort(404)
+
+    return send_from_directory(upload_folder, safe_filename)
 
 conversation_memory = defaultdict(list)
 database_init_lock = threading.Lock()
