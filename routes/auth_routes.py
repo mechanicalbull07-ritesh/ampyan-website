@@ -185,6 +185,10 @@ def login():
         user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
 
         if user and check_password_hash(user.password, password):
+            if getattr(user, "is_managed_persona", False):
+                flash("This account is managed by AMPYAN admin and cannot login directly.")
+                return redirect(url_for("auth.login"))
+
             if _apply_admin_policy(user):
                 db.session.commit()
 
@@ -220,6 +224,9 @@ def api_login():
     user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
     if not user or not check_password_hash(user.password, password):
         return jsonify({"status": "error", "message": "invalid credentials"}), 401
+
+    if getattr(user, "is_managed_persona", False):
+        return jsonify({"status": "error", "message": "managed personas cannot login directly"}), 403
 
     if _apply_admin_policy(user):
         db.session.commit()

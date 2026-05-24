@@ -52,6 +52,11 @@ class User(UserMixin, db.Model):
     contributor_score = db.Column(db.Integer, default=0)
     badge = db.Column(db.String(50), default="New Member")
 
+    # admin-managed community personas
+    is_managed_persona = db.Column(db.Boolean, default=False)
+    managed_by_admin_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    managed_note = db.Column(db.String(255))
+
 
 # ================= MECHANIC / GARAGE =================
 

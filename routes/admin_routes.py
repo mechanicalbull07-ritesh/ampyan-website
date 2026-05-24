@@ -1,12 +1,22 @@
 from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta
+import secrets
 
-from flask import Blueprint, current_app, render_template, redirect, flash, request
+from flask import Blueprint, current_app, render_template, redirect, flash, request, url_for
 from flask_login import login_required, current_user
-from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEvent, MechanicProfile, MechanicReview, Car
+from werkzeug.security import generate_password_hash
+
+from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEvent, MechanicProfile, MechanicReview, Car, CarCommunity
 from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
 from services.garage_network_service import refresh_mechanic_reputation
 from services.app_api_sync import delete_garage_from_app, sync_garage_to_app, sync_news_to_app
+from routes.community_routes import (
+    _find_remote_post_id_for_website_post,
+    _get_or_create_car_community,
+    _safe_remote_call,
+    _sync_user_profile,
+    refresh_author_stats,
+)
 
 admin_bp = Blueprint("admin", __name__)
 IST_OFFSET = timedelta(hours=5, minutes=30)
@@ -166,6 +176,35 @@ def _require_admin():
         return False
     email = (current_user.email or "").strip().lower()
     return email in ADMIN_EMAIL_SET
+
+
+def _slugify_persona_username(value):
+    cleaned = "".join(char if char.isalnum() or char in {"_", "-"} else "_" for char in (value or "").strip())
+    return cleaned.strip("_-")[:80]
+
+
+def _commit_new_user_with_id_fallback(user):
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("Managed persona insert needed id fallback: %s", exc.__class__.__name__)
+        message = str(exc).lower()
+        if "null value" not in message or "id" not in message:
+            raise
+
+        next_id = (db.session.query(db.func.max(User.id)).scalar() or 0) + 1
+        user.id = next_id
+        db.session.add(user)
+        db.session.commit()
+
+
+def _managed_persona_or_none(user_id):
+    if not user_id:
+        return None
+    return User.query.filter_by(id=user_id, is_managed_persona=True).first()
 
 
 def _build_admin_analytics_context(section="overview"):
@@ -600,6 +639,14 @@ def admin_dashboard():
     recent_posts = posts[:8]
     recent_cars = cars[:12]
     banned_users = [user for user in users if user.is_banned][:8]
+    managed_personas = (
+        User.query
+        .filter_by(is_managed_persona=True)
+        .order_by(User.id.desc())
+        .limit(60)
+        .all()
+    )
+    car_communities = CarCommunity.query.order_by(CarCommunity.name.asc()).all()
 
     return render_template(
         "admin.html",
@@ -649,8 +696,184 @@ def admin_dashboard():
         recent_users=recent_users,
         recent_posts=recent_posts,
         recent_cars=recent_cars,
-        banned_users=banned_users
+        banned_users=banned_users,
+        managed_personas=managed_personas,
+        car_communities=car_communities
     )
+
+
+# ================= COMMUNITY STUDIO =================
+
+@admin_bp.route("/admin/community/personas", methods=["POST"])
+@login_required
+def create_managed_persona():
+    if not _require_admin():
+        return "Access Denied", 403
+
+    username = _slugify_persona_username(request.form.get("username"))
+    city = (request.form.get("city") or "").strip()[:100]
+    badge = (request.form.get("badge") or "Community Member").strip()[:50]
+    note = (request.form.get("managed_note") or "").strip()[:255]
+    email = (request.form.get("email") or "").strip().lower()
+
+    if not username:
+        flash("Persona username is required.")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    if User.query.filter_by(username=username).first():
+        flash("That username already exists.")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    if not email:
+        email_slug = username.lower().replace("_", "-")
+        email = f"{email_slug}-{secrets.token_hex(4)}@community.ampyan.local"
+    if User.query.filter_by(email=email).first():
+        flash("That persona email already exists.")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    persona = User(
+        username=username,
+        email=email,
+        mobile="",
+        password=generate_password_hash(secrets.token_urlsafe(32)),
+        role="user",
+        email_verified=True,
+        is_banned=False,
+        city=city,
+        badge=badge or "Community Member",
+        reputation=0,
+        posts_count=0,
+        helpful_answers=0,
+        contributor_score=0,
+        is_managed_persona=True,
+        managed_by_admin_id=current_user.id,
+        managed_note=note,
+    )
+
+    try:
+        _commit_new_user_with_id_fallback(persona)
+        flash(f"Managed community persona '{persona.username}' created.")
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("Managed persona create failed: %s", exc.__class__.__name__)
+        flash("Persona could not be created.")
+    return redirect(url_for("admin.admin_dashboard"))
+
+
+@admin_bp.route("/admin/community/post-as", methods=["POST"])
+@login_required
+def admin_create_post_as_persona():
+    if not _require_admin():
+        return "Access Denied", 403
+
+    author = _managed_persona_or_none(request.form.get("persona_id", type=int))
+    title = (request.form.get("title") or "").strip()
+    content = (request.form.get("content") or "").strip()
+    community_id = request.form.get("community_id", type=int)
+    new_community_name = (request.form.get("new_community_name") or "").strip()
+
+    if not author:
+        flash("Select a managed persona first.")
+        return redirect(url_for("admin.admin_dashboard"))
+    if not title or not content:
+        flash("Post title and content are required.")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    car_community = None
+    if new_community_name:
+        car_community = _get_or_create_car_community(new_community_name, user=current_user)
+    elif community_id:
+        car_community = CarCommunity.query.get(community_id)
+
+    try:
+        post = Post(
+            title=title[:200],
+            content=content,
+            user_id=author.id,
+            community_id=car_community.id if car_community else None,
+        )
+        db.session.add(post)
+        db.session.flush()
+        refresh_author_stats(author)
+        _sync_user_profile(author)
+        _safe_remote_call(
+            "/community/posts",
+            method="POST",
+            payload={
+                "source": "website",
+                "external_id": f"web-post-{post.id}",
+                "email": author.email,
+                "fullName": author.username,
+                "mobile": author.mobile or "",
+                "location": author.city or "Website",
+                "text": f"{post.title}\n\n{post.content}",
+                "community": car_community.name if car_community else "General Community",
+            },
+        )
+        db.session.commit()
+        flash(f"Post published as {author.username}.")
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("Admin persona post failed: %s", exc.__class__.__name__)
+        flash("Post could not be published.")
+    return redirect(url_for("admin.admin_dashboard"))
+
+
+@admin_bp.route("/admin/community/reply-as", methods=["POST"])
+@login_required
+def admin_reply_as_persona():
+    if not _require_admin():
+        return "Access Denied", 403
+
+    author = _managed_persona_or_none(request.form.get("persona_id", type=int))
+    post_id = request.form.get("post_id", type=int)
+    parent_id = request.form.get("parent_id", type=int)
+    content = (request.form.get("content") or "").strip()
+
+    post = Post.query.get(post_id) if post_id else None
+    if not author:
+        flash("Select a managed persona first.")
+        return redirect(url_for("admin.admin_dashboard"))
+    if not post:
+        flash("Select a valid post.")
+        return redirect(url_for("admin.admin_dashboard"))
+    if not content:
+        flash("Reply text is required.")
+        return redirect(url_for("admin.admin_dashboard"))
+
+    if parent_id and not Comment.query.filter_by(id=parent_id, post_id=post.id).first():
+        parent_id = None
+
+    try:
+        comment = Comment(content=content, user_id=author.id, post_id=post.id, parent_id=parent_id)
+        db.session.add(comment)
+        db.session.flush()
+        refresh_author_stats(author)
+        _sync_user_profile(author)
+
+        remote_post_id = _find_remote_post_id_for_website_post(post.id)
+        if remote_post_id:
+            _safe_remote_call(
+                f"/community/posts/{remote_post_id}/replies",
+                method="POST",
+                payload={
+                    "source": "website",
+                    "external_id": f"web-reply-{comment.id}",
+                    "email": author.email,
+                    "fullName": author.username,
+                    "mobile": author.mobile or "",
+                    "location": author.city or "Website",
+                    "text": content,
+                },
+            )
+
+        db.session.commit()
+        flash(f"Reply added as {author.username}.")
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("Admin persona reply failed: %s", exc.__class__.__name__)
+        flash("Reply could not be added.")
+    return redirect(url_for("admin.admin_dashboard"))
 
 
 # ================= DELETE USER =================

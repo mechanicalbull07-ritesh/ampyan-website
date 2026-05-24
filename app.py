@@ -2173,6 +2173,9 @@ def ensure_user_schema():
         "helpful_answers": "INTEGER DEFAULT 0",
         "contributor_score": "INTEGER DEFAULT 0",
         "badge": f"{string_type}(50) DEFAULT 'New Member'",
+        "is_managed_persona": f"{bool_type} DEFAULT FALSE",
+        "managed_by_admin_id": "INTEGER",
+        "managed_note": f"{string_type}(255)",
     }
 
     for column_name, column_definition in column_definitions.items():
