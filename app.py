@@ -456,10 +456,18 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 engine_options = {
     "pool_pre_ping": True,
     "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", "280")),
+    "pool_timeout": int(os.environ.get("DB_POOL_TIMEOUT", "2")),
 }
 if database_url and database_url.startswith("postgresql://"):
     engine_options["connect_args"] = {
-        "connect_timeout": int(os.environ.get("DB_CONNECT_TIMEOUT", "5")),
+        "connect_timeout": int(os.environ.get("DB_CONNECT_TIMEOUT", "2")),
+        "options": " ".join(
+            [
+                f"-c statement_timeout={int(os.environ.get('DB_STATEMENT_TIMEOUT_MS', '2000'))}",
+                f"-c lock_timeout={int(os.environ.get('DB_LOCK_TIMEOUT_MS', '1000'))}",
+                f"-c idle_in_transaction_session_timeout={int(os.environ.get('DB_IDLE_TX_TIMEOUT_MS', '5000'))}",
+            ]
+        ),
     }
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
 db.init_app(app)
@@ -2630,8 +2638,8 @@ def ensure_database_ready():
         return
     if request.path.startswith("/static") or "." in request.path.rsplit("/", 1)[-1]:
         return
-    database_ready_for_queries()
-    trigger_database_init_async(source="before_request")
+    if os.environ.get("ENABLE_REQUEST_DB_INIT", "").lower() == "true":
+        trigger_database_init_async(source="before_request")
     return None
 
 
