@@ -2473,14 +2473,14 @@ def initialize_database():
         return
 
     if not database_init_lock.acquire(blocking=False):
-        app.logger.info("Database initialization already running; skipping duplicate request.")
+        app.logger.info("db_init_already_running")
         return
 
     try:
         if database_initialized:
             return
 
-        app.logger.info("Database initialization started.")
+        app.logger.info("db_init_started")
         try:
             db.create_all()
             ensure_user_schema()
@@ -2492,7 +2492,7 @@ def initialize_database():
             ensure_car_community_seed()
         except Exception:
             db.session.rollback()
-            app.logger.exception("Database initialization failed.")
+            app.logger.exception("db_init_failed")
             raise
 
         admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
@@ -2515,21 +2515,21 @@ def initialize_database():
             db.session.commit()
 
         database_initialized = True
-        app.logger.info("Database initialization finished.")
+        app.logger.info("db_init_completed")
     finally:
         database_init_lock.release()
 
 
 @app.before_request
 def ensure_database_ready():
-    if request.endpoint in {"health", "healthz", "version"} or request.path in {"/health", "/healthz", "/version"}:
+    if request.endpoint in {"health", "healthz", "ready", "version"} or request.path in {"/health", "/healthz", "/ready", "/version"}:
         return
     if request.path.startswith("/static") or "." in request.path.rsplit("/", 1)[-1]:
         return
     try:
         initialize_database()
         if not database_initialized:
-            return "Service starting. Please try again shortly.", 503
+            return None
     except Exception as e:
         db.session.rollback()
         app.logger.warning("Database initialization skipped: %s", e.__class__.__name__)
@@ -2625,6 +2625,19 @@ def health():
 @app.route("/healthz")
 def healthz():
     return "ok"
+
+
+@app.route("/ready")
+def ready():
+    if not database_initialized:
+        try:
+            initialize_database()
+        except Exception as exc:
+            db.session.rollback()
+            app.logger.warning("db_ready_check_failed error=%s", exc.__class__.__name__)
+
+    status_code = 200 if database_initialized else 503
+    return jsonify(status="ready" if database_initialized else "starting"), status_code
 
 
 @app.route("/version")
