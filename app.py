@@ -818,6 +818,8 @@ def load_user(user_id):
             db.session.rollback()
             app.logger.warning("User load database initialization skipped: %s", exc.__class__.__name__)
             return None
+        if not database_initialized:
+            return None
     user = db.session.get(User, int(user_id))
     if user:
         return user
@@ -2470,7 +2472,11 @@ def initialize_database():
     if database_initialized:
         return
 
-    with database_init_lock:
+    if not database_init_lock.acquire(blocking=False):
+        app.logger.info("Database initialization already running; skipping duplicate request.")
+        return
+
+    try:
         if database_initialized:
             return
 
@@ -2510,6 +2516,8 @@ def initialize_database():
 
         database_initialized = True
         app.logger.info("Database initialization finished.")
+    finally:
+        database_init_lock.release()
 
 
 @app.before_request
@@ -2520,6 +2528,8 @@ def ensure_database_ready():
         return
     try:
         initialize_database()
+        if not database_initialized:
+            return "Service starting. Please try again shortly.", 503
     except Exception as e:
         db.session.rollback()
         app.logger.warning("Database initialization skipped: %s", e.__class__.__name__)
