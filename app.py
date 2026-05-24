@@ -869,6 +869,12 @@ def platform():
 @app.route("/google/callback")
 def google_callback():
     try:
+        if not database_initialized:
+            trigger_database_init_async(source="google_callback")
+            app.logger.warning("Google callback deferred: database_not_ready")
+            flash("Google login is warming up. Please try again in a moment.")
+            return redirect(url_for("auth.login"))
+
         token = google.authorize_access_token()
 
         user_info = token.get("userinfo") if isinstance(token, dict) else None
@@ -923,7 +929,7 @@ def google_callback():
         return redirect("/community")
     except Exception as e:
         db.session.rollback()
-        app.logger.warning("Google callback failed: %s", e.__class__.__name__)
+        app.logger.warning("Google callback failed: %s detail=%s", e.__class__.__name__, str(e)[:300])
         flash("Google login failed. Please try again.")
         return redirect(url_for("auth.login"))
 
