@@ -459,6 +459,8 @@ engine_options = {
     "pool_timeout": int(os.environ.get("DB_POOL_TIMEOUT", "2")),
 }
 if database_url and database_url.startswith("postgresql://"):
+    engine_options["pool_size"] = int(os.environ.get("DB_POOL_SIZE", "2"))
+    engine_options["max_overflow"] = int(os.environ.get("DB_MAX_OVERFLOW", "0"))
     engine_options["connect_args"] = {
         "connect_timeout": int(os.environ.get("DB_CONNECT_TIMEOUT", "2")),
         "options": " ".join(
@@ -621,6 +623,11 @@ def run_managed_persona_migration_once():
 
 
 def start_managed_persona_migration():
+    if os.environ.get("ENABLE_MANAGED_PERSONA_MIGRATION", "").lower() != "true":
+        app.config["MANAGED_PERSONA_MIGRATION_COMPLETE"] = True
+        app.logger.info("managed_persona_migration_disabled")
+        return
+
     def runner():
         with app.app_context():
             max_attempts = int(os.environ.get("MANAGED_PERSONA_MIGRATION_ATTEMPTS", "30"))
