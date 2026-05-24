@@ -182,7 +182,13 @@ def login():
             flash("Username/email and password are required.")
             return redirect(url_for("auth.login"))
 
-        user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
+        try:
+            user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning("Login lookup failed: %s detail=%s", exc.__class__.__name__, str(exc)[:300])
+            flash("Login is temporarily unavailable. Please try again in a moment.")
+            return redirect(url_for("auth.login"))
 
         if user and check_password_hash(user.password, password):
             if getattr(user, "is_managed_persona", False):
@@ -201,7 +207,8 @@ def login():
                 return redirect(url_for("auth.login"))
 
             login_user(user)
-            _sync_profile(user.username, user.email, user.mobile or "")
+            if os.environ.get("ENABLE_AUTH_PROFILE_SYNC", "").lower() == "true":
+                _sync_profile(user.username, user.email, user.mobile or "")
 
             if next_page and next_page.startswith("/"):
                 return redirect(next_page)
@@ -221,7 +228,12 @@ def api_login():
     if not username or not password:
         return jsonify({"status": "error", "message": "username/email and password are required"}), 400
 
-    user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
+    try:
+        user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("API login lookup failed: %s detail=%s", exc.__class__.__name__, str(exc)[:300])
+        return jsonify({"status": "error", "message": "login temporarily unavailable"}), 503
     if not user or not check_password_hash(user.password, password):
         return jsonify({"status": "error", "message": "invalid credentials"}), 401
 
