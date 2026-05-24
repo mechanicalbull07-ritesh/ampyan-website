@@ -558,16 +558,6 @@ def database_ready_for_queries():
         if app.config.get("DATABASE_READY", False):
             return True
         db.session.execute(text("SELECT 1"))
-        try:
-            ensure_user_schema()
-            ensure_post_schema()
-            ensure_reply_schema()
-            ensure_news_schema()
-        except Exception as exc:
-            db.session.rollback()
-            trigger_database_init_async(source="schema_ready_check")
-            app.logger.warning("schema_ready_check_deferred error=%s", exc.__class__.__name__)
-            return False
         app.config["DATABASE_READY"] = True
         return True
     except Exception as exc:
