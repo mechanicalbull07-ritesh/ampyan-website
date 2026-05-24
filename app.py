@@ -802,6 +802,13 @@ def remember_login_next(target):
 
 @login_manager.user_loader
 def load_user(user_id):
+    if not database_initialized:
+        try:
+            initialize_database()
+        except Exception as exc:
+            db.session.rollback()
+            app.logger.warning("User load database initialization skipped: %s", exc.__class__.__name__)
+            return None
     user = db.session.get(User, int(user_id))
     if user:
         return user
