@@ -582,6 +582,7 @@ database_init_lock = threading.Lock()
 database_initialized = False
 database_init_thread_started = False
 app.config["DATABASE_READY"] = False
+app.config["MANAGED_PERSONA_MIGRATION_COMPLETE"] = False
 
 
 def database_ready_for_queries():
@@ -596,6 +597,41 @@ def database_ready_for_queries():
         app.config["DATABASE_READY"] = False
         app.logger.warning("database_ready_check_failed error=%s", exc.__class__.__name__)
         return False
+
+
+def run_managed_persona_migration_once():
+    try:
+        if db.engine.dialect.name != "postgresql":
+            app.config["MANAGED_PERSONA_MIGRATION_COMPLETE"] = True
+            app.logger.info("managed_persona_migration_skipped dialect=%s", db.engine.dialect.name)
+            return True
+
+        db.session.execute(text("SET LOCAL lock_timeout = '1000ms'"))
+        db.session.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_managed_persona BOOLEAN DEFAULT FALSE'))
+        db.session.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS managed_by_admin_id INTEGER'))
+        db.session.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS managed_note TEXT'))
+        db.session.commit()
+        app.config["MANAGED_PERSONA_MIGRATION_COMPLETE"] = True
+        app.logger.info("managed_persona_migration_completed")
+        return True
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("managed_persona_migration_deferred error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
+        return False
+
+
+def start_managed_persona_migration():
+    def runner():
+        with app.app_context():
+            max_attempts = int(os.environ.get("MANAGED_PERSONA_MIGRATION_ATTEMPTS", "30"))
+            retry_seconds = int(os.environ.get("MANAGED_PERSONA_MIGRATION_RETRY_SECONDS", "10"))
+            for attempt in range(1, max_attempts + 1):
+                if run_managed_persona_migration_once():
+                    return
+                app.logger.warning("managed_persona_migration_retry attempt=%s", attempt)
+                time.sleep(retry_seconds)
+
+    threading.Thread(target=runner, daemon=True, name="managed-persona-migration").start()
 
 
 login_manager = LoginManager()
@@ -859,9 +895,6 @@ def remember_login_next(target):
 
 @login_manager.user_loader
 def load_user(user_id):
-    if not database_ready_for_queries():
-        trigger_database_init_async(source="user_loader")
-        return None
     try:
         user = db.session.get(User, int(user_id))
         if user:
@@ -869,7 +902,6 @@ def load_user(user_id):
     except Exception as exc:
         db.session.rollback()
         app.config["DATABASE_READY"] = False
-        trigger_database_init_async(source="user_loader_error")
         app.logger.warning("user_loader_failed error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
     return None
 
@@ -923,7 +955,6 @@ def platform():
 def google_callback():
     try:
         if not database_ready_for_queries():
-            trigger_database_init_async(source="google_callback")
             app.logger.warning("Google callback deferred: database_not_ready")
             flash("Google login is warming up. Please try again in a moment.")
             return redirect(url_for("auth.login"))
@@ -1055,7 +1086,6 @@ def record_website_event(event_type, label="", target_url="", severity="info", p
 
     try:
         if not database_ready_for_queries():
-            trigger_database_init_async(source="website_event")
             return
         visitor_id = request.cookies.get("ampyan_visitor_id") or getattr(g, "set_visitor_cookie", None)
         event = WebsiteEvent(
@@ -1225,7 +1255,6 @@ def track_visit():
             return
 
         if not database_ready_for_queries():
-            trigger_database_init_async(source="track_visit")
             return
 
         visitor_id = request.cookies.get("ampyan_visitor_id")
@@ -2737,7 +2766,7 @@ def healthz():
 
 @app.route("/ready")
 def ready():
-    ready_status = database_ready_for_queries()
+    ready_status = database_ready_for_queries() and app.config.get("MANAGED_PERSONA_MIGRATION_COMPLETE", False)
     status_code = 200 if ready_status else 503
     return jsonify(status="ready" if ready_status else "starting"), status_code
 
@@ -2760,6 +2789,7 @@ def start_background_database_init():
 
 
 start_background_database_init()
+start_managed_persona_migration()
 logger.info("AMPYAN import finished; WSGI app ready.")
 
 # ================= START SERVER =================
