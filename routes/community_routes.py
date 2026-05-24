@@ -550,28 +550,32 @@ def community():
     query = (request.args.get("q") or "").strip().lower()
     sort = (request.args.get("sort") or "new").strip()
     active_car_community = (request.args.get("car_community") or "").strip()
+    database_ready = current_app.config.get("DATABASE_READY", False)
 
     try:
-        local_query = (
-            Post.query
-            .options(
-                selectinload(Post.author),
-                selectinload(Post.car_community),
-                selectinload(Post.votes),
-                selectinload(Post.comments).selectinload(Comment.user),
-            )
-            .order_by(Post.id.desc())
-        )
-        if active_car_community:
-            local_query = local_query.join(CarCommunity).filter(CarCommunity.slug == active_car_community)
-        if query:
-            local_query = local_query.filter(
-                or_(
-                    Post.title.ilike(f"%{query}%"),
-                    Post.content.ilike(f"%{query}%"),
+        if database_ready:
+            local_query = (
+                Post.query
+                .options(
+                    selectinload(Post.author),
+                    selectinload(Post.car_community),
+                    selectinload(Post.votes),
+                    selectinload(Post.comments).selectinload(Comment.user),
                 )
+                .order_by(Post.id.desc())
             )
-        local_posts = [_decorate_local_post(post) for post in local_query.limit(80).all()]
+            if active_car_community:
+                local_query = local_query.join(CarCommunity).filter(CarCommunity.slug == active_car_community)
+            if query:
+                local_query = local_query.filter(
+                    or_(
+                        Post.title.ilike(f"%{query}%"),
+                        Post.content.ilike(f"%{query}%"),
+                    )
+                )
+            local_posts = [_decorate_local_post(post) for post in local_query.limit(80).all()]
+        else:
+            local_posts = []
     except Exception as exc:
         db.session.rollback()
         current_app.logger.warning("community_section_error=local_posts error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
@@ -586,11 +590,14 @@ def community():
     combined_posts = local_posts + remote_posts
 
     try:
-        car_communities = (
-            CarCommunity.query
-            .order_by(CarCommunity.name.asc())
-            .all()
-        )
+        if database_ready:
+            car_communities = (
+                CarCommunity.query
+                .order_by(CarCommunity.name.asc())
+                .all()
+            )
+        else:
+            car_communities = []
     except Exception as exc:
         db.session.rollback()
         current_app.logger.warning("community_section_error=car_communities error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
@@ -628,13 +635,16 @@ def community():
         )
 
     try:
-        top_contributors = (
-            User.query
-            .filter(User.posts_count > 0)
-            .order_by(User.reputation.desc(), User.helpful_answers.desc(), User.posts_count.desc(), User.id.asc())
-            .limit(5)
-            .all()
-        )
+        if database_ready:
+            top_contributors = (
+                User.query
+                .filter(User.posts_count > 0)
+                .order_by(User.reputation.desc(), User.helpful_answers.desc(), User.posts_count.desc(), User.id.asc())
+                .limit(5)
+                .all()
+            )
+        else:
+            top_contributors = []
     except Exception as exc:
         db.session.rollback()
         current_app.logger.warning("community_section_error=top_contributors error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])

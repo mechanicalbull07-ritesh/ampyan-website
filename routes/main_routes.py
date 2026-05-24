@@ -114,9 +114,10 @@ def home():
     recent_post_records = []
     latest_videos = []
     upcoming_service = None
+    database_ready = current_app.config.get("DATABASE_READY", False)
 
     try:
-        if current_user.is_authenticated:
+        if database_ready and current_user.is_authenticated:
 
             cars = Car.query.filter_by(owner_id=current_user.id).all()
 
@@ -134,21 +135,24 @@ def home():
         default_car = None
 
     try:
-        latest_news_records = News.query.order_by(News.created_at.desc()).limit(6).all()
-        latest_news = [
-            {
-                "title": news.title,
-                "summary": (news.content or "Read the latest AMPYAN automotive update.")[:120],
-                "url": f"/news/{news.id}",
-                "image_url": _static_image_url_if_exists(
-                    "news_images",
-                    news.image,
-                    fallback=default_news_image
-                ),
-                "meta": news.created_at.strftime("%d %b %Y") if news.created_at else "AMPYAN News",
-            }
-            for news in latest_news_records
-        ]
+        if database_ready:
+            latest_news_records = News.query.order_by(News.created_at.desc()).limit(6).all()
+            latest_news = [
+                {
+                    "title": news.title,
+                    "summary": (news.content or "Read the latest AMPYAN automotive update.")[:120],
+                    "url": f"/news/{news.id}",
+                    "image_url": _static_image_url_if_exists(
+                        "news_images",
+                        news.image,
+                        fallback=default_news_image
+                    ),
+                    "meta": news.created_at.strftime("%d %b %Y") if news.created_at else "AMPYAN News",
+                }
+                for news in latest_news_records
+            ]
+        else:
+            latest_news = []
     except Exception as exc:
         db.session.rollback()
         current_app.logger.warning("home_section_error=news error=%s", exc.__class__.__name__)
@@ -162,21 +166,24 @@ def home():
         ]
 
     try:
-        recent_post_records = Post.query.order_by(Post.created_at.desc()).limit(8).all()
-        community_threads = [
-            {
-                "title": post.title,
-                "summary": (post.content or "Community discussion on AMPYAN.")[:120],
-                "url": f"/post/{post.id}",
-                "image_url": _static_image_url_if_exists(
-                    "post_images",
-                    post.image,
-                    fallback=default_news_image
-                ),
-                "meta": post.created_at.strftime("%d %b") if post.created_at else "Community",
-            }
-            for post in recent_post_records
-        ]
+        if database_ready:
+            recent_post_records = Post.query.order_by(Post.created_at.desc()).limit(8).all()
+            community_threads = [
+                {
+                    "title": post.title,
+                    "summary": (post.content or "Community discussion on AMPYAN.")[:120],
+                    "url": f"/post/{post.id}",
+                    "image_url": _static_image_url_if_exists(
+                        "post_images",
+                        post.image,
+                        fallback=default_news_image
+                    ),
+                    "meta": post.created_at.strftime("%d %b") if post.created_at else "Community",
+                }
+                for post in recent_post_records
+            ]
+        else:
+            community_threads = []
     except Exception as exc:
         db.session.rollback()
         current_app.logger.warning("home_section_error=community error=%s", exc.__class__.__name__)
@@ -216,7 +223,8 @@ def home():
     ]
 
     try:
-        latest_videos = Video.query.order_by(Video.created_at.desc()).limit(2).all()
+        if database_ready:
+            latest_videos = Video.query.order_by(Video.created_at.desc()).limit(2).all()
     except Exception as exc:
         db.session.rollback()
         current_app.logger.warning("home_section_error=videos error=%s", exc.__class__.__name__)

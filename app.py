@@ -550,6 +550,7 @@ conversation_memory = defaultdict(list)
 database_init_lock = threading.Lock()
 database_initialized = False
 database_init_thread_started = False
+app.config["DATABASE_READY"] = False
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -1696,14 +1697,20 @@ def effective_news_category(news):
 @app.route("/news")
 def news_list():
     active_category = normalize_news_category(request.args.get("category")) if request.args.get("category") else ""
-    query = News.query.order_by(News.id.desc()).limit(50)
-    news_items = query.all()
-    if active_category:
-        news_items = [
-            news
-            for news in news_items
-            if effective_news_category(news) == active_category
-        ]
+    news_items = []
+    if app.config.get("DATABASE_READY", False):
+        try:
+            query = News.query.order_by(News.id.desc()).limit(50)
+            news_items = query.all()
+            if active_category:
+                news_items = [
+                    news
+                    for news in news_items
+                    if effective_news_category(news) == active_category
+                ]
+        except Exception as exc:
+            db.session.rollback()
+            app.logger.warning("news_section_error=list error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
     return render_template(
         "news.html",
         news_items=news_items,
@@ -2473,6 +2480,7 @@ def ensure_demo_community_seed():
 def initialize_database():
     global database_initialized
     if database_initialized:
+        app.config["DATABASE_READY"] = True
         return
 
     if not database_init_lock.acquire(blocking=False):
@@ -2518,6 +2526,7 @@ def initialize_database():
             db.session.commit()
 
         database_initialized = True
+        app.config["DATABASE_READY"] = True
         app.logger.info("db_init_completed")
     finally:
         database_init_lock.release()
@@ -2526,6 +2535,10 @@ def initialize_database():
 def trigger_database_init_async(source="request"):
     global database_init_thread_started
     if database_initialized:
+        app.config["DATABASE_READY"] = True
+        return
+
+    if database_init_lock.locked():
         return
 
     if database_init_thread_started:
