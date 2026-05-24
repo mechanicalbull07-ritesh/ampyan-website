@@ -260,6 +260,9 @@ def _build_remote_post(post):
 
 
 def _load_remote_posts():
+    if os.environ.get("ENABLE_REMOTE_COMMUNITY_FEED", "").lower() != "true":
+        return REMOTE_POST_CACHE["posts"] if REMOTE_POST_CACHE["posts"] else []
+
     now = datetime.utcnow()
     if REMOTE_POST_CACHE["expires_at"] and REMOTE_POST_CACHE["expires_at"] > now:
         return REMOTE_POST_CACHE["posts"]

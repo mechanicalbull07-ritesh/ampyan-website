@@ -1042,6 +1042,9 @@ def normalize_event_url(value):
 
 
 def record_website_event(event_type, label="", target_url="", severity="info", path=None):
+    if os.environ.get("ENABLE_WEBSITE_EVENTS", "").lower() != "true":
+        return
+
     try:
         if not database_ready_for_queries():
             trigger_database_init_async(source="website_event")
@@ -1205,6 +1208,8 @@ def detect_device_type(user_agent):
 
 @app.before_request
 def track_visit():
+    if os.environ.get("ENABLE_PAGE_VISIT_TRACKING", "").lower() != "true":
+        return
 
     try:
 
