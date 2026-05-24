@@ -813,14 +813,8 @@ def remember_login_next(target):
 @login_manager.user_loader
 def load_user(user_id):
     if not database_initialized:
-        try:
-            initialize_database()
-        except Exception as exc:
-            db.session.rollback()
-            app.logger.warning("User load database initialization skipped: %s", exc.__class__.__name__)
-            return None
-        if not database_initialized:
-            return None
+        trigger_database_init_async(source="user_loader")
+        return None
     user = db.session.get(User, int(user_id))
     if user:
         return user
@@ -999,7 +993,8 @@ def normalize_event_url(value):
 def record_website_event(event_type, label="", target_url="", severity="info", path=None):
     try:
         if not database_initialized:
-            initialize_database()
+            trigger_database_init_async(source="website_event")
+            return
         visitor_id = request.cookies.get("ampyan_visitor_id") or getattr(g, "set_visitor_cookie", None)
         event = WebsiteEvent(
             event_type=sanitize_event_text(event_type, 40),
@@ -1161,7 +1156,8 @@ def track_visit():
             return
 
         if not database_initialized:
-            initialize_database()
+            trigger_database_init_async(source="track_visit")
+            return
 
         visitor_id = request.cookies.get("ampyan_visitor_id")
 
