@@ -558,6 +558,16 @@ def database_ready_for_queries():
         if app.config.get("DATABASE_READY", False):
             return True
         db.session.execute(text("SELECT 1"))
+        try:
+            ensure_user_schema()
+            ensure_post_schema()
+            ensure_reply_schema()
+            ensure_news_schema()
+        except Exception as exc:
+            db.session.rollback()
+            trigger_database_init_async(source="schema_ready_check")
+            app.logger.warning("schema_ready_check_deferred error=%s", exc.__class__.__name__)
+            return False
         app.config["DATABASE_READY"] = True
         return True
     except Exception as exc:
@@ -831,9 +841,15 @@ def load_user(user_id):
     if not database_ready_for_queries():
         trigger_database_init_async(source="user_loader")
         return None
-    user = db.session.get(User, int(user_id))
-    if user:
-        return user
+    try:
+        user = db.session.get(User, int(user_id))
+        if user:
+            return user
+    except Exception as exc:
+        db.session.rollback()
+        app.config["DATABASE_READY"] = False
+        trigger_database_init_async(source="user_loader_error")
+        app.logger.warning("user_loader_failed error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
     return None
 
 # ================= ROUTES =================
@@ -1100,11 +1116,16 @@ def security_guard():
 
 @app.before_request
 def restore_whitelisted_admin_role():
-    if request.endpoint in {"health", "healthz", "version"} or request.path in {"/health", "/healthz", "/version"}:
+    if request.endpoint in {"favicon", "health", "healthz", "ready", "version"} or request.path in {"/favicon.ico", "/health", "/healthz", "/ready", "/version"}:
         return
     if request.path.startswith("/static"):
         return
-    if not current_user.is_authenticated:
+    try:
+        if not current_user.is_authenticated:
+            return
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("admin_role_restore_user_load_skipped error=%s", exc.__class__.__name__)
         return
 
     email = (current_user.email or "").strip().lower()
@@ -1266,7 +1287,16 @@ def attach_visitor_cookie(response):
 @app.before_request
 def reset_ai_usage():
 
-    if not current_user.is_authenticated:
+    if request.endpoint in {"favicon", "health", "healthz", "ready", "version"} or request.path in {"/favicon.ico", "/health", "/healthz", "/ready", "/version"}:
+        return
+    if request.path.startswith("/static"):
+        return
+    try:
+        if not current_user.is_authenticated:
+            return
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("ai_usage_user_load_skipped error=%s", exc.__class__.__name__)
         return
 
     today = datetime.utcnow().date()
