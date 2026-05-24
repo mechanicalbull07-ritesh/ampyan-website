@@ -537,6 +537,15 @@ def uploaded_news_image(filename):
 
     return send_from_directory(upload_folder, safe_filename)
 
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path, "static", "images"),
+        "favicon.png",
+        mimetype="image/png",
+    )
+
 conversation_memory = defaultdict(list)
 database_init_lock = threading.Lock()
 database_initialized = False
