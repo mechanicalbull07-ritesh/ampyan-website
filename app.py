@@ -549,6 +549,7 @@ def favicon():
 conversation_memory = defaultdict(list)
 database_init_lock = threading.Lock()
 database_initialized = False
+database_init_thread_started = False
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -2520,19 +2521,39 @@ def initialize_database():
         database_init_lock.release()
 
 
+def trigger_database_init_async(source="request"):
+    global database_init_thread_started
+    if database_initialized:
+        return
+
+    if database_init_thread_started:
+        return
+
+    database_init_thread_started = True
+
+    def runner():
+        global database_init_thread_started
+        with app.app_context():
+            try:
+                app.logger.info("db_init_async_started source=%s", source)
+                initialize_database()
+            except Exception as e:
+                db.session.rollback()
+                app.logger.warning("db_init_async_failed source=%s error=%s", source, e.__class__.__name__)
+            finally:
+                database_init_thread_started = False
+
+    threading.Thread(target=runner, daemon=True, name="db-init").start()
+
+
 @app.before_request
 def ensure_database_ready():
     if request.endpoint in {"health", "healthz", "ready", "version"} or request.path in {"/health", "/healthz", "/ready", "/version"}:
         return
     if request.path.startswith("/static") or "." in request.path.rsplit("/", 1)[-1]:
         return
-    try:
-        initialize_database()
-        if not database_initialized:
-            return None
-    except Exception as e:
-        db.session.rollback()
-        app.logger.warning("Database initialization skipped: %s", e.__class__.__name__)
+    trigger_database_init_async(source="before_request")
+    return None
 
 
 @app.errorhandler(404)
@@ -2629,13 +2650,6 @@ def healthz():
 
 @app.route("/ready")
 def ready():
-    if not database_initialized:
-        try:
-            initialize_database()
-        except Exception as exc:
-            db.session.rollback()
-            app.logger.warning("db_ready_check_failed error=%s", exc.__class__.__name__)
-
     status_code = 200 if database_initialized else 503
     return jsonify(status="ready" if database_initialized else "starting"), status_code
 
@@ -2654,17 +2668,7 @@ def start_background_database_init():
         )
         return
 
-    def runner():
-        with app.app_context():
-            try:
-                app.logger.info("Background database initialization started.")
-                initialize_database()
-                app.logger.info("Background database initialization finished.")
-            except Exception as e:
-                db.session.rollback()
-                app.logger.warning("Background database initialization failed: %s", e.__class__.__name__)
-
-    threading.Thread(target=runner, daemon=True, name="db-init").start()
+    trigger_database_init_async(source="startup")
 
 
 start_background_database_init()
