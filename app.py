@@ -552,6 +552,21 @@ database_initialized = False
 database_init_thread_started = False
 app.config["DATABASE_READY"] = False
 
+
+def database_ready_for_queries():
+    try:
+        if app.config.get("DATABASE_READY", False):
+            return True
+        db.session.execute(text("SELECT 1"))
+        app.config["DATABASE_READY"] = True
+        return True
+    except Exception as exc:
+        db.session.rollback()
+        app.config["DATABASE_READY"] = False
+        app.logger.warning("database_ready_check_failed error=%s", exc.__class__.__name__)
+        return False
+
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = "auth.login"
@@ -813,7 +828,7 @@ def remember_login_next(target):
 
 @login_manager.user_loader
 def load_user(user_id):
-    if not database_initialized:
+    if not database_ready_for_queries():
         trigger_database_init_async(source="user_loader")
         return None
     user = db.session.get(User, int(user_id))
@@ -870,7 +885,7 @@ def platform():
 @app.route("/google/callback")
 def google_callback():
     try:
-        if not database_initialized:
+        if not database_ready_for_queries():
             trigger_database_init_async(source="google_callback")
             app.logger.warning("Google callback deferred: database_not_ready")
             flash("Google login is warming up. Please try again in a moment.")
@@ -999,7 +1014,7 @@ def normalize_event_url(value):
 
 def record_website_event(event_type, label="", target_url="", severity="info", path=None):
     try:
-        if not database_initialized:
+        if not database_ready_for_queries():
             trigger_database_init_async(source="website_event")
             return
         visitor_id = request.cookies.get("ampyan_visitor_id") or getattr(g, "set_visitor_cookie", None)
@@ -1162,7 +1177,7 @@ def track_visit():
         if not should_track_page_visit():
             return
 
-        if not database_initialized:
+        if not database_ready_for_queries():
             trigger_database_init_async(source="track_visit")
             return
 
@@ -1698,7 +1713,7 @@ def effective_news_category(news):
 def news_list():
     active_category = normalize_news_category(request.args.get("category")) if request.args.get("category") else ""
     news_items = []
-    if app.config.get("DATABASE_READY", False):
+    if database_ready_for_queries():
         try:
             query = News.query.order_by(News.id.desc()).limit(50)
             news_items = query.all()
@@ -2567,6 +2582,7 @@ def ensure_database_ready():
         return
     if request.path.startswith("/static") or "." in request.path.rsplit("/", 1)[-1]:
         return
+    database_ready_for_queries()
     trigger_database_init_async(source="before_request")
     return None
 
@@ -2665,8 +2681,9 @@ def healthz():
 
 @app.route("/ready")
 def ready():
-    status_code = 200 if database_initialized else 503
-    return jsonify(status="ready" if database_initialized else "starting"), status_code
+    ready_status = database_ready_for_queries()
+    status_code = 200 if ready_status else 503
+    return jsonify(status="ready" if ready_status else "starting"), status_code
 
 
 @app.route("/version")
