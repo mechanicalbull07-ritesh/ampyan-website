@@ -106,10 +106,7 @@ def _attach_listing_catalog_image(listing):
 
 @main_bp.route("/")
 def home():
-    # AMPYAN HOME PAGE REDESIGN START
-
-    cars = []
-    default_car = None
+    return "AMPYAN LIVE - service online", 200
 
     if current_user.is_authenticated:
 
