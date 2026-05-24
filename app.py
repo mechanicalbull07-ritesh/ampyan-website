@@ -525,15 +525,38 @@ if not os.path.exists(PROFILE_UPLOAD):
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
 
+@app.route("/static/news_images/<path:filename>")
+def static_news_image(filename):
+    safe_filename = secure_filename(os.path.basename(filename))
+    default_filename = "AMPYAN_-_Powering_Intelligent_Mobility.png"
+    if safe_filename:
+        static_news_folder = os.path.join(app.static_folder, "news_images")
+        static_path = os.path.join(static_news_folder, safe_filename)
+        if os.path.isfile(static_path):
+            return send_from_directory(static_news_folder, safe_filename)
+
+        upload_folder = app.config.get("UPLOAD_FOLDER")
+        if upload_folder and os.path.isabs(upload_folder):
+            upload_path = os.path.join(upload_folder, safe_filename)
+            if os.path.isfile(upload_path):
+                return send_from_directory(upload_folder, safe_filename)
+
+    app.logger.info("news_image_fallback filename=%s", safe_filename or filename)
+    return send_from_directory(os.path.join(app.static_folder, "news_images"), default_filename)
+
 @app.route("/uploads/news/<path:filename>")
 def uploaded_news_image(filename):
     upload_folder = app.config.get("UPLOAD_FOLDER")
-    if not upload_folder or not os.path.isabs(upload_folder):
-        abort(404)
 
     safe_filename = secure_filename(os.path.basename(filename))
     if not safe_filename:
         abort(404)
+
+    if not upload_folder or not os.path.isabs(upload_folder):
+        return send_from_directory(
+            os.path.join(app.static_folder, "news_images"),
+            "AMPYAN_-_Powering_Intelligent_Mobility.png",
+        )
 
     return send_from_directory(upload_folder, safe_filename)
 
