@@ -1954,6 +1954,7 @@ NEWS_CATEGORIES = [
     ("tips-and-tricks", "Tips and Tricks"),
 ]
 NEWS_CATEGORY_LABELS = dict(NEWS_CATEGORIES)
+NEWS_CATEGORY_KEYS = set(NEWS_CATEGORY_LABELS)
 
 
 def normalize_news_category(value):
@@ -1977,6 +1978,33 @@ def normalize_news_category(value):
     return normalized
 
 
+def resolve_news_category(raw_value, previous_category=None, context="save"):
+    raw_value = (raw_value or "").strip()
+    app.logger.info("news_category_received context=%s value=%s", context, raw_value or "missing")
+
+    if not raw_value:
+        fallback = normalize_news_category(previous_category) if previous_category else "auto-news"
+        app.logger.warning(
+            "news_category_fallback_used context=%s reason=missing fallback=%s",
+            context,
+            fallback,
+        )
+        return fallback
+
+    normalized = raw_value.lower().replace("_", "-")
+    if normalized in NEWS_CATEGORY_KEYS:
+        return normalized
+
+    fallback = normalize_news_category(previous_category) if previous_category else "auto-news"
+    app.logger.warning(
+        "news_category_fallback_used context=%s reason=invalid value=%s fallback=%s",
+        context,
+        raw_value,
+        fallback,
+    )
+    return fallback
+
+
 def news_category_label(value):
     return NEWS_CATEGORY_LABELS.get(normalize_news_category(value), "Auto News")
 
@@ -1991,10 +2019,7 @@ def infer_news_category(news):
 
 
 def effective_news_category(news):
-    stored_category = normalize_news_category(getattr(news, "category", None))
-    if stored_category == "auto-news":
-        return infer_news_category(news)
-    return stored_category
+    return normalize_news_category(getattr(news, "category", None))
 
 
 @app.route("/news")
@@ -2170,6 +2195,7 @@ def create_news():
 
         image_file = request.files.get("image")
         filename = None
+        selected_category = resolve_news_category(request.form.get("category"), context="create")
 
         if image_file and image_file.filename != "":
             upload_result = store_news_image(image_file, "news")
@@ -2183,19 +2209,24 @@ def create_news():
         news = News(
             title=request.form["title"],
             content=request.form["content"],
-            category=normalize_news_category(request.form.get("category")),
+            category=selected_category,
             image=filename
         )
 
         db.session.add(news)
         db.session.commit()
+        app.logger.info("news_category_saved category=%s news_id=%s", news.category, news.id)
         if not filename:
             app.logger.info("news_post_saved_without_image")
         sync_news_to_app(news)
 
         return redirect("/news")
 
-    return render_template("create_news.html", news_categories=NEWS_CATEGORIES)
+    return render_template(
+        "create_news.html",
+        news_categories=NEWS_CATEGORIES,
+        selected_category="auto-news",
+    )
 
 
 import requests
@@ -2212,9 +2243,15 @@ def edit_news(news_id):
 
     if request.method == "POST":
 
+        previous_category = normalize_news_category(getattr(news, "category", None))
+        selected_category = resolve_news_category(
+            request.form.get("category"),
+            previous_category=previous_category,
+            context="update",
+        )
         news.title = request.form["title"]
         news.content = request.form["content"]
-        news.category = normalize_news_category(request.form.get("category"))
+        news.category = selected_category
 
         image_file = request.files.get("image")
 
@@ -2228,6 +2265,12 @@ def edit_news(news_id):
                 flash("Image upload failed, so the existing image was kept.", "warning")
 
         db.session.commit()
+        app.logger.info(
+            "news_category_updated previous=%s category=%s news_id=%s",
+            previous_category,
+            news.category,
+            news.id,
+        )
         sync_news_to_app(news)
         app.logger.info("news_update_completed")
 

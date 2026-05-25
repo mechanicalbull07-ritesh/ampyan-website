@@ -30,8 +30,6 @@ def _infer_news_category(news):
 
 def _effective_news_category(news):
     category = getattr(news, "category", None) or "auto-news"
-    if category == "auto-news":
-        return _infer_news_category(news)
     return category
 
 
