@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, jsonify, render_template, request, redirect, flash, url_for
 from flask_login import current_user, login_required
@@ -74,6 +75,10 @@ def _serialize_mechanic(mechanic, include_reviews=False):
 
 
 def _static_image_url_if_exists(folder, filename, fallback=None):
+    parsed = urlparse(filename or "")
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return filename
+
     if filename:
         candidates = []
         for candidate in (filename, secure_filename(filename)):
@@ -85,6 +90,13 @@ def _static_image_url_if_exists(folder, filename, fallback=None):
             absolute_path = os.path.join(current_app.static_folder, relative_path)
             if os.path.isfile(absolute_path):
                 return url_for("static", filename=relative_path.replace(os.sep, "/"))
+
+            if folder == "news_images":
+                upload_folder = current_app.config.get("UPLOAD_FOLDER")
+                if upload_folder and os.path.isabs(upload_folder):
+                    upload_path = os.path.join(upload_folder, candidate)
+                    if os.path.isfile(upload_path):
+                        return url_for("uploaded_news_image", filename=candidate)
 
     return url_for("static", filename=fallback) if fallback else None
 

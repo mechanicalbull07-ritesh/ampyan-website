@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlparse
 
 import requests
 from flask import current_app, url_for
@@ -54,6 +55,10 @@ def _request(method, path, **kwargs):
 
 
 def _absolute_static_url(folder, filename, fallback=None):
+    parsed = urlparse(filename or "")
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return filename
+
     if not filename and fallback:
         filename = fallback
     if not filename:

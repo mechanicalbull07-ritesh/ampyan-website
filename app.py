@@ -2,6 +2,7 @@ import logging
 import os
 import sys
 import json
+import hashlib
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -66,7 +67,7 @@ from services.app_api_sync import delete_news_from_app, sync_news_to_app
 
 # ================= OTHER IMPORTS =================
 from flask import session
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 from collections import defaultdict, deque
 import re
 import threading
@@ -207,6 +208,189 @@ IMAGE_FORMATS = {
     "png": "PNG",
     "webp": "WEBP",
 }
+DEFAULT_NEWS_IMAGE_FILENAME = "AMPYAN_-_Powering_Intelligent_Mobility.png"
+DEFAULT_NEWS_IMAGE_PATH = f"news_images/{DEFAULT_NEWS_IMAGE_FILENAME}"
+MAX_NEWS_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024
+MAX_NEWS_IMAGE_PIXELS = 24_000_000
+NEWS_IMAGE_MAX_WIDTH = 1200
+NEWS_IMAGE_TARGET_BYTES = 500 * 1024
+
+
+def is_external_image_url(value):
+    parsed = urlparse(value or "")
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def cloudinary_settings():
+    cloudinary_url = os.environ.get("CLOUDINARY_URL")
+    if cloudinary_url:
+        parsed = urlparse(cloudinary_url)
+        if parsed.scheme == "cloudinary" and parsed.hostname and parsed.username and parsed.password:
+            return {
+                "cloud_name": parsed.hostname,
+                "api_key": parsed.username,
+                "api_secret": parsed.password,
+            }
+
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
+    api_key = os.environ.get("CLOUDINARY_API_KEY")
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET")
+    if cloud_name and api_key and api_secret:
+        return {
+            "cloud_name": cloud_name,
+            "api_key": api_key,
+            "api_secret": api_secret,
+        }
+    return None
+
+
+def cloudinary_configured():
+    return cloudinary_settings() is not None
+
+
+def upload_image_to_cloudinary(image_bytes, filename):
+    settings = cloudinary_settings()
+    if not settings:
+        return None
+
+    app.logger.info("image_storage_cloudinary_upload_started")
+    timestamp = str(int(time.time()))
+    folder = os.environ.get("CLOUDINARY_NEWS_FOLDER", "ampyan/news")
+    signature_payload = f"folder={folder}&timestamp={timestamp}{settings['api_secret']}"
+    signature = hashlib.sha1(signature_payload.encode("utf-8")).hexdigest()
+    upload_url = f"https://api.cloudinary.com/v1_1/{settings['cloud_name']}/image/upload"
+
+    try:
+        response = requests.post(
+            upload_url,
+            data={
+                "api_key": settings["api_key"],
+                "timestamp": timestamp,
+                "folder": folder,
+                "signature": signature,
+            },
+            files={"file": (filename, image_bytes, "image/webp")},
+            timeout=12,
+        )
+        response.raise_for_status()
+        secure_url = (response.json() or {}).get("secure_url")
+        if secure_url:
+            app.logger.info("image_storage_cloudinary_upload_success")
+            return secure_url
+        app.logger.warning("image_storage_cloudinary_upload_failed reason=missing_secure_url")
+    except Exception as exc:
+        app.logger.warning("image_storage_cloudinary_upload_failed reason=%s", exc.__class__.__name__)
+    return None
+
+
+def compress_news_image_to_bytes(image_file):
+    original_filename = secure_filename(image_file.filename or "")
+    if not original_filename:
+        app.logger.warning("image_validation_failed reason=missing_filename")
+        return None, "missing_filename"
+    if not allowed_file(original_filename):
+        app.logger.warning("image_validation_failed reason=invalid_extension")
+        return None, "invalid_extension"
+
+    image_file.stream.seek(0, os.SEEK_END)
+    original_size = image_file.stream.tell()
+    image_file.stream.seek(0)
+    if original_size <= 0:
+        app.logger.warning("image_validation_failed reason=empty_file")
+        return None, "empty_file"
+    if original_size > MAX_NEWS_IMAGE_UPLOAD_BYTES:
+        app.logger.warning("image_validation_failed reason=file_too_large")
+        return None, "file_too_large"
+
+    raw_bytes = image_file.read()
+    image_file.stream.seek(0)
+
+    try:
+        with Image.open(BytesIO(raw_bytes)) as check_img:
+            check_img.verify()
+        with Image.open(BytesIO(raw_bytes)) as img:
+            if (img.format or "").lower() not in {"jpeg", "png", "webp"}:
+                app.logger.warning("image_validation_failed reason=invalid_image_format")
+                return None, "invalid_image_format"
+            if img.width * img.height > MAX_NEWS_IMAGE_PIXELS:
+                app.logger.warning("image_validation_failed reason=image_dimensions_too_large")
+                return None, "image_dimensions_too_large"
+
+            app.logger.info("image_compression_started")
+            img = ImageOps.exif_transpose(img)
+            if img.width > NEWS_IMAGE_MAX_WIDTH:
+                ratio = NEWS_IMAGE_MAX_WIDTH / float(img.width)
+                height = max(1, int(img.height * ratio))
+                img = img.resize((NEWS_IMAGE_MAX_WIDTH, height), Image.Resampling.LANCZOS)
+
+            has_alpha = img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
+            if has_alpha:
+                output_image = img.convert("RGBA")
+                output_format = "WEBP"
+                extension = "webp"
+            else:
+                output_image = img.convert("RGB")
+                output_format = "WEBP"
+                extension = "webp"
+
+            final_bytes = None
+            for quality in (82, 76, 70, 64):
+                output = BytesIO()
+                output_image.save(output, format=output_format, quality=quality, method=4)
+                candidate = output.getvalue()
+                final_bytes = candidate
+                if len(candidate) <= NEWS_IMAGE_TARGET_BYTES:
+                    break
+
+            app.logger.info(
+                "image_compression_success original_size=%s final_size=%s",
+                original_size,
+                len(final_bytes or b""),
+            )
+            return {
+                "bytes": final_bytes,
+                "extension": extension,
+                "original_filename": original_filename,
+                "original_size": original_size,
+                "final_size": len(final_bytes or b""),
+            }, None
+    except Exception as exc:
+        app.logger.warning("image_validation_failed reason=%s", exc.__class__.__name__)
+        return None, exc.__class__.__name__
+
+
+def store_news_image(image_file, prefix):
+    app.logger.info("news_image_upload_started")
+    try:
+        compressed, reason = compress_news_image_to_bytes(image_file)
+        if not compressed:
+            app.logger.warning("news_image_upload_failed reason=%s", reason or "validation_failed")
+            return {"ok": False, "filename": None, "reason": reason or "validation_failed"}
+
+        filename = f"{secure_filename(prefix)}_{secrets.token_hex(8)}.{compressed['extension']}"
+        cloudinary_url = upload_image_to_cloudinary(compressed["bytes"], filename)
+        if cloudinary_url:
+            app.logger.info("news_image_upload_success")
+            return {"ok": True, "filename": cloudinary_url, "reason": None}
+
+        upload_folder = app.config.get("UPLOAD_FOLDER") or "static/news_images"
+        os.makedirs(upload_folder, exist_ok=True)
+        upload_path = os.path.join(upload_folder, filename)
+        with open(upload_path, "wb") as output:
+            output.write(compressed["bytes"])
+
+        app.logger.warning("image_storage_local_fallback_used")
+        app.logger.warning("image_storage_persistent=false")
+        app.logger.info("news_image_upload_success")
+        return {
+            "ok": True,
+            "filename": filename,
+            "reason": None,
+            "warning": "Image storage is local and may not persist after deploy.",
+        }
+    except Exception as exc:
+        app.logger.warning("news_image_upload_failed reason=%s", exc.__class__.__name__)
+        return {"ok": False, "filename": None, "reason": exc.__class__.__name__}
 
 def compress_image(image_path):
 
@@ -271,6 +455,9 @@ def inject_admin_emails():
     return dict(ADMIN_EMAILS=ADMIN_EMAILS)
 
 def static_image_url_if_exists(folder, filename, fallback=None):
+    if is_external_image_url(filename):
+        return filename
+
     if not filename and fallback:
         filename = fallback
     if not filename:
@@ -293,6 +480,9 @@ def static_image_url_if_exists(folder, filename, fallback=None):
         absolute_path = os.path.join(app.static_folder, relative_path)
         if os.path.isfile(absolute_path):
             return url_for("static", filename=relative_path.replace(os.sep, "/"))
+
+    if folder == "news_images":
+        return url_for("static", filename=DEFAULT_NEWS_IMAGE_PATH)
 
     return None
 
@@ -398,7 +588,7 @@ def inject_image_helpers():
         news_image_url=lambda filename: static_image_url_if_exists(
             "news_images",
             filename,
-            fallback="AMPYAN_-_Powering_Intelligent_Mobility.png",
+            fallback=DEFAULT_NEWS_IMAGE_FILENAME,
         ),
         profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename),
         news_category_label=news_category_label,
@@ -538,7 +728,7 @@ if not os.path.exists(UPLOAD_FOLDER):
 @app.route("/static/news_images/<path:filename>")
 def static_news_image(filename):
     safe_filename = secure_filename(os.path.basename(filename))
-    default_filename = "AMPYAN_-_Powering_Intelligent_Mobility.png"
+    default_filename = DEFAULT_NEWS_IMAGE_FILENAME
     if safe_filename:
         static_news_folder = os.path.join(app.static_folder, "news_images")
         static_path = os.path.join(static_news_folder, safe_filename)
@@ -565,7 +755,7 @@ def uploaded_news_image(filename):
     if not upload_folder or not os.path.isabs(upload_folder):
         return send_from_directory(
             os.path.join(app.static_folder, "news_images"),
-            "AMPYAN_-_Powering_Intelligent_Mobility.png",
+            DEFAULT_NEWS_IMAGE_FILENAME,
         )
 
     return send_from_directory(upload_folder, safe_filename)
@@ -1160,6 +1350,12 @@ def security_guard():
 
     content_length = request.content_length or 0
     if content_length > app.config["MAX_CONTENT_LENGTH"]:
+        if request.path == "/admin/news/create":
+            flash("Image upload failed because the file is too large. The news form is still available.", "warning")
+            return redirect(url_for("create_news"))
+        if request.path.startswith("/admin/news/edit/"):
+            flash("Image upload failed because the file is too large. The existing image was kept.", "warning")
+            return redirect(request.path)
         return jsonify({"status": "error", "message": "Request too large"}), 413
 
     if rate_limited(request.path):
@@ -1834,13 +2030,14 @@ def news_detail(news_id):
     image_url = static_image_url_if_exists(
         "news_images",
         news.image,
-        fallback="AMPYAN_-_Powering_Intelligent_Mobility.png",
+        fallback=DEFAULT_NEWS_IMAGE_FILENAME,
     )
-    meta_image = (
-        url_for("static", filename=image_url.replace("/static/", "", 1), _external=True)
-        if image_url
-        else url_for("static", filename="images/logo.png", _external=True)
-    )
+    if is_external_image_url(image_url):
+        meta_image = image_url
+    elif image_url and image_url.startswith("/static/"):
+        meta_image = url_for("static", filename=image_url.replace("/static/", "", 1), _external=True)
+    else:
+        meta_image = url_for("static", filename=DEFAULT_NEWS_IMAGE_PATH, _external=True)
     return render_template(
         "news_detail.html",
         news=news,
@@ -1975,10 +2172,13 @@ def create_news():
         filename = None
 
         if image_file and image_file.filename != "":
-            filename = save_uploaded_image(image_file, app.config["UPLOAD_FOLDER"], "news")
-            if not filename:
-                flash("Please upload a valid PNG, JPG, JPEG or WebP image.", "error")
-                return redirect(url_for("create_news"))
+            upload_result = store_news_image(image_file, "news")
+            if upload_result.get("ok"):
+                filename = upload_result.get("filename")
+                if upload_result.get("warning"):
+                    flash(upload_result["warning"], "warning")
+            else:
+                flash("Image upload failed, so the news was saved with the default image.", "warning")
 
         news = News(
             title=request.form["title"],
@@ -1989,6 +2189,8 @@ def create_news():
 
         db.session.add(news)
         db.session.commit()
+        if not filename:
+            app.logger.info("news_post_saved_without_image")
         sync_news_to_app(news)
 
         return redirect("/news")
@@ -2017,14 +2219,17 @@ def edit_news(news_id):
         image_file = request.files.get("image")
 
         if image_file and image_file.filename != "":
-            filename = save_uploaded_image(image_file, app.config["UPLOAD_FOLDER"], f"news_{news.id}")
-            if not filename:
-                flash("Please upload a valid PNG, JPG, JPEG or WebP image.", "error")
-                return redirect(url_for("edit_news", news_id=news.id))
-            news.image = filename
+            upload_result = store_news_image(image_file, f"news_{news.id}")
+            if upload_result.get("ok"):
+                news.image = upload_result.get("filename")
+                if upload_result.get("warning"):
+                    flash(upload_result["warning"], "warning")
+            else:
+                flash("Image upload failed, so the existing image was kept.", "warning")
 
         db.session.commit()
         sync_news_to_app(news)
+        app.logger.info("news_update_completed")
 
         return redirect("/news")
 
