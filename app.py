@@ -248,12 +248,12 @@ def cloudinary_configured():
     return cloudinary_settings() is not None
 
 
-def upload_image_to_cloudinary(image_bytes, filename):
-    settings = cloudinary_settings()
+def upload_image_to_cloudinary(image_bytes, filename, settings=None):
+    settings = settings or cloudinary_settings()
     if not settings:
-        return None
+        return {"ok": False, "url": None, "reason": "config_missing"}
 
-    app.logger.info("image_storage_cloudinary_upload_started")
+    app.logger.info("cloudinary_upload_started")
     timestamp = str(int(time.time()))
     folder = os.environ.get("CLOUDINARY_NEWS_FOLDER", "ampyan/news")
     signature_payload = f"folder={folder}&timestamp={timestamp}{settings['api_secret']}"
@@ -270,17 +270,18 @@ def upload_image_to_cloudinary(image_bytes, filename):
                 "signature": signature,
             },
             files={"file": (filename, image_bytes, "image/webp")},
-            timeout=12,
+            timeout=6,
         )
         response.raise_for_status()
         secure_url = (response.json() or {}).get("secure_url")
         if secure_url:
-            app.logger.info("image_storage_cloudinary_upload_success")
-            return secure_url
-        app.logger.warning("image_storage_cloudinary_upload_failed reason=missing_secure_url")
+            app.logger.info("cloudinary_upload_success")
+            return {"ok": True, "url": secure_url, "reason": None}
+        app.logger.warning("cloudinary_upload_failed reason=missing_secure_url")
+        return {"ok": False, "url": None, "reason": "missing_secure_url"}
     except Exception as exc:
-        app.logger.warning("image_storage_cloudinary_upload_failed reason=%s", exc.__class__.__name__)
-    return None
+        app.logger.warning("cloudinary_upload_failed reason=%s", exc.__class__.__name__)
+        return {"ok": False, "url": None, "reason": exc.__class__.__name__}
 
 
 def compress_news_image_to_bytes(image_file):
@@ -368,10 +369,20 @@ def store_news_image(image_file, prefix):
             return {"ok": False, "filename": None, "reason": reason or "validation_failed"}
 
         filename = f"{secure_filename(prefix)}_{secrets.token_hex(8)}.{compressed['extension']}"
-        cloudinary_url = upload_image_to_cloudinary(compressed["bytes"], filename)
-        if cloudinary_url:
+        settings = cloudinary_settings()
+        if settings:
+            app.logger.info("cloudinary_config_detected")
+            cloudinary_result = upload_image_to_cloudinary(compressed["bytes"], filename, settings=settings)
+            if not cloudinary_result.get("ok"):
+                return {
+                    "ok": False,
+                    "filename": None,
+                    "reason": cloudinary_result.get("reason") or "cloudinary_upload_failed",
+                }
             app.logger.info("news_image_upload_success")
-            return {"ok": True, "filename": cloudinary_url, "reason": None}
+            return {"ok": True, "filename": cloudinary_result.get("url"), "reason": None}
+
+        app.logger.info("cloudinary_config_missing")
 
         upload_folder = app.config.get("UPLOAD_FOLDER") or "static/news_images"
         os.makedirs(upload_folder, exist_ok=True)
@@ -379,7 +390,7 @@ def store_news_image(image_file, prefix):
         with open(upload_path, "wb") as output:
             output.write(compressed["bytes"])
 
-        app.logger.warning("image_storage_local_fallback_used")
+        app.logger.warning("local_image_fallback_used")
         app.logger.warning("image_storage_persistent=false")
         app.logger.info("news_image_upload_success")
         return {
@@ -2216,8 +2227,10 @@ def create_news():
         db.session.add(news)
         db.session.commit()
         app.logger.info("news_category_saved category=%s news_id=%s", news.category, news.id)
-        if not filename:
-            app.logger.info("news_post_saved_without_image")
+        if filename:
+            app.logger.info("news_saved_with_image")
+        else:
+            app.logger.info("news_saved_without_image")
         sync_news_to_app(news)
 
         return redirect("/news")
@@ -2265,6 +2278,10 @@ def edit_news(news_id):
                 flash("Image upload failed, so the existing image was kept.", "warning")
 
         db.session.commit()
+        if news.image:
+            app.logger.info("news_saved_with_image")
+        else:
+            app.logger.info("news_saved_without_image")
         app.logger.info(
             "news_category_updated previous=%s category=%s news_id=%s",
             previous_category,
