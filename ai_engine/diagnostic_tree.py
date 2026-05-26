@@ -28,6 +28,16 @@ def detect_system(problem_text):
         "ac", "cooling", "air conditioning"
     ]
 
+    lighting_words = [
+        "tail light", "tail lamp", "headlight", "low beam",
+        "high beam", "parking light", "light throw"
+    ]
+
+    dashboard_words = [
+        "dashboard", "warning light", "check engine light", "oil light",
+        "temperature light", "tpms", "battery warning light"
+    ]
+
     for word in brake_words:
         if word in text:
             return "brake"
@@ -52,6 +62,14 @@ def detect_system(problem_text):
         if word in text:
             return "ac"
 
+    for word in lighting_words:
+        if word in text:
+            return "lighting"
+
+    for word in dashboard_words:
+        if word in text:
+            return "electrical"
+
     return None
 
 
@@ -72,7 +90,14 @@ def detect_component(problem_text):
         "spark plug": ["spark"],
         "ignition coil": ["coil"],
         "fuel pump": ["fuel pump"],
-        "ac compressor": ["compressor"]
+        "ac compressor": ["compressor"],
+        "tail light circuit": ["tail light", "tail lamp", "rear light"],
+        "headlight low beam": ["headlight", "low beam", "light throw"],
+        "dashboard warning light": ["dashboard", "warning light"],
+        "oil pressure system": ["oil light", "oil pressure"],
+        "cooling system": ["temperature light", "temp warning"],
+        "brake warning system": ["brake warning", "parking brake light"],
+        "tpms": ["tpms", "tyre pressure", "tire pressure"]
 
     }
 

@@ -31,6 +31,19 @@ def rank_failures(problem_text, failure_database):
 
     text = problem_text.lower()
 
+    def has_any(*phrases):
+        return any(phrase in text for phrase in phrases)
+
+    def calibrated_confidence(raw_score, matched_count, is_generic=False):
+        confidence = int(28 + (float(raw_score) / (float(raw_score) + 90.0)) * 67)
+        if matched_count >= 2:
+            confidence += 6
+        elif matched_count == 0:
+            confidence -= 12
+        if is_generic:
+            confidence = min(confidence, 58)
+        return max(25, min(95, confidence))
+
     def matched_symptoms_for(failure):
         matched = []
         for symptom in failure.get("symptoms", []):
@@ -38,13 +51,18 @@ def rank_failures(problem_text, failure_database):
             symptom_words = [word for word in symptom_text.split() if len(word) > 2]
             if symptom_text in text or any(word in problem_words for word in symptom_words):
                 matched.append(symptom)
+        for alias in failure.get("aliases", []):
+            alias_text = (alias or "").lower()
+            alias_words = [word for word in alias_text.split() if len(word) > 2]
+            if alias_text in text or any(word in problem_words for word in alias_words):
+                matched.append(alias)
         return matched[:5]
 
     # ------------------------------------------------
     # PROBABILITY BASED SCORING
     # ------------------------------------------------
 
-    scored_failures = probability_reasoning(problem_words, failure_database)
+    scored_failures = probability_reasoning(problem_words, failure_database, problem_text=text)
 
     for failure, base_score in scored_failures:
 
@@ -52,6 +70,7 @@ def rank_failures(problem_text, failure_database):
 
         component = failure.get("component", "").lower()
         system = failure.get("system", "").lower()
+        problem = failure.get("problem", "")
 
         # ------------------------------------
         # VEHICLE TYPE SAFETY FILTER
@@ -94,17 +113,21 @@ def rank_failures(problem_text, failure_database):
         # BRAKE DISC PRIORITY
         # ------------------------------------
 
-        if "brake" in text and "vibration" in text:
+        if has_any("brake", "braking") and has_any("vibration", "vibrate", "vibrates", "shaking", "shake"):
 
-            if "brake disc" in component:
-                score += 18
+            if problem in {"Brake Disc Warped", "Brake Pedal Vibrates", "Car Shakes While Braking"}:
+                score += 60
+            elif "brake disc" in component:
+                score += 28
+            elif "pulling" in problem.lower() and not has_any("pull", "left", "right", "one side"):
+                score -= 25
 
         # ------------------------------------
         # CRITICAL BRAKE HYDRAULIC PRIORITY
         # ------------------------------------
 
         if "brake" in text and ("floor" in text or "sinking" in text or "pedal sinking" in text):
-            if failure.get("problem") == "Brake Pedal Goes To Floor":
+            if problem == "Brake Pedal Goes To Floor":
                 score += 55
             elif "brake fluid" in component or "brake system" in component:
                 score += 18
@@ -114,10 +137,192 @@ def rank_failures(problem_text, failure_database):
         # ------------------------------------
 
         if "fan" in text and ("overheat" in text or "overheating" in text or "temperature" in text):
-            if failure.get("problem") in {"Fan Not Turning On", "Radiator Fan Failure", "Cooling Fan Relay Failure"}:
-                score += 45
+            if problem in {"Fan Not Turning On", "Radiator Fan Failure", "Cooling Fan Relay Failure"}:
+                score += 70
             elif "cooling" in system or "fan" in component:
                 score += 14
+            if "coolant" in component and has_any("fan not", "fan not working", "fan not running"):
+                score -= 22
+
+        # ------------------------------------
+        # STEERING PULL PRIORITY
+        # ------------------------------------
+
+        if has_any("pull", "pulling", "left", "right", "one side") and has_any("steering", "drive", "driving", "road"):
+            if problem == "Wheel Alignment Incorrect":
+                score += 55
+            elif "alignment" in component:
+                score += 35
+            elif has_any("hard steering", "heavy steering", "tight steering"):
+                score += 8
+            elif "power steering" in component and not has_any("hard", "heavy", "tight", "noise", "whine"):
+                score -= 25
+
+        # ------------------------------------
+        # AC COOLING CONTEXT
+        # ------------------------------------
+
+        if has_any("ac not cooling", "not cooling", "thandi hawa", "warm air") and has_any("ac", "air conditioning"):
+            if problem in {"AC Gas Low", "AC Gas Leak"}:
+                score += 35
+            elif problem == "AC Compressor Failure":
+                score += 20
+            elif problem == "AC Condenser Blocked" and not has_any("traffic", "highway", "condenser"):
+                score -= 18
+
+        # ------------------------------------
+        # EXHAUST SMOKE SAFETY PRIORITY
+        # ------------------------------------
+
+        if has_any("white smoke", "white exhaust") or ("smoke" in text and "coolant" in text):
+            if problem in {"White Smoke From Exhaust", "Engine Head Gasket Leak", "Coolant Mixed With Oil"}:
+                score += 55
+            elif system == "ac" and "ac" not in text:
+                score -= 35
+
+        if has_any("black smoke", "kala smoke", "kala dhuan") or ("smoke" in text and "black" in text):
+            if problem == "Black Smoke From Exhaust":
+                score += 90
+            elif system == "ac":
+                score -= 45
+
+        if has_any("blue smoke", "neela smoke", "neela dhuan", "oil burning smoke") or ("smoke" in text and "blue" in text):
+            if problem == "Blue Smoke From Exhaust":
+                score += 80
+            elif "turbo" in component and has_any("turbo", "boost"):
+                score += 20
+            elif system == "ac":
+                score -= 45
+
+        # ------------------------------------
+        # DASHBOARD / LIGHTING PRIORITY
+        # ------------------------------------
+
+        if has_any("tail light", "tail lamp", "rear light", "parking light") and has_any("ignition off", "car off", "key off", "band", "stays on", "remain"):
+            if problem == "Tail Light Stays On After Ignition Off":
+                score += 85
+            elif "light" in component or system in {"electrical", "lighting"}:
+                score += 12
+
+        if has_any("headlight", "head light", "low beam") and has_any("throw", "dim", "weak", "visibility", "raat"):
+            if problem == "Headlight Low Beam Weak":
+                score += 80
+            elif "headlight" in component:
+                score += 20
+
+        if has_any("check engine", "engine light", "mil light", "malfunction indicator"):
+            if has_any("flash", "flashing", "blink", "blinking"):
+                if problem == "Check Engine Light Flashing":
+                    score += 90
+                elif problem == "Check Engine Light Solid":
+                    score -= 25
+            else:
+                if problem == "Check Engine Light Solid":
+                    score += 95
+                elif problem == "Check Engine Light Flashing":
+                    score -= 18
+                elif problem in {"Ignition Coil Failure", "Spark Plug Worn", "Spark Plug Fouled", "Fuel Injector Clogged"} and not has_any("misfire", "rough", "jerk", "shaking", "power loss"):
+                    score -= 40
+
+        if has_any("oil light", "oil pressure", "red oil", "oil lamp"):
+            if problem == "Oil Pressure Warning Light On":
+                score += 90
+
+        if has_any("temperature light", "temp warning", "red temperature", "coolant temperature"):
+            if problem == "Temperature Warning Light On":
+                score += 90
+
+        if has_any("brake warning", "red brake light", "parking brake light", "brake fluid light"):
+            if problem == "Brake Warning Light On":
+                score += 85
+
+        if has_any("tpms", "tyre pressure light", "tire pressure light", "low tyre pressure", "low tire pressure"):
+            if problem == "TPMS Warning Light On":
+                score += 85
+
+        if has_any("dashboard warning light photo uploaded", "warning light image uploaded", "dashboard symbol photo uploaded"):
+            if problem == "Dashboard Warning Light Photo Review Needed":
+                score += 70
+
+        if problem == "Dashboard Warning Light Photo Review Needed" and has_any(
+            "check engine", "oil pressure", "oil light", "temperature light",
+            "brake warning", "tpms", "battery warning", "abs", "airbag"
+        ):
+            score -= 45
+
+        # ------------------------------------
+        # BASIC MAINTENANCE Q&A PRIORITY
+        # ------------------------------------
+
+        if system == "maintenance":
+            if has_any("warning light", "red light", "oil pressure", "overheating", "brake weak", "brake pedal", "not starting"):
+                score -= 20
+            if has_any("maintenance", "service", "checklist", "kab change", "when to change", "guidance"):
+                score += 25
+            if problem == "Basic Maintenance Schedule Guidance" and has_any("basic maintenance", "routine maintenance", "service schedule", "periodic service"):
+                score += 55
+            if problem == "Engine Oil Change Guidance" and has_any("engine oil", "oil change", "oil service"):
+                score += 70
+            if problem == "Tyre Pressure And Rotation Guidance" and has_any("tyre pressure", "tire pressure", "tyre rotation", "rotate tyres"):
+                score += 70
+            if problem == "Battery Maintenance Guidance" and has_any("battery maintenance", "battery health", "replace battery", "battery kab"):
+                score += 70
+            if problem == "Brake Maintenance Guidance" and has_any("brake maintenance", "brake pad", "brake service", "brake fluid"):
+                score += 70
+            if problem == "Coolant Maintenance Guidance" and has_any("coolant maintenance", "coolant change", "coolant level", "radiator coolant"):
+                score += 70
+            if problem == "Filter Maintenance Guidance" and has_any("filter maintenance", "air filter", "cabin filter", "fuel filter"):
+                score += 70
+            if problem == "Long Trip Maintenance Checklist" and has_any("long trip", "long drive", "road trip", "highway trip", "trip se pehle"):
+                score += 75
+
+        # ------------------------------------
+        # NOISE CONTEXT PRIORITY
+        # ------------------------------------
+
+        if has_any("humming", "ghurrr", "wheel bearing") and has_any("speed", "driving", "badhne", "increase"):
+            if problem == "Wheel Bearing Failure":
+                score += 80
+            elif "timing chain" in problem.lower() and not has_any("engine", "cold start", "startup", "start"):
+                score -= 35
+
+        # ------------------------------------
+        # BRAKE / CLUTCH / SAFETY CONTEXT
+        # ------------------------------------
+
+        if has_any("brake", "braking") and has_any("squeak", "squeaking", "cheekh"):
+            if problem == "Brake Pad Wear":
+                score += 75
+            elif problem == "Brake Fluid Low" and not has_any("soft", "warning light", "fluid", "pedal"):
+                score -= 35
+
+        if has_any("brake", "braking") and has_any("pull", "pulls", "pulling", "one side", "left", "right", "khich"):
+            if problem == "Brake Caliper Stuck":
+                score += 75
+            elif problem == "Brake Pad Wear":
+                score -= 20
+
+        if has_any("clutch slip", "clutch slipping", "rpm increases speed not increasing", "rpm badh raha", "rpm badhta") and has_any("speed not", "speed nahi", "not increasing", "clutch"):
+            if problem == "Clutch Slips Under Load":
+                score += 95
+            elif system == "engine" and not has_any("misfire", "check engine", "smoke"):
+                score -= 35
+
+        if has_any("car shuts off while driving", "engine shuts off while driving", "driving me car band", "chalti gaadi band"):
+            if problem == "Car Shuts Off While Driving":
+                score += 100
+
+        if has_any("abs light", "abs warning"):
+            if problem == "ABS Sensor Fault":
+                score += 75
+            elif problem == "ABS Module Failure":
+                score += 55
+            elif problem == "Brake Warning Light On" and "brake warning" not in text:
+                score -= 25
+
+        if has_any("airbag light", "airbag warning", "srs light", "srs warning"):
+            if problem == "Airbag Warning Light":
+                score += 95
 
         # ------------------------------------
         # SYMPTOM WEIGHT BOOST
@@ -170,6 +375,7 @@ def rank_failures(problem_text, failure_database):
             "system": failure.get("system"),
             "component": failure.get("component"),
             "raw_score": score,
+            "evidence_score": score,
             "probability_score": score,
             "severity": failure.get("severity"),
             "urgency": failure.get("urgency"),
@@ -183,6 +389,7 @@ def rank_failures(problem_text, failure_database):
             "aliases": failure.get("aliases", []),
             "is_generic": failure.get("is_generic", False),
             "use_as_router_only": failure.get("use_as_router_only", False),
+            "evidence_level": "strong" if score >= 95 and len(matched_symptoms) >= 1 else "medium" if score >= 45 else "low",
             "explanation": generate_explanation(problem_text, failure, {})
 
         })
@@ -202,8 +409,13 @@ def rank_failures(problem_text, failure_database):
 
     for item in matches:
 
-        confidence = (item["raw_score"] / top_score) * 95
-        confidence = min(95, confidence)
+        relative_confidence = (item["raw_score"] / top_score) * 95
+        absolute_confidence = calibrated_confidence(
+            item["raw_score"],
+            len(item.get("top_matched_symptoms") or []),
+            item.get("is_generic", False),
+        )
+        confidence = min(absolute_confidence, relative_confidence)
 
         item["confidence"] = round(confidence)
         item["confidence_percent"] = item["confidence"]
@@ -221,12 +433,25 @@ def rank_failures(problem_text, failure_database):
     # ------------------------------------------------
 
     unique = []
+    seen_groups = set()
     seen = set()
 
     for item in matches:
 
         if item["issue"] not in seen:
+            group_id = item.get("group_id") or item["issue"]
+            if group_id in seen_groups and len(unique) >= 1:
+                continue
             unique.append(item)
             seen.add(item["issue"])
+            seen_groups.add(group_id)
+
+    if len(unique) < 3:
+        for item in matches:
+            if item["issue"] not in seen:
+                unique.append(item)
+                seen.add(item["issue"])
+            if len(unique) >= 3:
+                break
 
     return unique[:3]

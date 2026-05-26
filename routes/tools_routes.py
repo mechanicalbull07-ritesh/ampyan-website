@@ -2,6 +2,7 @@ from flask import Blueprint, current_app, render_template, request, jsonify, ses
 from flask_login import current_user
 from models.models import Car, AIFeedback, db
 from services.car_recommendation_service import recommend_cars, build_user_profile_summary
+from services.dashboard_light_intake import dashboard_light_context
 from service_estimator import estimate_service
 
 # AI ENGINE
@@ -265,6 +266,9 @@ def ai_diagnosis_page():
     if request.method == "POST":
 
         problem = request.form.get("problem")
+        extra_context = dashboard_light_context(request.files, request.form)
+        if extra_context:
+            problem = f"{problem or ''} {extra_context}".strip()
 
         if problem:
 

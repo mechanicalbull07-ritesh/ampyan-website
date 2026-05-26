@@ -1,6 +1,7 @@
 # failure_database.py
 
 from ai_engine.language_engine import normalize_failure_database_entries
+from services.maintenance_qa import MAINTENANCE_QA_GUIDANCE
 
 FAILURE_DATABASE = [
 
@@ -9495,6 +9496,412 @@ def _is_generic_router(entry):
     )
 
 
+DASHBOARD_LIGHT_FAILURES = [
+    {
+        "id": 261,
+        "problem": "Tail Light Stays On After Ignition Off",
+        "system": "electrical",
+        "component": "tail light circuit",
+        "severity": "medium",
+        "urgency": "service_soon",
+        "probability": 5,
+        "symptoms": [
+            "tail light stays on after ignition off",
+            "parking light remains on after car off",
+            "rear light on after key off",
+            "tail lamp battery drain",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Tail light ignition OFF ke baad bhi ON rehti hai?", "impact": {"yes": 1.7, "no": 0.5}},
+            {"id": "q2", "text": "Battery discharge ho rahi hai?", "impact": {"yes": 1.4, "no": 0.7}},
+        ],
+        "user_checks": [
+            "check parking light switch position",
+            "inspect brake pedal switch if brake lamps stay on",
+            "do not leave the car parked long with lights on",
+        ],
+        "repair_cost": {"min": 500, "max": 6000},
+        "advice": "Most likely parking-light switch, brake-light switch, relay, BCM output or wiring short. Disconnecting the battery can prevent drain if lights remain on.",
+    },
+    {
+        "id": 262,
+        "problem": "Headlight Low Beam Weak",
+        "system": "electrical",
+        "component": "headlight low beam",
+        "severity": "medium",
+        "urgency": "service_soon",
+        "probability": 5,
+        "symptoms": [
+            "headlight throw low",
+            "low beam weak",
+            "headlight light throw poor",
+            "headlight dim while driving",
+            "night visibility poor",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Low beam ka throw bahut kam hai?", "impact": {"yes": 1.6, "no": 0.5}},
+            {"id": "q2", "text": "Dono headlights dim hain?", "impact": {"yes": 1.3, "no": 0.8}},
+        ],
+        "user_checks": [
+            "clean headlight lens",
+            "check bulb condition and headlight aim",
+            "check battery/alternator voltage if both lights are dim",
+        ],
+        "repair_cost": {"min": 500, "max": 12000},
+        "advice": "Weak throw can come from old bulbs, cloudy lenses, bad alignment, weak ground/voltage drop, or reflector damage.",
+    },
+    {
+        "id": 263,
+        "problem": "Dashboard Warning Light Photo Review Needed",
+        "system": "electrical",
+        "component": "dashboard warning light",
+        "severity": "medium",
+        "urgency": "service_soon",
+        "probability": 4,
+        "symptoms": [
+            "dashboard warning light photo uploaded",
+            "unknown dashboard warning light",
+            "dash light symbol on",
+            "instrument cluster warning symbol",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Warning light red color ki hai?", "impact": {"yes": 1.5, "no": 0.7}},
+            {"id": "q2", "text": "Car abnormal behave kar rahi hai?", "impact": {"yes": 1.5, "no": 0.7}},
+        ],
+        "user_checks": [
+            "match the symbol with the owner manual",
+            "if the warning is red, oil, brake, or temperature related, stop driving",
+            "scan the car with OBD if check engine or multiple lights are on",
+        ],
+        "repair_cost": {"min": 500, "max": 12000},
+        "advice": "Image upload is accepted as extra context, but AMPYAN still needs the symbol name or a clear description for reliable diagnosis.",
+    },
+    {
+        "id": 264,
+        "problem": "Oil Pressure Warning Light On",
+        "system": "engine",
+        "component": "oil pressure system",
+        "severity": "critical",
+        "urgency": "stop_driving",
+        "probability": 5,
+        "symptoms": [
+            "oil pressure warning light",
+            "red oil light on dashboard",
+            "oil lamp on",
+            "engine oil warning light",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Red oil pressure light ON hai?", "impact": {"yes": 1.8, "no": 0.4}},
+            {"id": "q2", "text": "Engine se knocking ya ticking sound aa rahi hai?", "impact": {"yes": 1.6, "no": 0.6}},
+        ],
+        "user_checks": [
+            "stop engine immediately",
+            "check engine oil level only after safely parking",
+            "do not continue driving with oil pressure warning",
+        ],
+        "repair_cost": {"min": 500, "max": 50000},
+        "advice": "Oil pressure warning can damage the engine quickly. Stop driving and check oil level, oil pump, sensor and leaks.",
+    },
+    {
+        "id": 265,
+        "problem": "Temperature Warning Light On",
+        "system": "cooling",
+        "component": "cooling system",
+        "severity": "critical",
+        "urgency": "stop_driving",
+        "probability": 5,
+        "symptoms": [
+            "temperature warning light",
+            "red temperature light",
+            "engine temperature light on",
+            "coolant temperature warning",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Temperature warning light ON hai?", "impact": {"yes": 1.7, "no": 0.4}},
+            {"id": "q2", "text": "Coolant level low hai?", "impact": {"yes": 1.5, "no": 0.7}},
+        ],
+        "user_checks": [
+            "stop driving and let engine cool",
+            "do not open radiator cap when hot",
+            "check coolant level, radiator fan and leaks",
+        ],
+        "repair_cost": {"min": 500, "max": 25000},
+        "advice": "Temperature warning means overheating risk. Stop safely and inspect coolant, fan, thermostat, radiator and water pump.",
+    },
+    {
+        "id": 266,
+        "problem": "Brake Warning Light On",
+        "system": "brake",
+        "component": "brake warning system",
+        "severity": "high",
+        "urgency": "repair_immediately",
+        "probability": 5,
+        "symptoms": [
+            "brake warning light",
+            "red brake light on dashboard",
+            "parking brake light stays on",
+            "brake fluid warning light",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Parking brake release ke baad bhi brake light ON hai?", "impact": {"yes": 1.6, "no": 0.6}},
+            {"id": "q2", "text": "Brake pedal soft feel ho raha hai?", "impact": {"yes": 1.6, "no": 0.6}},
+        ],
+        "user_checks": [
+            "confirm parking brake is fully released",
+            "check brake fluid level",
+            "avoid driving if brake pedal is soft or braking is weak",
+        ],
+        "repair_cost": {"min": 500, "max": 15000},
+        "advice": "Brake warning can mean parking brake switch, low brake fluid, brake wear sensor, hydraulic leak or ABS/brake system fault.",
+    },
+    {
+        "id": 267,
+        "problem": "TPMS Warning Light On",
+        "system": "tyre",
+        "component": "tyre pressure monitoring system",
+        "severity": "medium",
+        "urgency": "service_soon",
+        "probability": 5,
+        "symptoms": [
+            "tpms warning light",
+            "tyre pressure warning light",
+            "tire pressure light",
+            "low tyre pressure symbol",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Tyre pressure warning light ON hai?", "impact": {"yes": 1.6, "no": 0.6}},
+            {"id": "q2", "text": "Kisi tyre me pressure visibly low hai?", "impact": {"yes": 1.5, "no": 0.7}},
+        ],
+        "user_checks": [
+            "check all tyre pressures when cold",
+            "inspect for puncture or valve leak",
+            "reset TPMS only after correcting pressure",
+        ],
+        "repair_cost": {"min": 0, "max": 6000},
+        "advice": "TPMS usually means low tyre pressure or sensor issue. Verify pressure first before long driving.",
+    },
+]
+
+MAINTENANCE_QA_GUIDANCE = [
+    {
+        "id": 268,
+        "problem": "Basic Maintenance Schedule Guidance",
+        "system": "maintenance",
+        "component": "service schedule",
+        "severity": "low",
+        "urgency": "normal",
+        "probability": 4,
+        "symptoms": [
+            "basic maintenance question",
+            "service schedule question",
+            "routine maintenance checklist",
+            "what maintenance should i do",
+            "periodic service due",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Car ka last service kab hua tha?", "impact": {"yes": 1.2, "no": 1.0}},
+            {"id": "q2", "text": "Koi warning light ya abnormal sound hai?", "impact": {"yes": 1.5, "no": 0.8}},
+        ],
+        "user_checks": [
+            "check engine oil level and service sticker",
+            "check tyre pressure and visible tyre wear",
+            "check coolant, brake fluid, all lights, wipers and battery terminals",
+        ],
+        "repair_cost": {"min": 0, "max": 5000},
+        "advice": "For routine maintenance, follow the owner manual first. As a practical baseline, inspect fluids, filters, tyres, brakes, lights and battery before long trips or every service interval.",
+    },
+    {
+        "id": 269,
+        "problem": "Engine Oil Change Guidance",
+        "system": "maintenance",
+        "component": "engine oil",
+        "severity": "low",
+        "urgency": "normal",
+        "probability": 5,
+        "symptoms": [
+            "engine oil change question",
+            "when to change engine oil",
+            "oil service due",
+            "engine oil maintenance",
+            "which engine oil interval",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Oil change due date ya km cross ho gaya hai?", "impact": {"yes": 1.5, "no": 0.8}},
+            {"id": "q2", "text": "Oil level low ya oil warning light ON hai?", "impact": {"yes": 1.7, "no": 0.6}},
+        ],
+        "user_checks": [
+            "check oil level on dipstick when parked safely",
+            "follow the grade and interval in the owner manual",
+            "if oil pressure warning is ON, stop driving and inspect immediately",
+        ],
+        "repair_cost": {"min": 1500, "max": 8000},
+        "advice": "Do not guess oil grade. Use manufacturer-specified grade and interval. Severe city use, heat, dust and short trips may need earlier replacement.",
+    },
+    {
+        "id": 270,
+        "problem": "Tyre Pressure And Rotation Guidance",
+        "system": "maintenance",
+        "component": "tyres",
+        "severity": "low",
+        "urgency": "normal",
+        "probability": 5,
+        "symptoms": [
+            "tyre pressure question",
+            "tire pressure question",
+            "when to rotate tyres",
+            "tyre rotation maintenance",
+            "tyre maintenance checklist",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Tyre pressure monthly check karte ho?", "impact": {"yes": 1.1, "no": 1.4}},
+            {"id": "q2", "text": "Uneven tyre wear ya pulling feel hota hai?", "impact": {"yes": 1.5, "no": 0.8}},
+        ],
+        "user_checks": [
+            "check tyre pressure when tyres are cold",
+            "inspect sidewall cuts, bulges and uneven wear",
+            "do wheel alignment/balancing if pulling, vibration or uneven wear appears",
+        ],
+        "repair_cost": {"min": 0, "max": 4000},
+        "advice": "Use the tyre pressure label/manual value, not the maximum pressure printed on the tyre. Rotate tyres based on owner manual or tyre wear pattern.",
+    },
+    {
+        "id": 271,
+        "problem": "Battery Maintenance Guidance",
+        "system": "maintenance",
+        "component": "battery",
+        "severity": "low",
+        "urgency": "normal",
+        "probability": 5,
+        "symptoms": [
+            "battery maintenance question",
+            "battery health check question",
+            "when to replace battery",
+            "battery service guidance",
+            "battery weak prevention",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Morning start slow ho raha hai?", "impact": {"yes": 1.5, "no": 0.8}},
+            {"id": "q2", "text": "Battery 3-5 saal purani hai?", "impact": {"yes": 1.4, "no": 0.8}},
+        ],
+        "user_checks": [
+            "inspect terminal corrosion and tightness",
+            "get a battery load test before replacement",
+            "check alternator charging voltage if battery warning light appears",
+        ],
+        "repair_cost": {"min": 0, "max": 12000},
+        "advice": "Battery life depends on heat, usage and alternator health. Test before replacing; repeated discharge can also be caused by parasitic drain.",
+    },
+    {
+        "id": 272,
+        "problem": "Brake Maintenance Guidance",
+        "system": "maintenance",
+        "component": "brake system",
+        "severity": "medium",
+        "urgency": "service_soon",
+        "probability": 4,
+        "symptoms": [
+            "brake maintenance question",
+            "when to change brake pads",
+            "brake service guidance",
+            "brake fluid maintenance",
+            "brake inspection checklist",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Brake noise, vibration ya weak braking feel hota hai?", "impact": {"yes": 1.7, "no": 0.7}},
+            {"id": "q2", "text": "Brake fluid level low hai?", "impact": {"yes": 1.6, "no": 0.7}},
+        ],
+        "user_checks": [
+            "inspect brake pad thickness and disc condition",
+            "check brake fluid level and leaks",
+            "avoid driving if brake pedal is soft, sinking or warning light is ON",
+        ],
+        "repair_cost": {"min": 0, "max": 12000},
+        "advice": "Brake maintenance is safety-critical. Do not ignore noise, vibration, soft pedal, fluid loss or warning lights.",
+    },
+    {
+        "id": 273,
+        "problem": "Coolant Maintenance Guidance",
+        "system": "maintenance",
+        "component": "coolant system",
+        "severity": "medium",
+        "urgency": "service_soon",
+        "probability": 4,
+        "symptoms": [
+            "coolant maintenance question",
+            "coolant level check question",
+            "when to change coolant",
+            "radiator coolant guidance",
+            "cooling system maintenance",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Coolant level low ya leak visible hai?", "impact": {"yes": 1.6, "no": 0.8}},
+            {"id": "q2", "text": "Temperature warning ya overheating hoti hai?", "impact": {"yes": 1.8, "no": 0.6}},
+        ],
+        "user_checks": [
+            "check coolant only when engine is cool",
+            "do not open radiator cap when hot",
+            "inspect hoses, radiator fan, reservoir and leak marks",
+        ],
+        "repair_cost": {"min": 500, "max": 8000},
+        "advice": "Use the correct coolant type and mix. Overheating or coolant loss is not routine maintenance; it needs inspection.",
+    },
+    {
+        "id": 274,
+        "problem": "Filter Maintenance Guidance",
+        "system": "maintenance",
+        "component": "air/cabin/fuel filters",
+        "severity": "low",
+        "urgency": "normal",
+        "probability": 4,
+        "symptoms": [
+            "filter maintenance question",
+            "air filter change question",
+            "cabin filter change question",
+            "fuel filter maintenance",
+            "service filter checklist",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Dusty area me car zyada chalti hai?", "impact": {"yes": 1.4, "no": 0.8}},
+            {"id": "q2", "text": "AC airflow weak ya smell aa rahi hai?", "impact": {"yes": 1.5, "no": 0.8}},
+        ],
+        "user_checks": [
+            "inspect air filter for dust/clogging",
+            "replace cabin filter if AC airflow is weak or smell appears",
+            "follow manual for fuel filter interval, especially diesel cars",
+        ],
+        "repair_cost": {"min": 300, "max": 6000},
+        "advice": "Filters are low-cost but affect mileage, AC airflow and engine health. Replace earlier in dusty conditions.",
+    },
+    {
+        "id": 275,
+        "problem": "Long Trip Maintenance Checklist",
+        "system": "maintenance",
+        "component": "trip checklist",
+        "severity": "low",
+        "urgency": "normal",
+        "probability": 5,
+        "symptoms": [
+            "long trip maintenance checklist",
+            "highway trip car check",
+            "before road trip maintenance",
+            "long drive checklist",
+            "trip se pehle maintenance",
+        ],
+        "questions": [
+            {"id": "q1", "text": "Long trip 200 km se zyada hai?", "impact": {"yes": 1.3, "no": 0.8}},
+            {"id": "q2", "text": "Recent service overdue hai?", "impact": {"yes": 1.5, "no": 0.8}},
+        ],
+        "user_checks": [
+            "check tyre pressure, spare tyre, jack and puncture kit",
+            "check engine oil, coolant, brake fluid and washer fluid",
+            "check lights, wipers, battery health and emergency contacts",
+        ],
+        "repair_cost": {"min": 0, "max": 5000},
+        "advice": "Before a long trip, fix warning lights, weak brakes, overheating, tyre damage or battery weakness first. Do not rely on last-minute visual checks only.",
+    },
+]
+
+
 def harden_failure_database_entries(entries):
     seen_problem_counts = {}
 
@@ -9618,5 +10025,7 @@ def validate_failure_database(entries=None):
 
 
 FAILURE_DATABASE = harden_failure_database_entries(
-    normalize_failure_database_entries(FAILURE_DATABASE)
+    normalize_failure_database_entries(
+        FAILURE_DATABASE + DASHBOARD_LIGHT_FAILURES + MAINTENANCE_QA_GUIDANCE
+    )
 )

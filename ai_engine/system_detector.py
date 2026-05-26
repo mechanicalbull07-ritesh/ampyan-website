@@ -8,26 +8,34 @@ def detect_system(problem_text):
 
         "engine":[
             "engine","misfire","stall","power loss","loss of power",
-            "smoke","knocking","rpm","engine shaking","engine vibration"
+            "smoke","knocking","rpm","engine shaking","engine vibration",
+            "check engine light","engine warning light","oil pressure light",
+            "oil pressure warning light","oil warning light","oil light",
+            "black smoke","blue smoke","white smoke","car shuts off while driving"
         ],
 
         "brake":[
             "brake","braking","pedal","disc","rotor","caliper","pad",
-            "abs","stopping","brake noise"
+            "abs","stopping","brake noise","brake warning light",
+            "red brake light","parking brake light"
         ],
 
         "electrical":[
             "battery","starter","alternator","fuse","relay","sensor",
-            "not starting","no start","clicking sound"
+            "not starting","no start","clicking sound","dashboard light",
+            "warning light","tail light","headlight","parking light",
+            "check engine light","oil light","tpms"
         ],
 
         "cooling":[
             "overheat","overheating","coolant","radiator","temperature",
-            "fan","water pump"
+            "fan","water pump","temperature warning light","temperature light",
+            "temp warning"
         ],
 
         "transmission":[
-            "gear","gearbox","shifting","gear slipping","clutch"
+            "gear","gearbox","shifting","gear slipping","clutch",
+            "clutch slip","rpm increases speed not increasing"
         ],
 
         "steering":[
@@ -42,6 +50,11 @@ def detect_system(problem_text):
             "fuel","injector","fuel pump","fuel smell","fuel pressure"
         ],
 
+        "tyre":[
+            "tpms","tyre pressure","tire pressure","low tyre pressure",
+            "low tire pressure"
+        ],
+
         "ac":[
             " ac ","air conditioning","compressor","blower","weak cooling"
         ],
@@ -52,6 +65,22 @@ def detect_system(problem_text):
 
         "body":[
             "door","window","sunroof","lock","horn","wiper"
+        ],
+
+        "safety":[
+            "airbag light","airbag warning","srs light","srs warning"
+        ],
+
+        "maintenance":[
+            "maintenance","service schedule","periodic service","checklist",
+            "engine oil change","tyre rotation","tire rotation",
+            "battery maintenance","brake maintenance","coolant maintenance",
+            "filter maintenance","long trip checklist","road trip maintenance"
+        ],
+
+        "lighting":[
+            "tail light","tail lamp","headlight","low beam","high beam",
+            "parking light","brake light","light throw"
         ]
 
     }

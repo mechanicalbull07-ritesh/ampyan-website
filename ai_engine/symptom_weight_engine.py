@@ -92,21 +92,13 @@ SYMPTOM_WEIGHTS = {
 
 
 def symptom_weight_score(problem_words):
-
-    print("DEBUG WORDS:", problem_words)
-
     scores = {}
 
     text = " ".join(problem_words).lower()
 
-    print("DEBUG TEXT:", text)
-
     for symptom, components in SYMPTOM_WEIGHTS.items():
 
         if symptom in text:
-
-            print("MATCHED SYMPTOM:", symptom)
-
             for comp, weight in components.items():
 
                 scores[comp] = scores.get(comp, 0) + weight

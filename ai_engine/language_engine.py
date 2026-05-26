@@ -76,7 +76,13 @@ PHRASE_MAPPINGS = {
     "vibration": [
         "gaadi hil rahi hai", "car hil rahi hai", "engine hil raha hai",
         "kampan ho rahi hai", "body vibration", "steering vibration",
+        "vibrate kar rahi", "vibrate ho rahi", "vibration aa rahi",
         "கம்பனம்", "కంపనం", "কম্পন", "വൈബ്രേഷൻ", "ಕಂಪನ"
+    ],
+    "brake vibration": [
+        "brake lagate vibration", "brake pe vibration", "braking pe vibration",
+        "brake lagate steering hilti", "brake lagate car hilti",
+        "brake lagane par vibration", "brake lagane par steering vibrate"
     ],
     "misfire": [
         "jhattke maar rahi hai", "jerk aa raha", "engine skip kar raha",
@@ -86,7 +92,9 @@ PHRASE_MAPPINGS = {
     "not starting": [
         "start nahi ho rahi", "self maarne par start nahi",
         "car start nahi hoti", "engine start issue", "crank nahi ho raha",
-        "gaadi start nahi", "ஸ்டார்ட் ஆகவில்லை", "స్టార్ట్ కావడం లేదు",
+        "gaadi start nahi", "gadi start nahi", "self nahi le rahi",
+        "start nahi leti", "start nahi ho raha", "no crank",
+        "ஸ்டார்ட் ஆகவில்லை", "స్టార్ట్ కావడం లేదు",
         "স্টার্ট নিচ্ছে না", "സ്റ്റാർട്ട് ആവുന്നില്ല", "start avvatledu",
         "start aagavillai", "start hocche na", "ஆகவில்லை",
         "ആവുന്നില്ല", "ಆಗುತ್ತಿಲ್ಲ"
@@ -100,8 +108,22 @@ PHRASE_MAPPINGS = {
     "noise": [
         "awaaz aa rahi hai", "ajeeb sound", "tik tik sound",
         "khad khad sound", "noise aa raha hai", "sound aa raha hai",
+        "humming noise", "ghurrr sound", "speed badhne par awaaz",
         "சத்தம்", "শব্দ", "శబ్దం", "శబ్దం వస్తోంది", "ശബ്ദം", "ಶಬ್ದ",
         "கேட்கிறது", "করে", "వస్తోంది", "കേൾക്കുന്നു", "ಬರುತ್ತಿದೆ"
+    ],
+    "humming sound while driving": [
+        "speed badhne par humming", "speed badhne par humming noise",
+        "driving ke time humming", "ghurrr sound speed ke sath",
+        "humming noise while driving"
+    ],
+    "squeaking while braking": [
+        "brake squeak", "brake squeaking", "brake se cheekh awaaz",
+        "brake lagate squeaking", "braking squeak"
+    ],
+    "car pulling to one side while braking": [
+        "brake lagate ek side", "braking pe pull", "pulls to one side while braking",
+        "car pulls to one side while braking", "brake lagate car khich rahi"
     ],
     "knocking": [
         "knocking sound", "tak tak sound", "engine knocking",
@@ -113,6 +135,10 @@ PHRASE_MAPPINGS = {
         "heat issue", "கார் அதிக சூடு", "ఇంజిన్ వేడెక్కుతోంది",
         "ইঞ্জিন গরম হচ্ছে", "engine heat", "వేడెక్కుతోంది",
         "গরম হচ্ছে", "அதிக சூடு", "ചൂടാകുന്നു"
+    ],
+    "fan not working": [
+        "fan nahi chal raha", "fan chal nahi raha", "radiator fan nahi chal raha",
+        "fan not running", "fan not turning", "fan dead"
     ],
     "brake failure": [
         "brake kaam nahi kar raha", "brake fail", "brake nahi lag rahe",
@@ -126,6 +152,11 @@ PHRASE_MAPPINGS = {
         "steering tight hai", "steering hard hai", "hard steering",
         "steering bahut heavy", "ஸ்டீயரிங் ஹார்ட்", "స్టీరింగ్ గట్టిగా ఉంది"
     ],
+    "pulling": [
+        "ek side khich rahi", "ek side khinch rahi", "left pull",
+        "right pull", "car left ja rahi", "car right ja rahi",
+        "seedhi road pe khich rahi", "one side pull"
+    ],
     "steering loose": [
         "steering halka hai", "control loose hai", "steering loose",
         "play in steering"
@@ -138,9 +169,93 @@ PHRASE_MAPPINGS = {
         "bad smell", "gandi smell", "smell aa rahi hai", "odor",
         "வாசனை", "গন্ধ", "వాసన"
     ],
+    "tail light stays on after ignition off": [
+        "tail light ignition off ke baad bhi on", "tail light band nahi ho rahi",
+        "rear light car off ke baad on", "parking light band nahi ho rahi",
+        "brake light car band hone ke baad on", "tail lamp on after key off"
+    ],
+    "headlight throw low": [
+        "head light throw low", "headlight throw kam hai", "low beam weak",
+        "headlight low throw", "raat me visibility kam", "headlight dim throw",
+        "headlight light throw poor"
+    ],
+    "check engine light": [
+        "check engine light on", "engine check light", "engine warning light",
+        "yellow engine light", "malfunction indicator lamp", "mil light"
+    ],
+    "check engine light flashing": [
+        "check engine light blink", "check engine light flashing",
+        "engine light blink kar rahi", "engine warning blink"
+    ],
+    "oil pressure warning light": [
+        "oil light on", "red oil light", "engine oil light",
+        "oil pressure light", "oil lamp on"
+    ],
+    "temperature warning light": [
+        "temperature light on", "red temperature light", "engine temperature warning",
+        "coolant temperature light", "temp warning"
+    ],
+    "brake warning light": [
+        "brake light dashboard", "red brake light", "parking brake light on",
+        "brake warning on", "brake fluid light"
+    ],
+    "tpms warning light": [
+        "tpms light", "tyre pressure light", "tire pressure light",
+        "low tyre pressure symbol", "low tire pressure symbol"
+    ],
+    "basic maintenance question": [
+        "basic maintenance", "routine maintenance", "maintenance question",
+        "service schedule", "periodic service", "what maintenance should i do",
+        "general maintenance", "service checklist"
+    ],
+    "engine oil change question": [
+        "when to change engine oil", "engine oil kab change", "oil change due",
+        "engine oil service", "which engine oil interval", "oil service kab"
+    ],
+    "tyre pressure question": [
+        "tyre pressure kitna", "tire pressure kitna", "tyre pressure check",
+        "tyre rotation kab", "when to rotate tyres", "tyre maintenance"
+    ],
+    "battery maintenance question": [
+        "battery kab change", "battery health check", "battery maintenance",
+        "when to replace battery", "battery weak prevention"
+    ],
+    "brake maintenance question": [
+        "brake pad kab change", "brake maintenance", "brake service",
+        "brake fluid kab change", "brake inspection"
+    ],
+    "coolant maintenance question": [
+        "coolant kab change", "coolant maintenance", "coolant level check",
+        "radiator coolant", "cooling system maintenance"
+    ],
+    "filter maintenance question": [
+        "air filter kab change", "cabin filter kab change", "filter maintenance",
+        "fuel filter kab change", "service filter checklist"
+    ],
+    "long trip maintenance checklist": [
+        "long trip checklist", "long drive checklist", "road trip maintenance",
+        "trip se pehle maintenance", "highway trip car check"
+    ],
+    "dashboard warning light photo uploaded": [
+        "dashboard light photo uploaded", "dash light photo uploaded",
+        "warning light image uploaded", "dashboard symbol photo uploaded"
+    ],
+    "white smoke": [
+        "safed dhuan", "white dhuan", "white smoke", "exhaust se safed dhuan",
+        "silencer se white smoke"
+    ],
+    "black smoke": [
+        "black smoke", "kala dhuan", "exhaust se kala dhuan",
+        "silencer se black smoke", "acceleration pe black smoke"
+    ],
+    "blue smoke": [
+        "blue smoke", "neela dhuan", "oil burning smoke",
+        "exhaust se blue smoke", "oil jalne ka smoke"
+    ],
     "ac not cooling": [
         "ac thanda nahi kar raha", "ac cooling nahi hai", "ac cooling problem",
-        "ac not cold", "குளிர்ச்சி இல்லை", "చల్లగా లేదు", "ঠান্ডা করছে না"
+        "ac not cold", "ac thandi hawa nahi de raha", "blower chal raha par cooling nahi",
+        "ac hawa garam hai", "குளிர்ச்சி இல்லை", "చల్లగా లేదు", "ঠান্ডা করছে না"
     ],
     "ac weak": [
         "ac weak hai", "cooling kam hai", "airflow weak"
@@ -152,6 +267,21 @@ PHRASE_MAPPINGS = {
     "rough running": [
         "gaadi ajeeb chal rahi hai", "smooth nahi chal rahi",
         "rough chal rahi hai", "idle rough", "engine rough"
+    ],
+    "clutch slip under load": [
+        "clutch slipping", "clutch slip", "rpm badh raha speed nahi",
+        "rpm increases speed not increasing", "rpm badhta hai speed nahi",
+        "speed nahi badh rahi rpm badh raha"
+    ],
+    "airbag warning light on": [
+        "airbag light", "airbag warning", "srs light", "srs warning"
+    ],
+    "abs warning light": [
+        "abs light", "abs warning", "abs light dashboard"
+    ],
+    "car shuts off while driving": [
+        "car shuts off while driving", "driving me car band ho gayi",
+        "chalti gaadi band", "drive karte car band", "engine shuts off while driving"
     ]
 }
 
@@ -183,9 +313,24 @@ TERM_MAPPINGS = {
     "jhattke": "jerk",
     "jerk": "jerk",
     "khich": "pulling",
+    "khinch": "pulling",
     "pull": "pulling",
+    "pulling": "pulling",
     "light": "light",
+    "dashboard": "dashboard",
+    "dash": "dashboard",
+    "ignition": "ignition",
+    "tail": "tail",
+    "lamp": "light",
+    "headlight": "headlight",
+    "head": "head",
+    "tpms": "tpms",
     "smell": "smell",
+    "dhuan": "smoke",
+    "dhua": "smoke",
+    "safed": "white",
+    "kala": "black",
+    "neela": "blue",
     "கார்": "car",
     "ஸ்டார்ட்": "start",
     "இன்ஜின்": "engine",
@@ -323,7 +468,9 @@ KEYWORDS = [
     "fuel", "injector", "filter", "turbo", "radiator", "coolant",
     "fan", "ac", "compressor", "steering", "suspension",
     "mount", "tyre", "alignment", "sensor", "misfire", "vibration",
-    "noise", "overheating", "stalling", "not starting", "power loss"
+    "noise", "overheating", "stalling", "not starting", "power loss",
+    "maintenance", "service", "checklist", "engine oil", "tyre pressure",
+    "brake fluid", "road trip"
 ]
 
 

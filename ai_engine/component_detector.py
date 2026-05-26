@@ -12,23 +12,30 @@ def detect_components(problem_text):
 
         "brake":[
             "brake","braking","pedal","disc","rotor","caliper",
-            "pad","abs","stopping","brake failure","brake weak"
+            "pad","abs","stopping","brake failure","brake weak",
+            "squeaking while braking","pulling to one side while braking"
         ],
 
         "engine":[
             "engine","misfire","power loss","stall","knocking",
             "rpm","engine shaking","engine vibration","rough running",
-            "not starting","stalling","overheating"
+            "not starting","stalling","overheating","check engine light",
+            "engine warning light","oil pressure light","oil pressure warning light",
+            "oil warning light","oil light","black smoke","blue smoke",
+            "white smoke","car shuts off while driving"
         ],
 
         "electrical":[
             "battery","starter","alternator","fuse",
-            "not starting","no start","relay","sensor"
+            "not starting","no start","relay","sensor",
+            "dashboard light","warning light","tail light","headlight",
+            "parking light","check engine light","oil light","tpms"
         ],
 
         "cooling":[
             "overheat","overheating","coolant","radiator",
-            "temperature","fan","water pump","coolant loss","hot"
+            "temperature","fan","water pump","coolant loss","hot",
+            "temperature warning light","temperature light","temp warning"
         ],
 
         "steering":[
@@ -54,12 +61,19 @@ def detect_components(problem_text):
             "fuel smell","fuel pressure"
         ],
 
+        "tyre":[
+            "tpms","tyre pressure","tire pressure","low tyre pressure",
+            "low tire pressure"
+        ],
+
         "transmission":[
             "gear",
             "gearbox",
             "shifting",
             "gear slipping",
-            "clutch"
+            "clutch",
+            "clutch slip",
+            "rpm increases speed not increasing"
         ],
 
         "suspension":[
@@ -93,6 +107,28 @@ def detect_components(problem_text):
         "body":[
             "door","window","sunroof",
             "wiper","mirror","body noise"
+        ],
+
+        "maintenance":[
+            "maintenance","service schedule","periodic service","checklist",
+            "engine oil change","tyre rotation","tire rotation",
+            "battery maintenance","brake maintenance","coolant maintenance",
+            "filter maintenance","long trip checklist","road trip maintenance"
+        ],
+
+        "lighting":[
+            "tail light","tail lamp","parking light","brake light",
+            "headlight","low beam","high beam","light throw"
+        ],
+
+        "dashboard":[
+            "dashboard","dash light","warning light","check engine light",
+            "oil pressure light","temperature light","tpms light",
+            "battery warning light","airbag light","abs light"
+        ],
+
+        "safety":[
+            "airbag light","airbag warning","srs light","srs warning"
         ]
     }
 

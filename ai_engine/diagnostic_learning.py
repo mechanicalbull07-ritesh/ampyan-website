@@ -1,5 +1,6 @@
 from models.models import DiagnosticLearning, db
 from collections import defaultdict
+from flask import current_app
 
 
 # =============================
@@ -19,15 +20,13 @@ def save_learning(problem, answers, final_issue, user_id=None):
         db.session.add(entry)
         db.session.commit()
 
-        print("🧠 Learning Saved:", {
-            "problem": problem,
-            "answers": answers,
-            "final_issue": final_issue,
-            "user_id": user_id
-        })
+        current_app.logger.info("diagnosis_learning_saved issue=%s user_id=%s", final_issue, user_id)
 
     except Exception as e:
-        print("❌ Learning Save Error:", e)
+        try:
+            current_app.logger.warning("diagnosis_learning_save_skipped error=%s", e.__class__.__name__)
+        except Exception:
+            pass
 
 
 # =============================
@@ -58,9 +57,12 @@ def get_learning_boost(problem, answers, user_id=None):
             if user_id and r.user_id == user_id:
                 boost_map[issue] += 5
 
-        print("🧠 BOOST MAP:", dict(boost_map))
+        current_app.logger.info("diagnosis_learning_boost_loaded count=%s", len(boost_map))
 
     except Exception as e:
-        print("❌ Learning Fetch Error:", e)
+        try:
+            current_app.logger.warning("diagnosis_learning_boost_skipped error=%s", e.__class__.__name__)
+        except Exception:
+            pass
 
     return boost_map

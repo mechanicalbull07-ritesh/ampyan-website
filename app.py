@@ -84,6 +84,7 @@ from routes.user_routes import user_bp
 from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
 from ai_engine.response_formatter import enrich_diagnosis_results
 from services.diagnosis_safety import safe_diagnose_vehicle
+from services.dashboard_light_intake import dashboard_light_context
 
 print("All imports completed")
 
@@ -1598,6 +1599,9 @@ def diagnose():
     if request.method == "POST":
 
         problem = request.form.get("problem", "")
+        extra_context = dashboard_light_context(request.files, request.form)
+        if extra_context:
+            problem = f"{problem} {extra_context}".strip()
         car_id = request.form.get("car_id")
 
         car = Car.query.get(car_id)
@@ -1764,7 +1768,12 @@ def diagnosis_followup():
 @app.route("/api/diagnosis", methods=["POST"])
 def api_diagnosis():
     data = request.get_json(silent=True) or {}
+    if not data and request.form:
+        data = request.form.to_dict()
     problem = (data.get("problem") or data.get("message") or data.get("symptoms") or "").strip()
+    extra_context = dashboard_light_context(request.files, request.form, data)
+    if extra_context:
+        problem = f"{problem} {extra_context}".strip()
     answers = data.get("answers") or {}
 
     if not problem:
@@ -1797,6 +1806,8 @@ def api_diagnosis():
             "urgency": item.get("urgency"),
             "probability_score": item.get("probability_score"),
             "confidence_percent": item.get("confidence_percent", item.get("confidence")),
+            "evidence_level": item.get("evidence_level"),
+            "needs_more_info": item.get("needs_more_info", False),
             "top_matched_symptoms": item.get("top_matched_symptoms", []),
             "questions": item.get("questions", []),
             "user_checks": item.get("user_checks", []),

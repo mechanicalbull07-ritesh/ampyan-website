@@ -20,7 +20,7 @@ Default Car:
 <strong>{{ default_car.brand }} {{ default_car.model }}</strong>
 </p>
 
-<form method="POST" action="/tools/ai-diagnosis">
+<form method="POST" action="/tools/ai-diagnosis" enctype="multipart/form-data">
 
 <select name="car_id" class="auth-input" required>
 
@@ -36,9 +36,30 @@ Default Car:
 <input
 type="text"
 name="problem"
-placeholder="Describe your car problem..."
+placeholder="Describe your car problem or dashboard warning light..."
 class="auth-input"
-required
+>
+
+<select name="dashboard_light_hint" class="auth-input">
+<option value="">Dashboard light/symbol if visible</option>
+<option value="check_engine">Check engine light</option>
+<option value="check_engine_flashing">Check engine blinking</option>
+<option value="battery">Battery warning</option>
+<option value="oil">Oil pressure warning</option>
+<option value="temperature">Temperature warning</option>
+<option value="brake">Brake warning</option>
+<option value="abs">ABS warning</option>
+<option value="airbag">Airbag warning</option>
+<option value="tpms">Tyre pressure/TPMS</option>
+<option value="multiple">Multiple dashboard lights</option>
+<option value="unknown">Unknown dashboard light</option>
+</select>
+
+<input
+type="file"
+name="dashboard_image"
+accept="image/png,image/jpeg,image/webp"
+class="auth-input"
 >
 
 <button type="submit" class="auth-button">
@@ -57,6 +78,9 @@ Diagnose Now
 <button onclick="fillProblem('brake noise')">Brake noise</button>
 <button onclick="fillProblem('ac not cooling')">AC not cooling</button>
 <button onclick="fillProblem('steering vibration')">Steering vibration</button>
+<button onclick="fillProblem('tail light stays on after ignition off')">Tail light stays on</button>
+<button onclick="fillProblem('headlight throw low')">Headlight throw low</button>
+<button onclick="fillProblem('check engine light on')">Check engine light</button>
 </div>
 
 </div>

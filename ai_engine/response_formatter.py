@@ -247,6 +247,8 @@ def enrich_diagnosis_results(results, problem_text):
         item["issue"] = item.get("issue") or item.get("problem")
         item["probability_score"] = item.get("probability_score", item.get("confidence", 0))
         item["confidence_percent"] = item.get("confidence_percent", item.get("confidence", 0))
+        item["evidence_level"] = item.get("evidence_level") or "medium"
+        item["needs_more_info"] = bool(item.get("needs_more_info"))
         item["severity_label"] = severity_details["label"]
         item["severity_summary"] = severity_details["summary"]
         item["urgency_label"] = urgency_details["label"]

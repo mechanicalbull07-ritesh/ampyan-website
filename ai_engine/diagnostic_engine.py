@@ -197,14 +197,58 @@ def diagnose_vehicle(problem_text, answers=None, car=None):
                 r["confidence"] += boost
 
     # =============================
-    # 🔥 NORMALIZATION
+    # 🔥 TRUST CALIBRATION
     # =============================
 
-    max_score = results[0]["confidence"] or 1
+    results = sorted(results, key=lambda x: x["confidence"], reverse=True)
+    top_confidence = int(results[0].get("confidence", 0) or 0)
+    second_confidence = int(results[1].get("confidence", 0) or 0) if len(results) > 1 else 0
+    needs_more_info = bool(second_confidence and top_confidence - second_confidence <= 8)
 
-    for r in results:
-        r["confidence"] = int((r["confidence"] / max_score) * 100)
-        r["confidence_percent"] = r["confidence"]
+    for index, r in enumerate(results):
+        confidence = int(max(1, min(95, r.get("confidence", 0))))
+        if index > 0:
+            confidence = min(confidence, max(1, top_confidence - 3))
+        r["confidence"] = confidence
+        r["confidence_percent"] = confidence
+        r["needs_more_info"] = needs_more_info if index == 0 else False
+        if confidence < 55:
+            r["evidence_level"] = "low"
+        elif confidence < 78:
+            r["evidence_level"] = "medium"
+        else:
+            r["evidence_level"] = r.get("evidence_level") or "strong"
+
+    if results and results[0]["confidence"] < 40:
+        results = [
+            {
+                "issue": "General Vehicle Inspection Needed",
+                "problem": "General Vehicle Inspection Needed",
+                "system": "general",
+                "component": "multiple",
+                "severity": "medium",
+                "urgency": "service_soon",
+                "confidence": 40,
+                "confidence_percent": 40,
+                "probability_score": 40,
+                "top_matched_symptoms": [],
+                "questions": [
+                    {"id": "q1", "text": "When did the problem start?", "impact": {"yes": 1.5, "no": 0.6}},
+                    {"id": "q2", "text": "Are any warning lights visible?", "impact": {"yes": 1.5, "no": 0.6}},
+                    {"id": "q3", "text": "Did anything change after the last service?", "impact": {"yes": 1.5, "no": 0.6}},
+                ],
+                "user_checks": ["Describe the symptom, warning light, sound, smell, speed and driving condition in more detail."],
+                "repair_cost": {"min": 0, "max": 5000},
+                "safety_message": "",
+                "disclaimer": "AMPYAN provides informational guidance only. Confirm the issue with a qualified mechanic before making repair or safety decisions.",
+                "reason": "The symptom is too broad for a reliable fault match.",
+                "advice": "Please add details such as when it happens, warning lights, noise type, smell, speed, recent service and whether the car is safe to drive.",
+                "evidence_level": "low",
+                "needs_more_info": True,
+                "is_generic": True,
+                "use_as_router_only": False,
+            }
+        ]
 
     # =============================
     # QUESTIONS
