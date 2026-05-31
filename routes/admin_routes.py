@@ -557,11 +557,106 @@ def admin_analytics_live():
 
 # ================= ADMIN DASHBOARD =================
 
+def _safe_admin_rows(load_rows):
+    try:
+        return load_rows()
+    except Exception:
+        db.session.rollback()
+        return []
+
+
+def _safe_admin_scalar(load_value, default=0):
+    try:
+        return load_value()
+    except Exception:
+        db.session.rollback()
+        return default
+
+
+def _render_degraded_admin_dashboard():
+    users = _safe_admin_rows(lambda: User.query.order_by(User.id.desc()).limit(50).all())
+    posts = _safe_admin_rows(lambda: Post.query.order_by(Post.id.desc()).limit(30).all())
+    comments = _safe_admin_rows(lambda: Comment.query.order_by(Comment.id.desc()).limit(30).all())
+    news = _safe_admin_rows(lambda: News.query.order_by(News.id.desc()).limit(30).all())
+    mechanics = _safe_admin_rows(lambda: MechanicProfile.query.order_by(MechanicProfile.id.desc()).limit(50).all())
+    reviews = _safe_admin_rows(lambda: MechanicReview.query.order_by(MechanicReview.id.desc()).limit(10).all())
+    cars = _safe_admin_rows(lambda: Car.query.order_by(Car.created_at.desc()).limit(50).all())
+    managed_personas = _safe_admin_rows(
+        lambda: User.query.filter_by(is_managed_persona=True).order_by(User.id.desc()).limit(60).all()
+    )
+    car_communities = _safe_admin_rows(lambda: CarCommunity.query.order_by(CarCommunity.name.asc()).all())
+    pending_mechanics = [mechanic for mechanic in mechanics if not mechanic.is_verified]
+    approved_mechanics = [mechanic for mechanic in mechanics if mechanic.is_verified][:8]
+    banned_users = [user for user in users if user.is_banned][:8]
+    return render_template(
+        "admin.html",
+        admin_degraded=True,
+        users=users,
+        posts=posts,
+        comments=comments,
+        news=news,
+        mechanics=mechanics,
+        reviews=reviews,
+        total_users=_safe_admin_scalar(lambda: User.query.count(), len(users)),
+        total_ai_usage=_safe_admin_scalar(lambda: db.session.query(db.func.sum(User.ai_uses_today)).scalar() or 0),
+        visit_count=0,
+        today_page_views=0,
+        yesterday_page_views=0,
+        traffic_delta_today=0,
+        total_unique_visitors=0,
+        today_unique_visitors=0,
+        logged_in_views=0,
+        guest_views=0,
+        top_pages=[],
+        page_metrics=[],
+        device_breakdown=[],
+        hourly_traffic=[],
+        daily_traffic=[],
+        monthly_traffic=[],
+        top_clicks=[],
+        top_click_pages=[],
+        top_referrers=[],
+        security_events=[],
+        security_events_24h=[],
+        suspicious_ips=[],
+        safety_alerts=[],
+        click_events_count=0,
+        banned_users_count=_safe_admin_scalar(lambda: User.query.filter_by(is_banned=True).count(), len(banned_users)),
+        admin_users_count=_safe_admin_scalar(lambda: User.query.filter_by(role="admin").count()),
+        pending_garages_count=len(pending_mechanics),
+        approved_garages_count=len([mechanic for mechanic in mechanics if mechanic.is_verified]),
+        featured_garages_count=len([mechanic for mechanic in mechanics if mechanic.is_featured]),
+        total_cars=len(cars),
+        car_owner_count=0,
+        service_due_cars=[],
+        service_soon_cars=[],
+        insurance_expired_cars=[],
+        pollution_expired_cars=[],
+        pending_mechanics=pending_mechanics,
+        approved_mechanics=approved_mechanics,
+        recent_users=users[:10],
+        recent_posts=posts[:8],
+        recent_cars=cars[:12],
+        banned_users=banned_users,
+        managed_personas=managed_personas,
+        car_communities=car_communities,
+    )
+
+
 @admin_bp.route("/admin")
 @login_required
 def admin_dashboard():
     if not _require_admin():
         return "Access Denied", 403
+    try:
+        return _render_admin_dashboard()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("admin_dashboard_degraded error=%s", exc.__class__.__name__)
+        return _render_degraded_admin_dashboard()
+
+
+def _render_admin_dashboard():
 
     users = User.query.order_by(User.id.desc()).limit(300).all()
     posts = Post.query.order_by(Post.id.desc()).limit(300).all()
@@ -753,6 +848,7 @@ def admin_dashboard():
 
     return render_template(
         "admin.html",
+        admin_degraded=False,
         users=users,
         posts=posts,
         comments=comments,

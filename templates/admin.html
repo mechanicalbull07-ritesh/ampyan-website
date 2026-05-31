@@ -11,6 +11,12 @@
 </div>
 </div>
 
+{% if admin_degraded %}
+<div class="ui-card card-spacer">
+<p class="section-copy">Some admin statistics are temporarily limited while storage becomes ready. Core moderation tools remain available.</p>
+</div>
+{% endif %}
+
 <div class="ui-grid ui-grid-4 card-spacer">
 <a class="stat-card stat-card-link" href="/admin/analytics/users"><span>Total Users</span><div class="stat-number">{{ total_users }}</div></a>
 <div class="stat-card"><span>Total Posts</span><div class="stat-number">{{ posts|length }}</div></div>
