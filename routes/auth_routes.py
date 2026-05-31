@@ -11,6 +11,7 @@ from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from models.models import User, db
+from services.analytics_service import safe_track_event
 from services.email_service import send_email
 
 auth_bp = Blueprint("auth", __name__)
@@ -179,6 +180,7 @@ def login():
         password = request.form.get("password") or ""
 
         if not username or not password:
+            safe_track_event("login_failure", {"reason": "missing_credentials"})
             flash("Username/email and password are required.")
             return redirect(url_for("auth.login"))
 
@@ -207,6 +209,7 @@ def login():
                 return redirect(url_for("auth.login"))
 
             login_user(user)
+            safe_track_event("login_success", {"method": "password"})
             if os.environ.get("ENABLE_AUTH_PROFILE_SYNC", "").lower() == "true":
                 _sync_profile(user.username, user.email, user.mobile or "")
 
@@ -214,6 +217,7 @@ def login():
                 return redirect(next_page)
             return redirect("/community")
 
+        safe_track_event("login_failure", {"reason": "invalid_credentials"})
         flash("Invalid credentials")
 
     return render_template("auth.html")
@@ -226,6 +230,7 @@ def api_login():
     password = payload.get("password") or ""
 
     if not username or not password:
+        safe_track_event("login_failure", {"reason": "missing_credentials"}, traffic_type="app")
         return jsonify({"status": "error", "message": "username/email and password are required"}), 400
 
     try:
@@ -235,6 +240,7 @@ def api_login():
         current_app.logger.warning("API login lookup failed: %s detail=%s", exc.__class__.__name__, str(exc)[:300])
         return jsonify({"status": "error", "message": "login temporarily unavailable"}), 503
     if not user or not check_password_hash(user.password, password):
+        safe_track_event("login_failure", {"reason": "invalid_credentials"}, traffic_type="app")
         return jsonify({"status": "error", "message": "invalid credentials"}), 401
 
     if getattr(user, "is_managed_persona", False):
@@ -250,6 +256,7 @@ def api_login():
         return jsonify({"status": "error", "message": "email verification required"}), 403
 
     login_user(user)
+    safe_track_event("login_success", {"method": "password"}, traffic_type="app")
     _sync_profile(user.username, user.email, user.mobile or "")
     return jsonify({
         "status": "success",

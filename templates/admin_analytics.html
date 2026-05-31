@@ -36,6 +36,13 @@
 <div class="stat-card"><span>Admin Clicks 30d</span><div class="stat-number">{{ admin_activity.clicks_30d }}</div></div>
 </div>
 
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Human Sessions 24h</span><div class="stat-number">{{ live_analytics.human_sessions_24h }}</div></div>
+<div class="stat-card"><span>App Opens 24h</span><div class="stat-number">{{ live_analytics.app_opens_24h }}</div></div>
+<div class="stat-card"><span>API Errors 24h</span><div class="stat-number">{{ live_analytics.api_errors_24h }}</div></div>
+<div class="stat-card"><span>Failed Logins 24h</span><div class="stat-number">{{ live_analytics.failed_logins_24h }}</div></div>
+</div>
+
 <div class="admin-analytics-grid card-spacer">
 <div class="admin-analytics-panel">
 <h3>Last 12 hours</h3>
@@ -199,6 +206,49 @@
 {% else %}
 <p class="section-copy">No device data yet.</p>
 {% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Browsers</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.browsers %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Operating systems</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.operating_systems %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Countries and cities</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.top_countries[:5] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+{% for label, count in live_analytics.top_cities[:5] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Separated traffic 24h</h3>
+<div class="admin-mini-stats">
+<div><span>Bots</span><strong>{{ live_analytics.bot_events_24h }}</strong></div>
+<div><span>Internal</span><strong>{{ live_analytics.internal_events_24h }}</strong></div>
+<div><span>Admin</span><strong>{{ live_analytics.admin_events_24h }}</strong></div>
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Slow API endpoints</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.slow_endpoints %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
 </div>
 </div>
 {% endif %}

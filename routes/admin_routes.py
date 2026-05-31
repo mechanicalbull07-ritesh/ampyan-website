@@ -2,7 +2,7 @@ from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta
 import secrets
 
-from flask import Blueprint, current_app, render_template, redirect, flash, request, url_for
+from flask import Blueprint, current_app, jsonify, render_template, redirect, flash, request, url_for
 from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 
@@ -10,6 +10,7 @@ from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEv
 from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
 from services.garage_network_service import refresh_mechanic_reputation
 from services.app_api_sync import delete_garage_from_app, sync_garage_to_app, sync_news_to_app
+from services.analytics_service import safe_live_summary
 from routes.community_routes import (
     _find_remote_post_id_for_website_post,
     _get_or_create_car_community,
@@ -219,6 +220,9 @@ def _build_admin_analytics_context(section="overview"):
 
     tracked_visits = WebsiteVisit.query.filter_by(is_page_view=True)
     public_visits_query = tracked_visits.filter(
+        WebsiteVisit.is_bot.isnot(True),
+        WebsiteVisit.is_internal.isnot(True),
+        WebsiteVisit.is_admin.isnot(True),
         (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     )
     admin_visits_query = tracked_visits.filter(WebsiteVisit.user_id.in_(admin_user_ids)) if admin_user_ids else tracked_visits.filter(False)
@@ -246,10 +250,15 @@ def _build_admin_analytics_context(section="overview"):
     ).filter(
         WebsiteVisit.is_page_view.is_(True),
         WebsiteVisit.device_type.isnot(None),
+        WebsiteVisit.is_bot.isnot(True),
+        WebsiteVisit.is_internal.isnot(True),
+        WebsiteVisit.is_admin.isnot(True),
         (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).group_by(WebsiteVisit.device_type).order_by(db.func.count(WebsiteVisit.id).desc()).all()
 
-    recent_visit_rows = public_visits_query.filter(WebsiteVisit.visit_time >= last_365d).all()
+    recent_visit_rows = public_visits_query.filter(WebsiteVisit.visit_time >= last_365d).order_by(
+        WebsiteVisit.visit_time.desc()
+    ).limit(5000).all()
     all_public_visit_rows = (
         public_visits_query
         .order_by(WebsiteVisit.visit_time.desc())
@@ -262,7 +271,9 @@ def _build_admin_analytics_context(section="overview"):
         for visit in all_public_visit_rows
         if visit.visit_time and visit.visit_time >= today_start
     })
-    admin_visit_rows = admin_visits_query.filter(WebsiteVisit.visit_time >= last_30d).all()
+    admin_visit_rows = admin_visits_query.filter(WebsiteVisit.visit_time >= last_30d).order_by(
+        WebsiteVisit.visit_time.desc()
+    ).limit(2000).all()
     visits_24h = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_24h]
     visits_30d = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_30d]
     hourly_traffic = _count_by_hour(visits_24h)
@@ -277,11 +288,11 @@ def _build_admin_analytics_context(section="overview"):
         WebsiteEvent.event_time >= last_30d,
         WebsiteEvent.user_id.in_(admin_user_ids)
     ) if admin_user_ids else WebsiteEvent.query.filter(False)
-    click_events = public_click_query.order_by(WebsiteEvent.event_time.desc()).all()
-    admin_click_events = admin_click_query.order_by(WebsiteEvent.event_time.desc()).all()
+    click_events = public_click_query.order_by(WebsiteEvent.event_time.desc()).limit(5000).all()
+    admin_click_events = admin_click_query.order_by(WebsiteEvent.event_time.desc()).limit(2000).all()
     security_events = WebsiteEvent.query.filter_by(event_type="security").filter(
         WebsiteEvent.event_time >= last_30d
-    ).order_by(WebsiteEvent.event_time.desc()).all()
+    ).order_by(WebsiteEvent.event_time.desc()).limit(2000).all()
     security_events_24h = [
         event for event in security_events
         if event.event_time and event.event_time >= last_24h
@@ -340,7 +351,7 @@ def _build_admin_analytics_context(section="overview"):
             "detail": "No unusual security pattern detected from tracked events.",
         })
 
-    cars = Car.query.order_by(Car.created_at.desc()).all()
+    cars = Car.query.order_by(Car.created_at.desc()).limit(1000).all()
     today = now.date()
     service_due_cars = [
         car for car in cars
@@ -369,7 +380,7 @@ def _build_admin_analytics_context(section="overview"):
         )
         if frequency_start:
             user_visits_query = user_visits_query.filter(WebsiteVisit.visit_time >= frequency_start)
-        user_visits = user_visits_query.order_by(WebsiteVisit.visit_time.desc()).all()
+        user_visits = user_visits_query.order_by(WebsiteVisit.visit_time.desc()).limit(1000).all()
         latest_visit = user_visits[0] if user_visits else (
             WebsiteVisit.query.filter_by(user_id=user.id, is_page_view=True)
             .order_by(WebsiteVisit.visit_time.desc())
@@ -406,6 +417,7 @@ def _build_admin_analytics_context(section="overview"):
     }
 
     return {
+        "live_analytics": safe_live_summary(),
         "section": section,
         "frequency_filter": frequency_filter,
         "frequency_label": frequency_label,
@@ -460,6 +472,18 @@ def admin_analytics(section="overview"):
     return render_template("admin_analytics.html", **_build_admin_analytics_context(section))
 
 
+@admin_bp.route("/admin/analytics/live")
+@login_required
+def admin_analytics_live():
+    if not _require_admin():
+        return jsonify({"status": "error"}), 403
+    try:
+        return jsonify({"status": "success", "analytics": safe_live_summary()})
+    except Exception:
+        current_app.logger.warning("admin_analytics_live_failed", exc_info=True)
+        return jsonify({"status": "success", "analytics": {}})
+
+
 # ================= ADMIN DASHBOARD =================
 
 @admin_bp.route("/admin")
@@ -476,7 +500,7 @@ def admin_dashboard():
         MechanicProfile.is_verified.asc(),
         MechanicProfile.is_featured.desc(),
         MechanicProfile.id.desc()
-    ).all()
+    ).limit(500).all()
     reviews = MechanicReview.query.order_by(MechanicReview.id.desc()).limit(10).all()
     cars = Car.query.order_by(Car.created_at.desc()).limit(500).all()
 
@@ -490,6 +514,9 @@ def admin_dashboard():
     admin_user_ids = [user.id for user in User.query.filter_by(role="admin").all()]
     tracked_visits = WebsiteVisit.query.filter_by(is_page_view=True)
     public_visits_query = tracked_visits.filter(
+        WebsiteVisit.is_bot.isnot(True),
+        WebsiteVisit.is_internal.isnot(True),
+        WebsiteVisit.is_admin.isnot(True),
         (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     )
     visit_count = public_visits_query.count()
@@ -518,6 +545,9 @@ def admin_dashboard():
     ).filter(
         WebsiteVisit.is_page_view.is_(True),
         WebsiteVisit.device_type.isnot(None),
+        WebsiteVisit.is_bot.isnot(True),
+        WebsiteVisit.is_internal.isnot(True),
+        WebsiteVisit.is_admin.isnot(True),
         (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
     ).group_by(WebsiteVisit.device_type).order_by(db.func.count(WebsiteVisit.id).desc()).all()
     total_users = User.query.count()
@@ -526,7 +556,9 @@ def admin_dashboard():
     pending_garages_count = MechanicProfile.query.filter_by(is_verified=False).count()
     approved_garages_count = MechanicProfile.query.filter_by(is_verified=True).count()
     featured_garages_count = MechanicProfile.query.filter_by(is_featured=True).count()
-    recent_visit_rows = public_visits_query.filter(WebsiteVisit.visit_time >= last_365d).all()
+    recent_visit_rows = public_visits_query.filter(WebsiteVisit.visit_time >= last_365d).order_by(
+        WebsiteVisit.visit_time.desc()
+    ).limit(5000).all()
     all_public_visit_rows = (
         public_visits_query
         .order_by(WebsiteVisit.visit_time.desc())
@@ -548,10 +580,10 @@ def admin_dashboard():
     click_events = WebsiteEvent.query.filter_by(event_type="click").filter(
         WebsiteEvent.event_time >= last_30d,
         (WebsiteEvent.user_id.is_(None)) | (~WebsiteEvent.user_id.in_(admin_user_ids))
-    ).order_by(WebsiteEvent.event_time.desc()).all()
+    ).order_by(WebsiteEvent.event_time.desc()).limit(5000).all()
     security_events = WebsiteEvent.query.filter_by(event_type="security").filter(
         WebsiteEvent.event_time >= last_30d
-    ).order_by(WebsiteEvent.event_time.desc()).all()
+    ).order_by(WebsiteEvent.event_time.desc()).limit(2000).all()
     security_events_24h = [
         event for event in security_events
         if event.event_time and event.event_time >= last_24h

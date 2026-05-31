@@ -428,6 +428,16 @@ class WebsiteVisit(db.Model):
     referrer = db.Column(db.String(500))
     user_agent = db.Column(db.String(500))
     device_type = db.Column(db.String(30))
+    session_id = db.Column(db.String(100), index=True)
+    source = db.Column(db.String(120), index=True)
+    country = db.Column(db.String(100), index=True)
+    city = db.Column(db.String(120))
+    browser = db.Column(db.String(80))
+    os_name = db.Column(db.String(80))
+    is_bot = db.Column(db.Boolean, default=False, index=True)
+    is_internal = db.Column(db.Boolean, default=False, index=True)
+    is_admin = db.Column(db.Boolean, default=False)
+    traffic_type = db.Column(db.String(30), default="web")
     is_authenticated = db.Column(db.Boolean, default=False)
     is_page_view = db.Column(db.Boolean, default=True)
 
@@ -457,3 +467,44 @@ class WebsiteEvent(db.Model):
     severity = db.Column(db.String(20), default="info")
 
     user = db.relationship("User", backref="website_events")
+
+
+class AnalyticsEvent(db.Model):
+    __tablename__ = "analytics_event"
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp(), index=True)
+    event_type = db.Column(db.String(60), nullable=False, index=True)
+    session_id = db.Column(db.String(100), index=True)
+    source = db.Column(db.String(120), index=True)
+    path = db.Column(db.String(500))
+    referrer = db.Column(db.String(500))
+    country = db.Column(db.String(100), index=True)
+    city = db.Column(db.String(120))
+    device_type = db.Column(db.String(30))
+    browser = db.Column(db.String(80))
+    os_name = db.Column(db.String(80))
+    traffic_type = db.Column(db.String(30), default="web")
+    is_bot = db.Column(db.Boolean, default=False, index=True)
+    is_internal = db.Column(db.Boolean, default=False, index=True)
+    is_admin = db.Column(db.Boolean, default=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    ip_address = db.Column(db.String(50))
+    metadata_json = db.Column(db.Text)
+
+    user = db.relationship("User", backref="analytics_events")
+
+
+class ApiRequestMetric(db.Model):
+    __tablename__ = "api_request_metric"
+
+    id = db.Column(db.Integer, primary_key=True)
+    created_at = db.Column(db.DateTime, default=db.func.current_timestamp(), index=True)
+    path = db.Column(db.String(500), index=True)
+    method = db.Column(db.String(10))
+    status_code = db.Column(db.Integer, index=True)
+    response_time_ms = db.Column(db.Integer)
+    traffic_type = db.Column(db.String(30), default="api")
+    is_bot = db.Column(db.Boolean, default=False, index=True)
+    is_internal = db.Column(db.Boolean, default=False, index=True)
+    is_admin = db.Column(db.Boolean, default=False)

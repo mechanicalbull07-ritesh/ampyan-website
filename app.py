@@ -85,6 +85,14 @@ from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
 from ai_engine.response_formatter import enrich_diagnosis_results
 from services.diagnosis_safety import safe_diagnose_vehicle
 from services.dashboard_light_intake import dashboard_light_context
+from services.analytics_service import (
+    ALLOWED_EVENT_TYPES,
+    analytics_enabled,
+    safe_track_api_request,
+    safe_track_event,
+    safe_track_page_visit,
+    start_worker,
+)
 
 print("All imports completed")
 
@@ -464,7 +472,13 @@ def save_uploaded_image(image_file, folder, prefix):
     return filename
 @app.context_processor
 def inject_admin_emails():
-    return dict(ADMIN_EMAILS=ADMIN_EMAILS)
+    return dict(
+        ADMIN_EMAILS=ADMIN_EMAILS,
+        analytics_enabled=analytics_enabled(),
+        ga4_measurement_id=os.environ.get("GA4_MEASUREMENT_ID", ""),
+        clarity_project_id=os.environ.get("CLARITY_PROJECT_ID", ""),
+        google_site_verification=os.environ.get("GOOGLE_SITE_VERIFICATION", ""),
+    )
 
 def static_image_url_if_exists(folder, filename, fallback=None):
     if is_external_image_url(filename):
@@ -1362,6 +1376,8 @@ def security_guard():
 
     content_length = request.content_length or 0
     if content_length > app.config["MAX_CONTENT_LENGTH"]:
+        if request.path == "/api/track-event":
+            return jsonify({"status": "accepted"}), 202
         if request.path == "/admin/news/create":
             flash("Image upload failed because the file is too large. The news form is still available.", "warning")
             return redirect(url_for("create_news"))
@@ -1436,6 +1452,7 @@ def should_track_page_visit():
         "/google",
         "/health",
         "/healthz",
+        "/ready",
         "/version",
         "/symptom-suggest",
         "/favicon",
@@ -1461,15 +1478,12 @@ def detect_device_type(user_agent):
 
 @app.before_request
 def track_visit():
-    if os.environ.get("ENABLE_PAGE_VISIT_TRACKING", "").lower() != "true":
+    if not analytics_enabled():
         return
 
     try:
 
         if not should_track_page_visit():
-            return
-
-        if not database_ready_for_queries():
             return
 
         visitor_id = request.cookies.get("ampyan_visitor_id")
@@ -1478,27 +1492,11 @@ def track_visit():
             visitor_id = secrets.token_urlsafe(24)
             g.set_visitor_cookie = visitor_id
 
-        user_agent = request.headers.get("User-Agent", "")
-
-        visit = WebsiteVisit(
-            ip_address=request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip(),
-            visitor_id=visitor_id,
-            user_id=current_user.id if current_user.is_authenticated else None,
-            path=(request.path or "/")[:500],
-            method=request.method,
-            referrer=request.referrer,
-            user_agent=user_agent[:500],
-            device_type=detect_device_type(user_agent),
-            is_authenticated=current_user.is_authenticated,
-            is_page_view=True
-        )
-
-        db.session.add(visit)
-        db.session.commit()
+        safe_track_page_visit()
 
     except Exception as e:
 
-        db.session.rollback()
+        pass
 
 
 @app.after_request
@@ -1506,6 +1504,7 @@ def attach_visitor_cookie(response):
     elapsed = None
     if hasattr(g, "request_start_time"):
         elapsed = time.perf_counter() - g.request_start_time
+        safe_track_api_request(request.path, request.method, response.status_code, elapsed * 1000)
         log_message = (
             "route=%s method=%s path=%s status=%s start=%s end=%s duration=%.3fs"
         )
@@ -1533,12 +1532,12 @@ def attach_visitor_cookie(response):
     response.headers.setdefault(
         "Content-Security-Policy",
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.instagram.com; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.instagram.com https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
         "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
         "img-src 'self' data: https:; "
         "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.instagram.com; "
-        "connect-src 'self' https://ampyan-api.onrender.com https://api.ampyan.com; "
+        "connect-src 'self' https://ampyan-api.onrender.com https://api.ampyan.com https://www.google-analytics.com https://*.google-analytics.com https://www.clarity.ms https://*.clarity.ms; "
         "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
     )
 
@@ -2399,27 +2398,19 @@ def api_help_report():
 
 @app.route("/api/track-event", methods=["POST"])
 def api_track_event():
-    payload = request.get_json(silent=True) or {}
-    event_type = sanitize_event_text(payload.get("event_type") or "click", 40)
-
-    if event_type != "click":
-        return jsonify({"status": "error", "message": "unsupported event type"}), 400
-
-    label = sanitize_event_text(payload.get("label") or "Click", 120)
-    target_url = normalize_event_url(payload.get("target_url") or "")
-    source_path = normalize_event_url(payload.get("path") or request.path)
-
-    if not label and not target_url:
-        return jsonify({"status": "error", "message": "event label or target is required"}), 400
-
-    record_website_event(
-        "click",
-        label=label,
-        target_url=target_url,
-        severity="info",
-        path=source_path,
-    )
-    return jsonify({"status": "success"})
+    try:
+        if (request.content_length or 0) > 32 * 1024:
+            return jsonify({"status": "accepted"}), 202
+        payload = request.get_json(silent=True) or {}
+        if not isinstance(payload, dict):
+            return jsonify({"status": "accepted"}), 202
+        event_type = sanitize_event_text(payload.get("event_type") or "click", 60)
+        if event_type in ALLOWED_EVENT_TYPES:
+            traffic_type = "app" if payload.get("traffic_type") == "app" else "web"
+            safe_track_event(event_type, payload, traffic_type=traffic_type)
+        return jsonify({"status": "accepted"}), 202
+    except Exception:
+        return jsonify({"status": "accepted"}), 202
 # ================= FORGOT PASSWORD =================
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -2650,6 +2641,16 @@ def ensure_website_visit_schema():
         "referrer": f"{string_type}(500)",
         "user_agent": f"{string_type}(500)",
         "device_type": f"{string_type}(30)",
+        "session_id": f"{string_type}(100)",
+        "source": f"{string_type}(120)",
+        "country": f"{string_type}(100)",
+        "city": f"{string_type}(120)",
+        "browser": f"{string_type}(80)",
+        "os_name": f"{string_type}(80)",
+        "is_bot": f"{bool_type} DEFAULT FALSE",
+        "is_internal": f"{bool_type} DEFAULT FALSE",
+        "is_admin": f"{bool_type} DEFAULT FALSE",
+        "traffic_type": f"{string_type}(30) DEFAULT 'web'",
         "is_authenticated": f"{bool_type} DEFAULT FALSE",
         "is_page_view": f"{bool_type} DEFAULT TRUE",
     }
@@ -2658,6 +2659,16 @@ def ensure_website_visit_schema():
         if column_name in existing_columns:
             continue
         db.session.execute(text(f"ALTER TABLE website_visit ADD COLUMN {column_name} {column_definition}"))
+
+    for index_name, column_name in {
+        "ix_website_visit_visit_time": "visit_time",
+        "ix_website_visit_session_id": "session_id",
+        "ix_website_visit_source": "source",
+        "ix_website_visit_country": "country",
+        "ix_website_visit_is_bot": "is_bot",
+        "ix_website_visit_is_internal": "is_internal",
+    }.items():
+        db.session.execute(text(f"CREATE INDEX IF NOT EXISTS {index_name} ON website_visit ({column_name})"))
 
     db.session.commit()
 
@@ -2884,6 +2895,7 @@ def initialize_database():
             ensure_post_schema()
             ensure_news_schema()
             ensure_car_community_seed()
+            start_worker(app)
         except Exception:
             db.session.rollback()
             app.logger.exception("db_init_failed")

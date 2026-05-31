@@ -5,3 +5,16 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: bash start.sh
     healthCheckPath: /health
+    envVars:
+      - key: ANALYTICS_ENABLED
+        value: "true"
+      - key: BOT_FILTER_ENABLED
+        value: "true"
+      - key: ADMIN_ANALYTICS_CACHE_SECONDS
+        value: "60"
+      - key: GA4_MEASUREMENT_ID
+        sync: false
+      - key: CLARITY_PROJECT_ID
+        sync: false
+      - key: GOOGLE_SITE_VERIFICATION
+        sync: false

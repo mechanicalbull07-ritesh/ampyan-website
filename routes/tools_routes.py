@@ -3,6 +3,7 @@ from flask_login import current_user
 from models.models import Car, AIFeedback, db
 from services.car_recommendation_service import recommend_cars, build_user_profile_summary
 from services.dashboard_light_intake import dashboard_light_context
+from services.analytics_service import safe_track_event
 from service_estimator import estimate_service
 
 # AI ENGINE
@@ -266,6 +267,7 @@ def ai_diagnosis_page():
     if request.method == "POST":
 
         problem = request.form.get("problem")
+        safe_track_event("diagnosis_started", {"surface": "website"})
         extra_context = dashboard_light_context(request.files, request.form)
         if extra_context:
             problem = f"{problem or ''} {extra_context}".strip()
@@ -273,6 +275,7 @@ def ai_diagnosis_page():
         if problem:
 
             results, questions = safe_diagnose_vehicle(problem, route_name="tools_ai_diagnosis")
+            safe_track_event("diagnosis_completed", {"surface": "website", "result_count": len(results or [])})
 
             current_app.logger.info("AI diagnosis completed with %s result(s)", len(results or []))
 
@@ -338,6 +341,7 @@ def ai_diagnosis_page():
 def ai_diagnosis_followup():
 
     problem = request.form.get("problem")
+    safe_track_event("diagnosis_started", {"surface": "website_followup"})
 
     answers = {}
 
@@ -346,6 +350,7 @@ def ai_diagnosis_followup():
             answers[key] = request.form.get(key)
 
     results, questions = safe_diagnose_vehicle(problem, answers, route_name="tools_ai_followup")
+    safe_track_event("diagnosis_completed", {"surface": "website_followup", "result_count": len(results or [])})
 
     current_app.logger.info("AI diagnosis follow-up completed with %s result(s)", len(results or []))
 

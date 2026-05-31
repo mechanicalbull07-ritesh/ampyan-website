@@ -8,6 +8,7 @@
 <meta name="description" content="AMPYAN is an AI powered automotive ecosystem helping car owners diagnose vehicle problems, track maintenance, improve safety, and save money.">
 <meta name="keywords" content="AMPYAN, AI car diagnosis, automotive AI, car maintenance, vehicle assistant, dashcam AI">
 <meta name="robots" content="index, follow">
+{% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
 {% set social_title = meta_title|default("AMPYAN", true) %}
 {% set social_description = meta_description|default("AI Powered Automotive Ecosystem", true) %}
 {% set social_url = meta_url|default(request.url, true) %}
@@ -44,6 +45,29 @@
 </script>
 
 <title>{{ browser_title }}</title>
+
+{% if analytics_enabled and ga4_measurement_id %}
+<script async src="https://www.googletagmanager.com/gtag/js?id={{ ga4_measurement_id|urlencode }}"></script>
+<script>
+try {
+window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag("js", new Date());
+gtag("config", {{ ga4_measurement_id|tojson }}, {send_page_view: true});
+} catch (error) {}
+</script>
+{% endif %}
+{% if analytics_enabled and clarity_project_id %}
+<script>
+try {
+(function(c,l,a,r,i,t,y){
+c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+})(window, document, "clarity", "script", {{ clarity_project_id|tojson }});
+} catch (error) {}
+</script>
+{% endif %}
 
 <!-- FONTS -->
 
@@ -775,40 +799,77 @@ observer.observe(sec);
 </script>
 <script>
 
-/* ================= PRIVACY-SAFE PRODUCT ANALYTICS ================= */
-
-document.addEventListener("click", function(event){
-
-const target = event.target.closest("a, button");
-
-if(!target) return;
-
-if(target.closest(".ai-chatbox")) return;
-
-const label = (target.getAttribute("data-analytics-label") || target.innerText || target.getAttribute("aria-label") || target.href || "Click").trim().slice(0,120);
-const targetUrl = target.getAttribute("href") || target.getAttribute("data-target-url") || "";
-
-const payload = JSON.stringify({
-event_type: "click",
-label: label,
-target_url: targetUrl,
-path: window.location.pathname
-});
-
-if(navigator.sendBeacon){
-const blob = new Blob([payload], {type: "application/json"});
-navigator.sendBeacon("/api/track-event", blob);
+/* ================= NON-BLOCKING PRODUCT ANALYTICS ================= */
+(function(){
+try {
+const enabled = {{ analytics_enabled|tojson }};
+if(!enabled) return;
+const storageKey = "ampyan_analytics_session_id";
+let sessionId = "";
+try {
+sessionId = localStorage.getItem(storageKey) || "";
+if(!sessionId) {
+sessionId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "web-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+localStorage.setItem(storageKey, sessionId);
+}
+} catch(error) {
+sessionId = "web-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+}
+const params = new URLSearchParams(window.location.search);
+const base = {
+session_id: sessionId,
+path: window.location.pathname,
+referrer: document.referrer || "",
+utm_source: params.get("utm_source") || "",
+utm_medium: params.get("utm_medium") || "",
+utm_campaign: params.get("utm_campaign") || ""
+};
+function track(eventType, details) {
+try {
+const payload = JSON.stringify(Object.assign({}, base, details || {}, {event_type: eventType}));
+if(navigator.sendBeacon) {
+navigator.sendBeacon("/api/track-event", new Blob([payload], {type: "application/json"}));
 return;
 }
-
-fetch("/api/track-event", {
-method: "POST",
-headers: {"Content-Type": "application/json"},
-body: payload,
-keepalive: true
-}).catch(function(){});
-
+fetch("/api/track-event", {method: "POST", headers: {"Content-Type": "application/json"}, body: payload, keepalive: true}).catch(function(){});
+} catch(error) {}
+}
+window.AMPYANAnalytics = {track: track};
+track("page_view");
+if(window.location.pathname.indexOf("/community") === 0) track("community_opened");
+if(window.location.pathname.indexOf("/news") === 0) track("news_opened");
+let lastClickAt = 0;
+document.addEventListener("click", function(event){
+try {
+const now = Date.now();
+if(now - lastClickAt < 300) return;
+const target = event.target.closest("a, button");
+if(!target || target.closest(".ai-chatbox")) return;
+lastClickAt = now;
+track("click", {
+label: (target.getAttribute("data-analytics-label") || target.innerText || target.getAttribute("aria-label") || target.href || "Click").trim().slice(0, 120),
+target_url: target.getAttribute("href") || target.getAttribute("data-target-url") || ""
 });
+} catch(error) {}
+});
+const sentDepths = {};
+let scrollTimer = null;
+window.addEventListener("scroll", function(){
+try {
+if(scrollTimer) return;
+scrollTimer = setTimeout(function(){
+scrollTimer = null;
+const height = document.documentElement.scrollHeight - window.innerHeight;
+if(height <= 0) return;
+const depth = Math.floor((window.scrollY / height) * 100);
+[25, 50, 75, 100].forEach(function(mark){
+if(depth >= mark && !sentDepths[mark]) { sentDepths[mark] = true; track("scroll_depth", {depth: mark}); }
+});
+}, 400);
+} catch(error) {}
+}, {passive: true});
+} catch(error) {}
+})();
 
 </script>
 <script>

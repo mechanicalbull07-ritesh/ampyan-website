@@ -5,6 +5,7 @@ from flask_login import login_required, current_user
 from models.models import db, Car, DiagnosticLearning
 from services.garage_summary import enrich_car_for_garage
 from services.india_car_catalog import catalog_brands, catalog_image_path, garage_catalog_payload
+from services.analytics_service import safe_track_event
 
 garage_bp = Blueprint("garage", __name__)
 
@@ -130,6 +131,7 @@ def add_car():
 
         db.session.add(car)
         db.session.commit()
+        safe_track_event("garage_added", {"surface": "website"})
 
         return redirect("/garage")
 
