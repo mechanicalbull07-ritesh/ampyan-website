@@ -208,6 +208,66 @@ def _managed_persona_or_none(user_id):
     return User.query.filter_by(id=user_id, is_managed_persona=True).first()
 
 
+def _empty_admin_analytics_context(section="overview"):
+    empty_period = {"views": 0, "unique": 0, "repeated": 0, "new": 0, "logged_in": 0}
+    return {
+        "analytics_degraded": True,
+        "live_analytics": safe_live_summary(),
+        "section": section,
+        "frequency_filter": request.args.get("frequency", "30d"),
+        "frequency_label": "Temporarily unavailable",
+        "frequency_options": _frequency_options(),
+        "user_rows": [],
+        "active_user_rows": [],
+        "inactive_user_count": 0,
+        "user_frequency_summary": {
+            "hour": dict(empty_period),
+            "day": dict(empty_period),
+            "week": dict(empty_period),
+            "month": dict(empty_period),
+        },
+        "admin_activity": {
+            "views_30d": 0,
+            "views_24h": 0,
+            "clicks_30d": 0,
+            "clicks_24h": 0,
+            "unique_admins_30d": 0,
+        },
+        "visit_count": 0,
+        "today_page_views": 0,
+        "yesterday_page_views": 0,
+        "traffic_delta_today": 0,
+        "total_unique_visitors": 0,
+        "today_unique_visitors": 0,
+        "logged_in_views": 0,
+        "guest_views": 0,
+        "page_metrics": [],
+        "device_breakdown": [],
+        "hourly_traffic": [],
+        "daily_traffic": [],
+        "monthly_traffic": [],
+        "top_clicks": [],
+        "top_click_pages": [],
+        "top_referrers": [],
+        "security_events": [],
+        "security_events_24h": [],
+        "suspicious_ips": [],
+        "safety_alerts": [{
+            "severity": "Info",
+            "title": "Analytics is warming up",
+            "detail": "Traffic data is temporarily limited while analytics storage becomes ready.",
+        }],
+        "click_events_count": 0,
+        "total_cars": 0,
+        "car_owner_count": 0,
+        "service_due_cars": [],
+        "service_soon_cars": [],
+        "insurance_expired_cars": [],
+        "pollution_expired_cars": [],
+        "recent_cars": [],
+    }
+
+
 def _build_admin_analytics_context(section="overview"):
     now = datetime.utcnow()
     today_start = _ist_day_start_utc()
@@ -469,7 +529,18 @@ def admin_analytics(section="overview"):
     if section not in allowed_sections:
         return redirect("/admin/analytics/overview")
 
-    return render_template("admin_analytics.html", **_build_admin_analytics_context(section))
+    try:
+        context = _build_admin_analytics_context(section)
+        context["analytics_degraded"] = False
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning(
+            "admin_analytics_degraded section=%s error=%s",
+            section,
+            exc.__class__.__name__,
+        )
+        context = _empty_admin_analytics_context(section)
+    return render_template("admin_analytics.html", **context)
 
 
 @admin_bp.route("/admin/analytics/live")

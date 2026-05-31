@@ -11,6 +11,12 @@
 </div>
 </div>
 
+{% if analytics_degraded %}
+<div class="ui-card card-spacer">
+<p class="section-copy">Analytics data is temporarily limited while storage becomes ready. The dashboard remains available and will recover automatically.</p>
+</div>
+{% endif %}
+
 <div class="admin-studio-nav card-spacer">
 <a href="/admin"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
 <a href="/admin/analytics/overview" class="{% if section == 'overview' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i><span>Overview</span></a>
