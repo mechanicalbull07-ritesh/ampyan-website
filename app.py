@@ -800,26 +800,33 @@ database_init_lock = threading.Lock()
 database_initialized = False
 database_init_thread_started = False
 app.config["DATABASE_READY"] = False
+app.config["DATABASE_READY_ERROR"] = None
 app.config["MANAGED_PERSONA_MIGRATION_COMPLETE"] = False
 
 
 def database_ready_for_queries():
-    try:
-        if app.config.get("DATABASE_READY", False):
-            return True
-        db.session.execute(text("SELECT 1"))
-        app.config["DATABASE_READY"] = True
+    if app.config.get("DATABASE_READY", False):
         return True
-    except Exception as exc:
-        db.session.rollback()
-        app.config["DATABASE_READY"] = False
-        app.logger.warning(
-            "database_ready_check_failed error=%s detail=%s database_url_configured=%s",
-            exc.__class__.__name__,
-            str(exc)[:300],
-            bool(os.environ.get("DATABASE_URL")),
-        )
-        return False
+
+    for attempt in range(1, 3):
+        try:
+            db.session.execute(text("SELECT 1"))
+            app.config["DATABASE_READY"] = True
+            app.config["DATABASE_READY_ERROR"] = None
+            return True
+        except Exception as exc:
+            db.session.rollback()
+            db.session.remove()
+            app.config["DATABASE_READY"] = False
+            app.config["DATABASE_READY_ERROR"] = exc.__class__.__name__
+            app.logger.warning(
+                "database_ready_check_failed attempt=%s error=%s detail=%s database_url_configured=%s",
+                attempt,
+                exc.__class__.__name__,
+                str(exc)[:300],
+                bool(os.environ.get("DATABASE_URL")),
+            )
+    return False
 
 
 def run_managed_persona_migration_once():
@@ -3077,9 +3084,17 @@ def healthz():
 
 @app.route("/ready")
 def ready():
-    ready_status = database_ready_for_queries() and app.config.get("MANAGED_PERSONA_MIGRATION_COMPLETE", False)
+    database_ready = database_ready_for_queries()
+    migration_complete = app.config.get("MANAGED_PERSONA_MIGRATION_COMPLETE", False)
+    ready_status = database_ready and migration_complete
     status_code = 200 if ready_status else 503
-    return jsonify(status="ready" if ready_status else "starting"), status_code
+    return jsonify(
+        status="ready" if ready_status else "starting",
+        database_ready=database_ready,
+        database_error=app.config.get("DATABASE_READY_ERROR"),
+        database_url_configured=bool(os.environ.get("DATABASE_URL")),
+        managed_persona_migration_complete=migration_complete,
+    ), status_code
 
 
 @app.route("/version")
