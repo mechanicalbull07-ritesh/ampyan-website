@@ -813,7 +813,12 @@ def database_ready_for_queries():
     except Exception as exc:
         db.session.rollback()
         app.config["DATABASE_READY"] = False
-        app.logger.warning("database_ready_check_failed error=%s", exc.__class__.__name__)
+        app.logger.warning(
+            "database_ready_check_failed error=%s detail=%s database_url_configured=%s",
+            exc.__class__.__name__,
+            str(exc)[:300],
+            bool(os.environ.get("DATABASE_URL")),
+        )
         return False
 
 
@@ -1139,7 +1144,7 @@ def google_login():
         if not os.environ.get(key)
     ]
     if missing_env:
-        app.logger.error("Google login is missing required environment variables")
+        app.logger.error("google_login_config_missing missing_env=%s", ",".join(missing_env))
         flash("Google login is not configured yet. Please check server configuration.")
         return redirect(url_for("auth.login"))
 
@@ -1177,11 +1182,6 @@ def platform():
 @app.route("/google/callback")
 def google_callback():
     try:
-        if not database_ready_for_queries():
-            app.logger.warning("Google callback deferred: database_not_ready")
-            flash("Google login is warming up. Please try again in a moment.")
-            return redirect(url_for("auth.login"))
-
         token = google.authorize_access_token()
 
         user_info = token.get("userinfo") if isinstance(token, dict) else None
@@ -1199,6 +1199,22 @@ def google_callback():
         if not email:
             app.logger.warning("Google callback missing email field")
             flash("Google login failed. Please try again.")
+            return redirect(url_for("auth.login"))
+
+        if not database_ready_for_queries():
+            app.logger.warning(
+                "google_callback_storage_unavailable database_ready=%s "
+                "database_initialized=%s db_init_thread_started=%s "
+                "managed_persona_migration_complete=%s analytics_enabled=%s "
+                "database_url_configured=%s",
+                app.config.get("DATABASE_READY", False),
+                database_initialized,
+                database_init_thread_started,
+                app.config.get("MANAGED_PERSONA_MIGRATION_COMPLETE", False),
+                analytics_enabled(),
+                bool(os.environ.get("DATABASE_URL")),
+            )
+            flash("Google login is temporarily unavailable. Please try again shortly.")
             return redirect(url_for("auth.login"))
 
         user = User.query.filter_by(email=email).first()

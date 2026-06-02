@@ -35,6 +35,7 @@ _worker_lock = threading.Lock()
 _worker_started = False
 _live_cache_lock = threading.Lock()
 _live_cache = {"expires_at": 0.0, "value": None}
+_storage_retry_after = 0.0
 
 
 def analytics_enabled():
@@ -180,6 +181,12 @@ def _fallback_log(item):
 
 
 def _persist(item):
+    global _storage_retry_after
+    retry_seconds = max(5, min(int(os.environ.get("ANALYTICS_STORAGE_RETRY_SECONDS", "30")), 300))
+    if time.monotonic() < _storage_retry_after:
+        _fallback_log(item)
+        return
+
     try:
         kind = item.pop("_kind")
         if kind == "event":
@@ -189,8 +196,15 @@ def _persist(item):
         elif kind == "api_metric":
             db.session.add(ApiRequestMetric(**item))
         db.session.commit()
-    except Exception:
+        _storage_retry_after = 0.0
+    except Exception as exc:
         db.session.rollback()
+        _storage_retry_after = time.monotonic() + retry_seconds
+        current_app.logger.warning(
+            "analytics_storage_degraded retry_seconds=%s error=%s",
+            retry_seconds,
+            exc.__class__.__name__,
+        )
         _fallback_log(item)
 
 
