@@ -88,6 +88,7 @@ from services.dashboard_light_intake import dashboard_light_context
 from services.analytics_service import (
     ALLOWED_EVENT_TYPES,
     analytics_enabled,
+    ensure_analytics_schema,
     safe_track_api_request,
     safe_track_event,
     safe_track_page_visit,
@@ -2939,6 +2940,7 @@ def initialize_database():
             ensure_user_schema()
             ensure_car_schema()
             ensure_website_visit_schema()
+            ensure_analytics_schema()
             ensure_reply_schema()
             ensure_post_schema()
             ensure_news_schema()

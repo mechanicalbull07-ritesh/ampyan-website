@@ -10,6 +10,8 @@ from urllib.parse import urlparse
 
 from flask import current_app, g, has_request_context, request
 from flask_login import current_user
+from sqlalchemy import inspect, text
+from sqlalchemy.exc import OperationalError, ProgrammingError
 
 from models.models import AnalyticsEvent, ApiRequestMetric, WebsiteVisit, db
 
@@ -38,6 +40,9 @@ _live_cache = {"expires_at": 0.0, "value": None}
 _storage_retry_after = 0.0
 _last_storage_error = None
 _last_storage_error_at = None
+_last_storage_error_detail = None
+_schema_lock = threading.Lock()
+_schema_retry_after = 0.0
 
 
 def analytics_enabled():
@@ -220,8 +225,138 @@ def _fallback_log(item):
         pass
 
 
+def _db_error_detail(exc, limit=320):
+    original = getattr(exc, "orig", None)
+    parts = [exc.__class__.__name__]
+    if original is not None:
+        parts.append(original.__class__.__name__)
+        message = str(original)
+    else:
+        message = str(exc)
+    message = re.sub(r"\s+", " ", message or "").strip()
+    if message:
+        parts.append(message[:limit])
+    return ": ".join(parts)
+
+
+def _column_type(column):
+    dialect = db.engine.dialect.name
+    if dialect == "postgresql":
+        return str(column.type.compile(dialect=db.engine.dialect))
+    return str(column.type.compile(dialect=db.engine.dialect))
+
+
+def _add_missing_columns(table):
+    inspector = inspect(db.engine)
+    if not inspector.has_table(table.name):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns(table.name)}
+    for column in table.columns:
+        if column.name in existing_columns:
+            continue
+        default = ""
+        if column.default is not None and column.default.is_scalar:
+            default = f" DEFAULT {column.default.arg!r}"
+        safe_table = table.name.replace('"', '""')
+        safe_column = column.name.replace('"', '""')
+        db.session.execute(
+            text(f'ALTER TABLE "{safe_table}" ADD COLUMN "{safe_column}" {_column_type(column)}{default}')
+        )
+
+
+def _create_indexes():
+    indexes = {
+        "website_visit": {
+            "ix_website_visit_visit_time": "visit_time",
+            "ix_website_visit_session_id": "session_id",
+            "ix_website_visit_source": "source",
+            "ix_website_visit_country": "country",
+            "ix_website_visit_is_bot": "is_bot",
+            "ix_website_visit_is_internal": "is_internal",
+        },
+        "analytics_event": {
+            "ix_analytics_event_created_at": "created_at",
+            "ix_analytics_event_event_type": "event_type",
+            "ix_analytics_event_session_id": "session_id",
+            "ix_analytics_event_source": "source",
+            "ix_analytics_event_country": "country",
+            "ix_analytics_event_is_bot": "is_bot",
+            "ix_analytics_event_is_internal": "is_internal",
+        },
+        "api_request_metric": {
+            "ix_api_request_metric_created_at": "created_at",
+            "ix_api_request_metric_path": "path",
+            "ix_api_request_metric_status_code": "status_code",
+            "ix_api_request_metric_is_bot": "is_bot",
+            "ix_api_request_metric_is_internal": "is_internal",
+        },
+    }
+    inspector = inspect(db.engine)
+    for table_name, table_indexes in indexes.items():
+        if not inspector.has_table(table_name):
+            continue
+        safe_table = table_name.replace('"', '""')
+        for index_name, column_name in table_indexes.items():
+            safe_index = index_name.replace('"', '""')
+            safe_column = column_name.replace('"', '""')
+            db.session.execute(text(f'CREATE INDEX IF NOT EXISTS "{safe_index}" ON "{safe_table}" ("{safe_column}")'))
+
+
+def ensure_analytics_schema(reason=None):
+    """Additively create/repair analytics storage without touching core tables."""
+    global _schema_retry_after
+    if time.monotonic() < _schema_retry_after:
+        return False
+
+    with _schema_lock:
+        if time.monotonic() < _schema_retry_after:
+            return False
+        try:
+            WebsiteVisit.__table__.create(db.engine, checkfirst=True)
+            AnalyticsEvent.__table__.create(db.engine, checkfirst=True)
+            ApiRequestMetric.__table__.create(db.engine, checkfirst=True)
+            _add_missing_columns(WebsiteVisit.__table__)
+            _add_missing_columns(AnalyticsEvent.__table__)
+            _add_missing_columns(ApiRequestMetric.__table__)
+            _create_indexes()
+            db.session.commit()
+            _schema_retry_after = 0.0
+            if reason is not None:
+                current_app.logger.info(
+                    "analytics_schema_repaired reason=%s",
+                    _db_error_detail(reason),
+                )
+            return True
+        except Exception as exc:
+            db.session.rollback()
+            _schema_retry_after = time.monotonic() + 300
+            current_app.logger.warning(
+                "analytics_schema_repair_failed error=%s detail=%s",
+                exc.__class__.__name__,
+                _db_error_detail(exc),
+                exc_info=True,
+            )
+            return False
+
+
+def _insert_payload(item):
+    payload = dict(item)
+    kind = payload.pop("_kind", "")
+    if kind == "event":
+        db.session.add(AnalyticsEvent(**payload))
+    elif kind == "visit":
+        db.session.add(WebsiteVisit(**payload))
+    elif kind == "api_metric":
+        db.session.add(ApiRequestMetric(**payload))
+    else:
+        return False
+    db.session.commit()
+    return True
+
+
 def _persist(item):
-    global _last_storage_error, _last_storage_error_at
+    global _last_storage_error, _last_storage_error_at, _last_storage_error_detail
     global _storage_retry_after
     retry_seconds = max(5, min(int(os.environ.get("ANALYTICS_STORAGE_RETRY_SECONDS", "30")), 300))
     if time.monotonic() < _storage_retry_after:
@@ -229,24 +364,44 @@ def _persist(item):
         return
 
     try:
-        kind = item.pop("_kind")
-        if kind == "event":
-            db.session.add(AnalyticsEvent(**item))
-        elif kind == "visit":
-            db.session.add(WebsiteVisit(**item))
-        elif kind == "api_metric":
-            db.session.add(ApiRequestMetric(**item))
-        db.session.commit()
+        _insert_payload(item)
         _storage_retry_after = 0.0
+    except (ProgrammingError, OperationalError) as exc:
+        db.session.rollback()
+        if ensure_analytics_schema(reason=exc):
+            try:
+                _insert_payload(item)
+                _storage_retry_after = 0.0
+                return
+            except Exception as retry_exc:
+                db.session.rollback()
+                exc = retry_exc
+        _storage_retry_after = time.monotonic() + retry_seconds
+        _last_storage_error = exc.__class__.__name__
+        _last_storage_error_detail = _db_error_detail(exc)
+        _last_storage_error_at = datetime.utcnow()
+        current_app.logger.warning(
+            "analytics_storage_degraded retry_seconds=%s kind=%s error=%s detail=%s",
+            retry_seconds,
+            item.get("_kind", "unknown"),
+            exc.__class__.__name__,
+            _last_storage_error_detail,
+            exc_info=True,
+        )
+        _fallback_log(item)
     except Exception as exc:
         db.session.rollback()
         _storage_retry_after = time.monotonic() + retry_seconds
         _last_storage_error = exc.__class__.__name__
+        _last_storage_error_detail = _db_error_detail(exc)
         _last_storage_error_at = datetime.utcnow()
         current_app.logger.warning(
-            "analytics_storage_degraded retry_seconds=%s error=%s",
+            "analytics_storage_degraded retry_seconds=%s kind=%s error=%s detail=%s",
             retry_seconds,
+            item.get("_kind", "unknown"),
             exc.__class__.__name__,
+            _last_storage_error_detail,
+            exc_info=True,
         )
         _fallback_log(item)
 
@@ -369,6 +524,7 @@ def analytics_storage_status():
     return {
         "fallback_active": fallback_active,
         "last_error": _last_storage_error,
+        "last_error_detail": _last_storage_error_detail,
         "last_error_at": _last_storage_error_at.isoformat() if _last_storage_error_at else None,
     }
 
