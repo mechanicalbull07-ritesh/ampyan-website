@@ -13,7 +13,7 @@ from werkzeug.utils import secure_filename
 
 community_bp = Blueprint("community", __name__)
 REMOTE_POST_CACHE = {"expires_at": None, "posts": []}
-REMOTE_CACHE_TTL_SECONDS = int(os.environ.get("REMOTE_COMMUNITY_CACHE_SECONDS", "60"))
+REMOTE_CACHE_TTL_SECONDS = int(os.environ.get("REMOTE_COMMUNITY_CACHE_SECONDS", "15"))
 COMMENT_MAX_LENGTH = 2000
 
 
@@ -175,6 +175,29 @@ def _remote_title(text):
     return (base_text[:80] + "...") if len(base_text) > 80 else base_text
 
 
+def _remote_text(payload):
+    return (
+        payload.get("content")
+        or payload.get("text")
+        or payload.get("body")
+        or payload.get("message")
+        or payload.get("description")
+        or ""
+    )
+
+
+def _remote_author_name(payload, user):
+    return (
+        payload.get("author_name")
+        or payload.get("author")
+        or user.get("name")
+        or user.get("username")
+        or user.get("email")
+        or payload.get("userId")
+        or "AMPYAN User"
+    )
+
+
 def _social_preview_text(text, fallback="AMPYAN community discussion"):
     cleaned = " ".join((text or "").split())
     if not cleaned:
@@ -205,11 +228,13 @@ def _post_social_context(post):
 
 def _build_remote_comment(reply):
     user = reply.get("user") or {}
-    author_name = user.get("name") or user.get("email") or reply.get("userId") or "Community Member"
+    author_name = _remote_author_name(reply, user)
+    content = _remote_text(reply)
     return SimpleNamespace(
         id=f"remote-reply-{reply.get('id')}",
         user_id=user.get("id"),
-        content=reply.get("text") or "",
+        content=content,
+        text=content,
         created_at=reply.get("created_at"),
         author_name=author_name,
         author_badge=user.get("role", "user").title(),
@@ -225,20 +250,22 @@ def _build_remote_comment(reply):
 
 def _build_remote_post(post):
     user = post.get("user") or {}
-    author_name = user.get("name") or user.get("email") or post.get("userId") or "Community Member"
+    author_name = _remote_author_name(post, user)
     replies = [_build_remote_comment(reply) for reply in (post.get("replies") or [])]
-    image_url = post.get("imagePath")
+    content = _remote_text(post)
+    title = (post.get("title") or "").strip() or _remote_title(content)
+    image_url = post.get("imagePath") or post.get("imageUrl") or post.get("image_url") or post.get("image")
     if image_url and not str(image_url).startswith(("http://", "https://", "/")):
         image_url = None
     return SimpleNamespace(
         id=f"remote-post-{post.get('id')}",
         remote_id=post.get("id"),
         is_remote=True,
-        title=_remote_title(post.get("text") or "Untitled"),
-        content=post.get("text") or "",
+        title=title or "Untitled",
+        content=content,
         image=None,
         image_url=image_url,
-        created_at=post.get("created_at"),
+        created_at=post.get("created_at") or post.get("createdAt") or post.get("updated_at") or "",
         detail_url=url_for("community.remote_post_detail", remote_post_id=post.get("id")),
         share_url=url_for("community.remote_post_detail", remote_post_id=post.get("id"), _external=True),
         reply_url=url_for("community.remote_add_comment", remote_post_id=post.get("id")),
@@ -270,25 +297,33 @@ def _build_remote_post(post):
             profile_photo=user.get("profile_photo"),
             email=user.get("email"),
         ),
-        preview_text=(post.get("text") or "")[:180] + ("..." if len(post.get("text") or "") > 180 else ""),
+        preview_text=content[:180] + ("..." if len(content) > 180 else ""),
     )
 
 
-def _load_remote_posts():
-    if os.environ.get("ENABLE_REMOTE_COMMUNITY_FEED", "").lower() != "true":
+def _remote_community_feed_enabled():
+    return os.environ.get("ENABLE_REMOTE_COMMUNITY_FEED", "true").lower() not in {"0", "false", "no", "off"}
+
+
+def _load_remote_posts(force_refresh=False):
+    if not _remote_community_feed_enabled():
         return REMOTE_POST_CACHE["posts"] if REMOTE_POST_CACHE["posts"] else []
 
     now = datetime.utcnow()
-    if REMOTE_POST_CACHE["expires_at"] and REMOTE_POST_CACHE["expires_at"] > now:
+    if not force_refresh and REMOTE_POST_CACHE["expires_at"] and REMOTE_POST_CACHE["expires_at"] > now:
         return REMOTE_POST_CACHE["posts"]
 
-    payload = _safe_remote_call("/community/export?include_replies=true")
+    timeout = float(os.environ.get("REMOTE_COMMUNITY_TIMEOUT_SECONDS", "1.5"))
+    payload = _safe_remote_call("/community/export?include_replies=true", timeout=timeout)
     if not payload:
         return REMOTE_POST_CACHE["posts"] if REMOTE_POST_CACHE["posts"] else []
 
     remote_posts = []
     for post in payload.get("posts") or []:
         if (post.get("source") or "").lower() == "website":
+            continue
+        if post.get("id") is None:
+            current_app.logger.warning("remote_community_post_skipped reason=missing_id")
             continue
         remote_posts.append(_build_remote_post(post))
     remote_posts = remote_posts[:40]
@@ -495,10 +530,10 @@ def _community_feed(limit=50, include_remote=False):
         .limit(limit)
     )
     local_posts = [_decorate_local_post(post) for post in local_query.all()]
-    remote_posts = _load_remote_posts() if include_remote else []
+    remote_posts = _load_remote_posts(force_refresh=request.args.get("fresh", "").lower() == "true") if include_remote else []
     posts = sorted(
         local_posts + remote_posts,
-        key=lambda post: str(getattr(post, "created_at", "") or ""),
+        key=lambda post: (str(getattr(post, "created_at", "") or ""), str(getattr(post, "id", "") or "")),
         reverse=True,
     )
     return posts[:limit]
@@ -508,13 +543,20 @@ def _community_feed(limit=50, include_remote=False):
 def api_community_posts():
     limit = min(max(request.args.get("limit", default=50, type=int) or 50, 1), 100)
     include_remote = request.args.get("include_remote", "").strip().lower() == "true"
-    posts = _community_feed(limit=limit, include_remote=include_remote)
-    return jsonify({
-        "status": "success",
-        "source": "website",
-        "include_remote": include_remote,
-        "posts": [_serialize_post(post) for post in posts],
-    })
+    try:
+        posts = _community_feed(limit=limit, include_remote=include_remote)
+        response = make_response(jsonify({
+            "status": "success",
+            "source": "website",
+            "include_remote": include_remote,
+            "posts": [_serialize_post(post) for post in posts],
+        }))
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        return response
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("API community posts fetch failed: %s", exc.__class__.__name__)
+        return jsonify({"status": "error", "message": "posts temporarily unavailable", "posts": []}), 503
 
 
 @community_bp.route("/api/community/posts", methods=["POST"])
@@ -699,7 +741,7 @@ def community():
     else:
         posts = sorted(
             combined_posts,
-            key=lambda post: str(post.created_at or ""),
+            key=lambda post: (str(post.created_at or ""), str(getattr(post, "id", "") or "")),
             reverse=True,
         )
 

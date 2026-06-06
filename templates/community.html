@@ -83,10 +83,10 @@
 </div>
 {% endif %}
 
-<div class="community-posts">
+<div class="community-posts" id="community-posts" data-feed-url="{{ url_for('community.api_community_posts', limit=80, include_remote='true', fresh='true') }}">
 {% if posts %}
 {% for post in posts %}
-<div class="post-card">
+<div class="post-card" data-post-id="{{ post.id }}">
 <div class="post-header">
 <div class="author-left">
 {% if post.author_avatar_url %}
@@ -173,9 +173,10 @@ Community Member
 </div>
 {% endfor %}
 {% else %}
-<div class="empty-state">No posts yet.</div>
+<div class="empty-state" id="community-empty-state">No posts yet.</div>
 {% endif %}
 </div>
+<p class="page-subtitle" id="community-feed-error" style="display:none;">Community feed could not be refreshed right now.</p>
 </div>
 
 <aside class="community-sidebar">
@@ -262,5 +263,94 @@ Community Member
 </div>
 
 </section>
+
+<script>
+(function(){
+try {
+const feed = document.getElementById("community-posts");
+if(!feed || !feed.dataset.feedUrl) return;
+const emptyState = document.getElementById("community-empty-state");
+const errorState = document.getElementById("community-feed-error");
+function textValue(value) {
+return value == null ? "" : String(value);
+}
+function escapeHtml(value) {
+return textValue(value).replace(/[&<>"']/g, function(char) {
+return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char];
+});
+}
+function existingPostIds() {
+const ids = new Set();
+feed.querySelectorAll("[data-post-id]").forEach(function(node) {
+ids.add(String(node.dataset.postId || ""));
+});
+return ids;
+}
+function postContent(post) {
+return post.content || post.text || post.body || "";
+}
+function postAuthor(post) {
+return post.author_name || (post.author && post.author.name) || post.author || "AMPYAN User";
+}
+function postTitle(post) {
+const title = textValue(post.title).trim();
+if(title) return title;
+const content = postContent(post).trim();
+return content ? content.split(/\s+/).slice(0, 10).join(" ") : "Community post";
+}
+function postCardHtml(post) {
+const id = escapeHtml(post.id || "");
+const title = escapeHtml(postTitle(post));
+const content = postContent(post);
+const preview = escapeHtml(content.length > 180 ? content.slice(0, 180) + "..." : content);
+const author = escapeHtml(postAuthor(post));
+const badge = escapeHtml((post.author && post.author.badge) || (post.is_remote ? "Phone/App" : "Member"));
+const reputation = escapeHtml((post.author && post.author.reputation) || "0");
+const city = escapeHtml((post.author && post.author.city) || "Community Member");
+const detailUrl = escapeHtml(post.detail_url || "/community");
+const shareUrl = escapeHtml(post.share_url || detailUrl);
+const communityName = escapeHtml((post.community && post.community.name) || "General Community");
+const imageUrl = post.image_url ? escapeHtml(post.image_url) : "";
+let html = '<div class="post-card" data-post-id="' + id + '">';
+html += '<div class="post-header"><div class="author-left"><div class="author-avatar-letter">' + author.slice(0, 1).toUpperCase() + '</div>';
+html += '<div class="author-info"><div class="author-name">' + author + ' <span class="author-badge">' + badge + '</span> <span class="author-reputation">⭐ ' + reputation + '</span>';
+if(post.is_remote) html += ' <span class="author-badge">Phone/App</span>';
+html += '</div><div class="author-location">' + city + '</div></div></div></div>';
+html += '<h2 class="post-title"><a href="' + detailUrl + '">' + title + '</a></h2>';
+html += '<a href="/community" class="post-community-pill"><i class="fa-solid fa-car-rear"></i> ' + communityName + '</a>';
+html += '<p class="post-preview">' + preview + '</p>';
+if(imageUrl) html += '<img src="' + imageUrl + '" class="post-image">';
+html += '<div class="post-divider"></div><div class="post-actions">';
+html += '<span class="vote-btn ampyan-boost-btn" style="opacity:0.7;pointer-events:none;"><i class="fa-solid fa-bolt-lightning"></i> ' + escapeHtml(post.vote_count || 0) + '</span>';
+html += '<a href="' + detailUrl + '" class="reply-count"><i class="fa-solid fa-comments"></i> ' + escapeHtml(post.reply_count || 0) + ' replies</a>';
+html += '<button type="button" class="community-icon-action share-btn" data-share-url="' + shareUrl + '" data-share-title="' + title + '" title="Share"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>';
+html += '</div></div>';
+return html;
+}
+fetch(feed.dataset.feedUrl, {cache: "no-store", headers: {"Accept": "application/json"}})
+.then(function(response) {
+if(!response.ok) throw new Error("community_feed_fetch_failed");
+return response.json();
+})
+.then(function(payload) {
+if(!payload || payload.status !== "success") throw new Error("community_feed_fetch_failed");
+const ids = existingPostIds();
+(payload.posts || []).slice().reverse().forEach(function(post) {
+const id = String(post.id || "");
+if(id && !ids.has(id)) {
+feed.insertAdjacentHTML("afterbegin", postCardHtml(post));
+ids.add(id);
+}
+});
+if(emptyState && feed.querySelector("[data-post-id]")) emptyState.style.display = "none";
+if(errorState) errorState.style.display = "none";
+})
+.catch(function(error) {
+if(errorState) errorState.style.display = "block";
+if(window.console && console.debug) console.debug("AMPYAN community feed refresh skipped", error && error.message);
+});
+} catch(error) {}
+})();
+</script>
 
 {% endblock %}
