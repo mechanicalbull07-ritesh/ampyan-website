@@ -119,6 +119,13 @@ def _decorate_local_comment(comment):
     return comment
 
 
+def _can_manage_post(post):
+    return bool(
+        current_user.is_authenticated
+        and (current_user.id == post.user_id or current_user.role in {"admin", "moderator"})
+    )
+
+
 def _comment_sort_key(comment):
     return (getattr(comment, "created_at", None) or datetime.min, getattr(comment, "id", 0) or 0)
 
@@ -164,10 +171,7 @@ def _decorate_local_post(post):
         reverse=True,
     )
     post.top_comments = [_decorate_local_comment(comment) for comment in sorted_comments[:4]]
-    post.can_edit = bool(
-        current_user.is_authenticated
-        and (current_user.id == post.user_id or current_user.role == "admin")
-    )
+    post.can_edit = _can_manage_post(post)
     post.can_vote = True
     decorated_comments = [_decorate_local_comment(comment) for comment in post.comments]
     post.reply_threads = _root_comment_threads(decorated_comments)
@@ -511,6 +515,7 @@ def _serialize_comment(comment):
 def _serialize_post(post):
     image_url = _absolute_public_url(getattr(post, "image_url", None))
     author_avatar_url = _absolute_public_url(getattr(post, "author_avatar_url", None))
+    can_edit = bool(getattr(post, "can_edit", False))
     return {
         "id": str(getattr(post, "id", "")),
         "remote_id": getattr(post, "remote_id", None),
@@ -521,9 +526,19 @@ def _serialize_post(post):
         "image_url": image_url,
         "image": image_url,
         "imageUrl": image_url,
+        "image_path": image_url,
+        "imagePath": image_url,
         "attachment_url": image_url,
+        "photo_url": image_url,
         "detail_url": getattr(post, "detail_url", None),
         "share_url": getattr(post, "share_url", None),
+        "edit_url": getattr(post, "edit_url", None),
+        "delete_url": getattr(post, "delete_url", None),
+        "api_edit_url": url_for("community.api_update_community_post", post_id=post.id) if not getattr(post, "is_remote", False) else None,
+        "api_delete_url": url_for("community.api_delete_community_post", post_id=post.id) if not getattr(post, "is_remote", False) else None,
+        "can_edit": can_edit,
+        "can_delete": can_edit,
+        "is_owner": bool(current_user.is_authenticated and getattr(post, "user_id", None) == current_user.id),
         "vote_count": getattr(post, "vote_count", 0) or 0,
         "reply_count": getattr(post, "reply_count", 0) or 0,
         "community": {
@@ -597,6 +612,20 @@ def _prepare_community_post_image(payload):
     reason = upload_result.get("reason") or "upload_failed"
     current_app.logger.warning("community_post_image_upload_failed field=%s reason=%s", field, reason)
     return None, None, f"Image was not attached: {reason.replace('_', ' ')}."
+
+
+def _community_post_for_api(post_id):
+    return (
+        Post.query
+        .options(
+            selectinload(Post.author),
+            selectinload(Post.car_community),
+            selectinload(Post.votes),
+            selectinload(Post.comments).selectinload(Comment.user),
+        )
+        .filter_by(id=post_id)
+        .first()
+    )
 
 
 def _comments_for_post(post_id):
@@ -690,17 +719,105 @@ def api_create_community_post():
 
 @community_bp.route("/api/community/posts/<int:post_id>")
 def api_community_post_detail(post_id):
-    post = (
-        Post.query
-        .options(
-            selectinload(Post.author),
-            selectinload(Post.car_community),
-            selectinload(Post.votes),
-            selectinload(Post.comments).selectinload(Comment.user),
-        )
-        .get_or_404(post_id)
-    )
+    post = _community_post_for_api(post_id)
+    if not post:
+        return jsonify({"status": "error", "message": "post not found"}), 404
     return jsonify({"status": "success", "post": _serialize_post(_decorate_local_post(post))})
+
+
+@community_bp.route("/api/community/posts/<int:post_id>", methods=["PATCH", "PUT"])
+def api_update_community_post(post_id):
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "authentication required"}), 401
+
+    post = _community_post_for_api(post_id)
+    if not post:
+        return jsonify({"status": "error", "message": "post not found"}), 404
+    if not _can_manage_post(post):
+        return jsonify({"status": "error", "message": "not allowed to edit this post"}), 403
+
+    payload = request.get_json(silent=True) or request.form
+    title_supplied = "title" in payload
+    content_supplied = any(field in payload for field in ("content", "text", "body", "message"))
+    image_filename, external_image_url, image_warning = _prepare_community_post_image(payload)
+    remove_image = str(payload.get("remove_image") or "").lower() in {"1", "true", "yes", "on"}
+
+    if title_supplied:
+        title = (payload.get("title") or "").strip()
+        if not title:
+            return jsonify({"status": "error", "message": "title cannot be empty"}), 400
+        post.title = title[:200]
+
+    if content_supplied:
+        content = _post_content_from_payload(payload)
+        if not content:
+            return jsonify({"status": "error", "message": "content cannot be empty"}), 400
+        post.content = content
+
+    if remove_image:
+        post.image = None
+        external_image_url = None
+    elif image_filename:
+        post.image = image_filename
+
+    if not title_supplied and not content_supplied and not image_filename and not remove_image:
+        return jsonify({"status": "error", "message": "nothing to update"}), 400
+
+    try:
+        remote_post_id = _find_remote_post_id_for_website_post(post.id)
+        if remote_post_id:
+            _safe_remote_call(
+                f"/community/posts/{remote_post_id}",
+                method="PUT",
+                payload={
+                    "email": current_user.email,
+                    "text": f"{post.title}\n\n{post.content}",
+                    "location": current_user.city or "Website",
+                    "imageUrl": external_image_url or (_absolute_public_url(public_image_url("post_images", post.image, placeholder=False)) if post.image else None),
+                },
+            )
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("API community post update failed: %s", exc.__class__.__name__)
+        return jsonify({"status": "error", "message": "post could not be updated"}), 500
+
+    response = {"status": "success", "post": _serialize_post(_decorate_local_post(post))}
+    if image_warning:
+        response["image_warning"] = image_warning
+    return jsonify(response)
+
+
+@community_bp.route("/api/community/posts/<int:post_id>", methods=["DELETE"])
+def api_delete_community_post(post_id):
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "authentication required"}), 401
+
+    post = Post.query.options(selectinload(Post.author)).filter_by(id=post_id).first()
+    if not post:
+        return jsonify({"status": "error", "message": "post not found"}), 404
+    if not _can_manage_post(post):
+        return jsonify({"status": "error", "message": "not allowed to delete this post"}), 403
+
+    try:
+        author = post.author
+        remote_post_id = _find_remote_post_id_for_website_post(post.id)
+        if remote_post_id:
+            _safe_remote_call(
+                f"/community/posts/{remote_post_id}",
+                method="DELETE",
+                payload={"email": current_user.email},
+            )
+        db.session.delete(post)
+        db.session.flush()
+        if author:
+            refresh_author_stats(author)
+        db.session.commit()
+        return jsonify({"status": "success", "deleted": True, "post_id": post_id})
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("API community post delete failed: %s", exc.__class__.__name__)
+        return jsonify({"status": "error", "message": "post could not be deleted"}), 500
 
 
 @community_bp.route("/api/community/posts/<int:post_id>/comments")
@@ -994,7 +1111,7 @@ def remote_post_detail(remote_post_id):
 @login_required
 def edit_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.user_id != current_user.id and current_user.role != "admin":
+    if not _can_manage_post(post):
         return "Unauthorized"
 
     if request.method == "POST":
@@ -1033,7 +1150,7 @@ def edit_post(post_id):
 @login_required
 def delete_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.user_id != current_user.id and current_user.role != "admin":
+    if not _can_manage_post(post):
         return "Unauthorized"
 
     author = post.author
