@@ -15,6 +15,8 @@ community_bp = Blueprint("community", __name__)
 REMOTE_POST_CACHE = {"expires_at": None, "posts": []}
 REMOTE_CACHE_TTL_SECONDS = int(os.environ.get("REMOTE_COMMUNITY_CACHE_SECONDS", "15"))
 COMMENT_MAX_LENGTH = 2000
+POST_IMAGE_FILE_FIELDS = ("image", "image_file", "photo", "attachment", "file", "post_image")
+POST_IMAGE_URL_FIELDS = ("image_url", "imageUrl", "image_path", "imagePath", "attachment_url", "photo_url")
 
 
 class RemoteSyncError(Exception):
@@ -549,6 +551,54 @@ def _comment_content_from_payload(payload):
     return (payload.get("content") or payload.get("text") or payload.get("comment") or "").strip()
 
 
+def _post_content_from_payload(payload):
+    return (
+        payload.get("content")
+        or payload.get("text")
+        or payload.get("body")
+        or payload.get("message")
+        or ""
+    ).strip()
+
+
+def _post_image_url_from_payload(payload):
+    for field in POST_IMAGE_URL_FIELDS:
+        value = (payload.get(field) or "").strip()
+        if value and value.startswith(("http://", "https://")):
+            return value
+    return None
+
+
+def _post_image_file_from_request():
+    for field in POST_IMAGE_FILE_FIELDS:
+        image_file = request.files.get(field)
+        if image_file and image_file.filename:
+            return image_file, field
+    return None, None
+
+
+def _prepare_community_post_image(payload):
+    image_url = _post_image_url_from_payload(payload)
+    if image_url:
+        return image_url, image_url, None
+
+    image_file, field = _post_image_file_from_request()
+    if not image_file:
+        return None, None, None
+
+    upload_result = store_public_image(image_file, "community", current_app.config["POST_IMAGE_UPLOAD"])
+    if upload_result.get("ok"):
+        stored_value = upload_result["stored_value"]
+        public_url = upload_result["public_url"]
+        if public_url and public_url.startswith("/"):
+            public_url = parse.urljoin(request.url_root, public_url.lstrip("/"))
+        return stored_value, public_url, None
+
+    reason = upload_result.get("reason") or "upload_failed"
+    current_app.logger.warning("community_post_image_upload_failed field=%s reason=%s", field, reason)
+    return None, None, f"Image was not attached: {reason.replace('_', ' ')}."
+
+
 def _comments_for_post(post_id):
     comments = (
         Comment.query
@@ -609,12 +659,14 @@ def api_create_community_post():
 
     payload = request.get_json(silent=True) or request.form
     title = (payload.get("title") or "").strip()
-    content = (payload.get("content") or payload.get("text") or "").strip()
+    content = _post_content_from_payload(payload)
     community_id = payload.get("community_id")
     new_community_name = (payload.get("new_community_name") or payload.get("community") or "").strip()
 
     if not title or not content:
         return jsonify({"status": "error", "message": "title and content are required"}), 400
+
+    image_filename, external_image_url, image_warning = _prepare_community_post_image(payload)
 
     try:
         post = _create_local_post(
@@ -622,13 +674,18 @@ def api_create_community_post():
             content=content,
             community_id=community_id,
             new_community_name=new_community_name,
+            image_filename=image_filename,
+            external_image_url=external_image_url,
         )
     except Exception as exc:
         db.session.rollback()
         current_app.logger.warning("API community post create failed: %s", exc.__class__.__name__)
         return jsonify({"status": "error", "message": "post could not be created"}), 500
 
-    return jsonify({"status": "success", "post": _serialize_post(_decorate_local_post(post))}), 201
+    response = {"status": "success", "post": _serialize_post(_decorate_local_post(post))}
+    if image_warning:
+        response["image_warning"] = image_warning
+    return jsonify(response), 201
 
 
 @community_bp.route("/api/community/posts/<int:post_id>")
@@ -879,20 +936,9 @@ def create_post():
             flash("Title and content required")
             return redirect("/create-post")
 
-        image = request.files.get("image")
-        filename = None
-        external_image_url = None
-
-        if image and image.filename != "":
-            upload_result = store_public_image(image, "community", current_app.config["POST_IMAGE_UPLOAD"])
-            if upload_result.get("ok"):
-                filename = upload_result["stored_value"]
-                external_image_url = upload_result["public_url"]
-                if external_image_url and external_image_url.startswith("/"):
-                    external_image_url = parse.urljoin(request.url_root, external_image_url.lstrip("/"))
-            else:
-                current_app.logger.warning("community_post_image_upload_failed reason=%s", upload_result.get("reason"))
-                flash("Post image could not be uploaded. Your text post was saved.")
+        filename, external_image_url, image_warning = _prepare_community_post_image(request.form)
+        if image_warning:
+            flash(image_warning + " Your text post was saved.")
 
         post = _create_local_post(
             title=title,

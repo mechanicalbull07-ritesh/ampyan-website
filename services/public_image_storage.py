@@ -44,23 +44,23 @@ def cloudinary_settings():
 
 
 def _compress_image_to_bytes(image_file):
-    original_filename = secure_filename(image_file.filename or "")
-    if not original_filename:
-        return None, "missing_filename"
-    if "." not in original_filename or original_filename.rsplit(".", 1)[1].lower() not in ALLOWED_IMAGE_EXTENSIONS:
-        return None, "invalid_extension"
-
-    image_file.stream.seek(0, os.SEEK_END)
-    original_size = image_file.stream.tell()
-    image_file.stream.seek(0)
-    if original_size <= 0:
-        return None, "empty_file"
-    if original_size > MAX_UPLOAD_BYTES:
-        return None, "file_too_large"
-
-    raw_bytes = image_file.read()
-    image_file.stream.seek(0)
     try:
+        original_filename = secure_filename(image_file.filename or "")
+        if not original_filename:
+            return None, "missing_filename"
+        if "." not in original_filename or original_filename.rsplit(".", 1)[1].lower() not in ALLOWED_IMAGE_EXTENSIONS:
+            return None, "invalid_extension"
+
+        image_file.stream.seek(0, os.SEEK_END)
+        original_size = image_file.stream.tell()
+        image_file.stream.seek(0)
+        if original_size <= 0:
+            return None, "empty_file"
+        if original_size > MAX_UPLOAD_BYTES:
+            return None, "file_too_large"
+
+        raw_bytes = image_file.read()
+        image_file.stream.seek(0)
         with Image.open(BytesIO(raw_bytes)) as check_img:
             check_img.verify()
         with Image.open(BytesIO(raw_bytes)) as img:
@@ -135,29 +135,33 @@ def public_image_url(folder, value, placeholder=True):
 
 
 def store_public_image(image_file, kind, local_folder):
-    compressed, reason = _compress_image_to_bytes(image_file)
-    if not compressed:
-        return {"ok": False, "stored_value": None, "public_url": None, "reason": reason}
+    try:
+        compressed, reason = _compress_image_to_bytes(image_file)
+        if not compressed:
+            return {"ok": False, "stored_value": None, "public_url": None, "reason": reason}
 
-    filename = f"{secure_filename(kind)}_{secrets.token_hex(8)}.{compressed['extension']}"
-    folder = os.environ.get(f"CLOUDINARY_{kind.upper()}_FOLDER") or f"ampyan/{kind}"
-    cloudinary_result = _upload_cloudinary(compressed["bytes"], filename, folder)
-    if cloudinary_result.get("ok"):
-        url = cloudinary_result["url"]
-        return {"ok": True, "stored_value": url, "public_url": url, "reason": None}
+        filename = f"{secure_filename(kind)}_{secrets.token_hex(8)}.{compressed['extension']}"
+        folder = os.environ.get(f"CLOUDINARY_{kind.upper()}_FOLDER") or f"ampyan/{kind}"
+        cloudinary_result = _upload_cloudinary(compressed["bytes"], filename, folder)
+        if cloudinary_result.get("ok"):
+            url = cloudinary_result["url"]
+            return {"ok": True, "stored_value": url, "public_url": url, "reason": None}
 
-    current_app.logger.warning(
-        "public_image_cloudinary_unavailable kind=%s reason=%s",
-        kind,
-        cloudinary_result.get("reason"),
-    )
-    os.makedirs(local_folder, exist_ok=True)
-    local_path = os.path.join(local_folder, filename)
-    with open(local_path, "wb") as output:
-        output.write(compressed["bytes"])
-    return {
-        "ok": True,
-        "stored_value": filename,
-        "public_url": public_image_url(os.path.basename(local_folder), filename),
-        "reason": "local_fallback",
-    }
+        current_app.logger.warning(
+            "public_image_cloudinary_unavailable kind=%s reason=%s",
+            kind,
+            cloudinary_result.get("reason"),
+        )
+        os.makedirs(local_folder, exist_ok=True)
+        local_path = os.path.join(local_folder, filename)
+        with open(local_path, "wb") as output:
+            output.write(compressed["bytes"])
+        return {
+            "ok": True,
+            "stored_value": filename,
+            "public_url": public_image_url(os.path.basename(local_folder), filename),
+            "reason": "local_fallback",
+        }
+    except Exception as exc:
+        current_app.logger.warning("public_image_store_failed kind=%s reason=%s", kind, exc.__class__.__name__)
+        return {"ok": False, "stored_value": None, "public_url": None, "reason": exc.__class__.__name__}
