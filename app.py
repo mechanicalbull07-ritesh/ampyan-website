@@ -669,12 +669,10 @@ app.config["PROPAGATE_EXCEPTIONS"] = False
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-engine_options = {
-    "pool_pre_ping": True,
-    "pool_recycle": int(os.environ.get("DB_POOL_RECYCLE", "280")),
-    "pool_timeout": int(os.environ.get("DB_POOL_TIMEOUT", "2")),
-}
+engine_options = {"pool_pre_ping": True}
 if database_url and database_url.startswith("postgresql://"):
+    engine_options["pool_recycle"] = int(os.environ.get("DB_POOL_RECYCLE", "280"))
+    engine_options["pool_timeout"] = int(os.environ.get("DB_POOL_TIMEOUT", "2"))
     engine_options["pool_size"] = int(os.environ.get("DB_POOL_SIZE", "2"))
     engine_options["max_overflow"] = int(os.environ.get("DB_MAX_OVERFLOW", "0"))
     engine_options["connect_args"] = {

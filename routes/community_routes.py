@@ -14,6 +14,7 @@ from werkzeug.utils import secure_filename
 community_bp = Blueprint("community", __name__)
 REMOTE_POST_CACHE = {"expires_at": None, "posts": []}
 REMOTE_CACHE_TTL_SECONDS = int(os.environ.get("REMOTE_COMMUNITY_CACHE_SECONDS", "60"))
+COMMENT_MAX_LENGTH = 2000
 
 
 class RemoteSyncError(Exception):
@@ -100,10 +101,11 @@ def _get_or_create_car_community(name, description="", user=None):
 
 
 def _decorate_local_comment(comment):
-    comment.author_name = comment.user.username
+    username = getattr(comment.user, "username", None) or "Community Member"
+    comment.author_name = username
     comment.author_badge = getattr(comment.user, "badge", "Member")
     comment.author_avatar_url = _author_avatar_url(getattr(comment.user, "profile_photo", None))
-    comment.author_avatar_letter = (comment.user.username[:1] or "U").upper()
+    comment.author_avatar_letter = (username[:1] or "U").upper()
     comment.can_edit = bool(
         current_user.is_authenticated
         and (current_user.id == comment.user_id or current_user.role == "admin")
@@ -150,8 +152,11 @@ def _decorate_local_post(post):
         and (current_user.id == post.user_id or current_user.role == "admin")
     )
     post.can_vote = True
-    post.comments = [_decorate_local_comment(comment) for comment in post.comments]
-    post.reply_threads = [comment for comment in post.comments if comment.parent_id is None]
+    decorated_comments = [_decorate_local_comment(comment) for comment in post.comments]
+    post.reply_threads = [
+        comment for comment in sorted(decorated_comments, key=lambda item: item.id)
+        if comment.parent_id is None
+    ]
     return post
 
 
@@ -357,6 +362,11 @@ def _create_local_post(title, content, community_id=None, new_community_name="",
 
 
 def _create_local_comment(post_id, content, parent_id=None):
+    content = (content or "").strip()
+    if not content:
+        raise ValueError("empty_comment")
+    if len(content) > COMMENT_MAX_LENGTH:
+        raise ValueError("comment_too_long")
     if parent_id and not Comment.query.filter_by(id=parent_id, post_id=post_id).first():
         parent_id = None
 
@@ -395,9 +405,13 @@ def _serialize_comment(comment):
     if not author_name and user:
         author_name = getattr(user, "username", None)
 
+    content = getattr(comment, "content", "") or ""
     return {
         "id": str(getattr(comment, "id", "")),
-        "content": getattr(comment, "content", "") or "",
+        "post_id": getattr(comment, "post_id", None),
+        "parent_id": getattr(comment, "parent_id", None),
+        "content": content,
+        "text": content,
         "created_at": _isoformat(getattr(comment, "created_at", None)),
         "author": {
             "id": getattr(comment, "user_id", None),
@@ -405,6 +419,7 @@ def _serialize_comment(comment):
             "badge": getattr(comment, "author_badge", None) or getattr(user, "badge", "Member"),
             "profile_photo": getattr(comment, "author_avatar_url", None),
         },
+        "author_name": author_name or "Community Member",
         "replies": [_serialize_comment(reply) for reply in getattr(comment, "replies", [])],
     }
 
@@ -435,6 +450,24 @@ def _serialize_post(post):
         },
         "comments": [_serialize_comment(comment) for comment in getattr(post, "reply_threads", [])],
     }
+
+
+def _json_comment_validation_error(message):
+    return jsonify({"status": "error", "message": message}), 400
+
+
+def _comment_content_from_payload(payload):
+    return (payload.get("content") or payload.get("text") or payload.get("comment") or "").strip()
+
+
+def _comments_for_post(post_id):
+    return (
+        Comment.query
+        .options(selectinload(Comment.user), selectinload(Comment.replies).selectinload(Comment.user))
+        .filter_by(post_id=post_id, parent_id=None)
+        .order_by(Comment.created_at.asc(), Comment.id.asc())
+        .all()
+    )
 
 
 def _community_feed(limit=50, include_remote=False):
@@ -516,17 +549,33 @@ def api_community_post_detail(post_id):
     return jsonify({"status": "success", "post": _serialize_post(_decorate_local_post(post))})
 
 
+@community_bp.route("/api/community/posts/<int:post_id>/comments")
+def api_community_post_comments(post_id):
+    if not Post.query.get(post_id):
+        return jsonify({"status": "error", "message": "post not found"}), 404
+    comments = [_decorate_local_comment(comment) for comment in _comments_for_post(post_id)]
+    return jsonify({
+        "status": "success",
+        "post_id": post_id,
+        "sort": "oldest",
+        "comments": [_serialize_comment(comment) for comment in comments],
+    })
+
+
+@community_bp.route("/api/community/posts/<int:post_id>/comments", methods=["POST"])
 @community_bp.route("/api/community/posts/<int:post_id>/replies", methods=["POST"])
 def api_create_community_reply(post_id):
     if not current_user.is_authenticated:
         return jsonify({"status": "error", "message": "authentication required"}), 401
 
     payload = request.get_json(silent=True) or request.form
-    content = (payload.get("content") or payload.get("text") or "").strip()
+    content = _comment_content_from_payload(payload)
     parent_id = payload.get("parent_id")
 
     if not content:
-        return jsonify({"status": "error", "message": "content is required"}), 400
+        return _json_comment_validation_error("content is required")
+    if len(content) > COMMENT_MAX_LENGTH:
+        return _json_comment_validation_error(f"content must be {COMMENT_MAX_LENGTH} characters or fewer")
     if not Post.query.get(post_id):
         return jsonify({"status": "error", "message": "post not found"}), 404
 
@@ -537,7 +586,8 @@ def api_create_community_reply(post_id):
         current_app.logger.warning("API community reply create failed: %s", exc.__class__.__name__)
         return jsonify({"status": "error", "message": "reply could not be created"}), 500
 
-    return jsonify({"status": "success", "reply": _serialize_comment(_decorate_local_comment(comment))}), 201
+    serialized = _serialize_comment(_decorate_local_comment(comment))
+    return jsonify({"status": "success", "comment": serialized, "reply": serialized}), 201
 
 
 @community_bp.route("/api/community/remote/<int:remote_post_id>")
@@ -847,8 +897,18 @@ def delete_post(post_id):
 def add_comment(post_id):
     content = (request.form.get("content") or "").strip()
     parent_id = request.form.get("parent_id") or None
-    if content:
+    if not content:
+        flash("Reply text is required.")
+        return redirect(url_for("community.post_detail", post_id=post_id))
+    if len(content) > COMMENT_MAX_LENGTH:
+        flash(f"Reply must be {COMMENT_MAX_LENGTH} characters or fewer.")
+        return redirect(url_for("community.post_detail", post_id=post_id))
+    try:
         _create_local_comment(post_id, content, parent_id=parent_id)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("Website comment create failed: %s", exc.__class__.__name__)
+        flash("Reply could not be saved right now. Please try again.")
     return redirect(url_for("community.post_detail", post_id=post_id))
 
 
