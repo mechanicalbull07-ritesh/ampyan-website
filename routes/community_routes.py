@@ -4,7 +4,7 @@ import os
 from types import SimpleNamespace
 from urllib import error, parse, request as urllib_request
 
-from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask import Blueprint, current_app, flash, jsonify, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from models.models import CarCommunity, Comment, Post, User, Vote, db
 from sqlalchemy import or_
@@ -115,6 +115,19 @@ def _decorate_local_comment(comment):
     return comment
 
 
+def _comment_sort_key(comment):
+    return (getattr(comment, "created_at", None) or datetime.min, getattr(comment, "id", 0) or 0)
+
+
+def _root_comment_threads(comments):
+    comment_ids = {comment.id for comment in comments if getattr(comment, "id", None) is not None}
+    roots = [
+        comment for comment in comments
+        if not getattr(comment, "parent_id", None) or comment.parent_id not in comment_ids
+    ]
+    return sorted(roots, key=_comment_sort_key)
+
+
 def _decorate_local_post(post):
     post.is_remote = False
     post.remote_id = None
@@ -153,10 +166,7 @@ def _decorate_local_post(post):
     )
     post.can_vote = True
     decorated_comments = [_decorate_local_comment(comment) for comment in post.comments]
-    post.reply_threads = [
-        comment for comment in sorted(decorated_comments, key=lambda item: item.id)
-        if comment.parent_id is None
-    ]
+    post.reply_threads = _root_comment_threads(decorated_comments)
     return post
 
 
@@ -406,6 +416,7 @@ def _serialize_comment(comment):
         author_name = getattr(user, "username", None)
 
     content = getattr(comment, "content", "") or ""
+    replies = sorted(getattr(comment, "replies", []), key=_comment_sort_key)
     return {
         "id": str(getattr(comment, "id", "")),
         "post_id": getattr(comment, "post_id", None),
@@ -420,7 +431,7 @@ def _serialize_comment(comment):
             "profile_photo": getattr(comment, "author_avatar_url", None),
         },
         "author_name": author_name or "Community Member",
-        "replies": [_serialize_comment(reply) for reply in getattr(comment, "replies", [])],
+        "replies": [_serialize_comment(reply) for reply in replies],
     }
 
 
@@ -461,13 +472,14 @@ def _comment_content_from_payload(payload):
 
 
 def _comments_for_post(post_id):
-    return (
+    comments = (
         Comment.query
         .options(selectinload(Comment.user), selectinload(Comment.replies).selectinload(Comment.user))
-        .filter_by(post_id=post_id, parent_id=None)
+        .filter_by(post_id=post_id)
         .order_by(Comment.created_at.asc(), Comment.id.asc())
         .all()
     )
+    return _root_comment_threads([_decorate_local_comment(comment) for comment in comments])
 
 
 def _community_feed(limit=50, include_remote=False):
@@ -551,15 +563,26 @@ def api_community_post_detail(post_id):
 
 @community_bp.route("/api/community/posts/<int:post_id>/comments")
 def api_community_post_comments(post_id):
-    if not Post.query.get(post_id):
-        return jsonify({"status": "error", "message": "post not found"}), 404
-    comments = [_decorate_local_comment(comment) for comment in _comments_for_post(post_id)]
-    return jsonify({
-        "status": "success",
-        "post_id": post_id,
-        "sort": "oldest",
-        "comments": [_serialize_comment(comment) for comment in comments],
-    })
+    try:
+        if not Post.query.get(post_id):
+            return jsonify({"status": "error", "message": "post not found"}), 404
+        comments = _comments_for_post(post_id)
+        response = make_response(jsonify({
+            "status": "success",
+            "post_id": post_id,
+            "sort": "oldest",
+            "comments": [_serialize_comment(comment) for comment in comments],
+        }))
+        response.headers["Cache-Control"] = "no-store, max-age=0"
+        return response
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("API community comments fetch failed: %s", exc.__class__.__name__)
+        return jsonify({
+            "status": "error",
+            "message": "comments temporarily unavailable",
+            "comments": [],
+        }), 503
 
 
 @community_bp.route("/api/community/posts/<int:post_id>/comments", methods=["POST"])

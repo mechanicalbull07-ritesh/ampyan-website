@@ -1,8 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 {% macro render_comment(comment, post) %}
-<div class="simple-list-card reply-card {% if comment.parent_id %}nested-reply{% endif %}">
-<p class="body-copy-lg" style="margin-top:0;">{{ comment.content }}</p>
+<div class="simple-list-card reply-card {% if comment.parent_id %}nested-reply{% endif %}" data-comment-id="{{ comment.id }}">
+<p class="body-copy-lg" style="margin-top:0;">{{ comment.content or comment.text }}</p>
 <div class="post-actions">
 <small class="page-subtitle" style="margin:0;">{{ comment.author_name }}</small>
 
@@ -93,17 +93,19 @@
 </div>
 
 <div class="ui-card narrow-card">
-<h2 class="section-heading">Replies ({{ post.reply_count }})</h2>
+<h2 class="section-heading">Replies (<span id="reply-count">{{ post.reply_count }}</span>)</h2>
 
 {% if post.reply_threads %}
-<div class="ui-grid">
+<div class="ui-grid" id="comments-list"{% if not post.is_remote %} data-comments-url="{{ url_for('community.api_community_post_comments', post_id=post.id) }}"{% endif %}>
 {% for comment in post.reply_threads %}
 {{ render_comment(comment, post) }}
 {% endfor %}
 </div>
 {% else %}
-<div class="empty-state">No replies yet.</div>
+<div class="ui-grid" id="comments-list"{% if not post.is_remote %} data-comments-url="{{ url_for('community.api_community_post_comments', post_id=post.id) }}"{% endif %}></div>
+<div class="empty-state" id="comments-empty-state">No replies yet.</div>
 {% endif %}
+<p class="page-subtitle" id="comments-error" style="display:none;">Replies could not be refreshed right now.</p>
 
 {% if current_user.is_authenticated %}
 <div class="comment-form">
@@ -119,5 +121,90 @@
 </div>
 
 </section>
+
+{% if not post.is_remote %}
+<script>
+(function(){
+try {
+const list = document.getElementById("comments-list");
+if(!list || !list.dataset.commentsUrl) return;
+const emptyState = document.getElementById("comments-empty-state");
+const errorState = document.getElementById("comments-error");
+const countNode = document.getElementById("reply-count");
+const canReply = {{ (current_user.is_authenticated and not post.is_remote)|tojson }};
+const replyUrl = {{ post.reply_url|tojson }};
+function textValue(value) {
+return value == null ? "" : String(value);
+}
+function escapeHtml(value) {
+return textValue(value).replace(/[&<>"']/g, function(char) {
+return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char];
+});
+}
+function existingIds() {
+const ids = new Set();
+list.querySelectorAll("[data-comment-id]").forEach(function(node) {
+ids.add(String(node.dataset.commentId || ""));
+});
+return ids;
+}
+function commentHtml(comment, nested) {
+const id = escapeHtml(comment.id);
+const author = escapeHtml(comment.author_name || (comment.author && comment.author.name) || "Community Member");
+const content = escapeHtml(comment.content || comment.text || "");
+let html = '<div class="simple-list-card reply-card' + (nested ? ' nested-reply' : '') + '" data-comment-id="' + id + '">';
+html += '<p class="body-copy-lg" style="margin-top:0;">' + content + '</p>';
+html += '<div class="post-actions"><small class="page-subtitle" style="margin:0;">' + author + '</small></div>';
+if(canReply) {
+html += '<form method="POST" action="' + escapeHtml(replyUrl) + '" class="inline-reply-form">';
+html += '<input type="hidden" name="parent_id" value="' + id + '">';
+html += '<textarea name="content" placeholder="Reply to ' + author + '..." required class="profile-input"></textarea>';
+html += '<button type="submit" class="ui-button-secondary">Reply</button></form>';
+}
+(comment.replies || []).forEach(function(reply) {
+html += commentHtml(reply, true);
+});
+html += '</div>';
+return html;
+}
+function markCommentIds(comment, ids) {
+const id = String(comment.id || "");
+if(id) ids.add(id);
+(comment.replies || []).forEach(function(reply) {
+markCommentIds(reply, ids);
+});
+}
+function appendMissing(comments, ids) {
+(comments || []).forEach(function(comment) {
+const id = String(comment.id || "");
+if(id && !ids.has(id)) {
+list.insertAdjacentHTML("beforeend", commentHtml(comment, false));
+markCommentIds(comment, ids);
+} else {
+appendMissing(comment.replies || [], ids);
+}
+});
+}
+fetch(list.dataset.commentsUrl, {cache: "no-store", headers: {"Accept": "application/json"}})
+.then(function(response) {
+if(!response.ok) throw new Error("comments_fetch_failed");
+return response.json();
+})
+.then(function(payload) {
+if(!payload || payload.status !== "success") throw new Error("comments_fetch_failed");
+const comments = payload.comments || [];
+appendMissing(comments, existingIds());
+if(countNode) countNode.textContent = String(list.querySelectorAll("[data-comment-id]").length);
+if(emptyState && list.querySelector("[data-comment-id]")) emptyState.style.display = "none";
+if(errorState) errorState.style.display = "none";
+})
+.catch(function(error) {
+if(errorState) errorState.style.display = "block";
+if(window.console && console.debug) console.debug("AMPYAN comments refresh skipped", error && error.message);
+});
+} catch(error) {}
+})();
+</script>
+{% endif %}
 
 {% endblock %}
