@@ -36,6 +36,8 @@ _worker_started = False
 _live_cache_lock = threading.Lock()
 _live_cache = {"expires_at": 0.0, "value": None}
 _storage_retry_after = 0.0
+_last_storage_error = None
+_last_storage_error_at = None
 
 
 def analytics_enabled():
@@ -125,6 +127,44 @@ def _referrer_source(referrer, utm_source=""):
     return _clean(host, 120)
 
 
+def _source_bucket(source):
+    value = (source or "direct").strip().lower()
+    if not value or value == "direct":
+        return "Direct"
+    if "google" in value:
+        return "Google"
+    if "instagram" in value:
+        return "Instagram"
+    if "facebook" in value or value == "fb":
+        return "Facebook"
+    if "youtube" in value or "youtu.be" in value:
+        return "YouTube"
+    if "whatsapp" in value or "wa.me" in value:
+        return "WhatsApp"
+    if "ampyan" in value or value == "internal":
+        return "Internal"
+    return _clean(source, 120) or "Direct"
+
+
+def _feature_bucket(path, event_type=""):
+    value = (path or "").strip().lower()
+    if value in {"", "/"}:
+        return "Home"
+    if value.startswith("/login") or event_type in {"login_success", "login_failure"}:
+        return "Login"
+    if value.startswith("/community") or event_type == "community_opened":
+        return "Community"
+    if value.startswith("/news") or event_type == "news_opened":
+        return "News"
+    if value.startswith("/garage") or value.startswith("/my-car-health") or event_type == "garage_added":
+        return "Garage"
+    if "diagnosis" in value or event_type in {"diagnosis_started", "diagnosis_completed"}:
+        return "Diagnosis"
+    if "nearby" in value:
+        return "Nearby Garage"
+    return value[:80] or "Other"
+
+
 def _current_user_parts():
     try:
         if current_user.is_authenticated:
@@ -181,6 +221,7 @@ def _fallback_log(item):
 
 
 def _persist(item):
+    global _last_storage_error, _last_storage_error_at
     global _storage_retry_after
     retry_seconds = max(5, min(int(os.environ.get("ANALYTICS_STORAGE_RETRY_SECONDS", "30")), 300))
     if time.monotonic() < _storage_retry_after:
@@ -200,6 +241,8 @@ def _persist(item):
     except Exception as exc:
         db.session.rollback()
         _storage_retry_after = time.monotonic() + retry_seconds
+        _last_storage_error = exc.__class__.__name__
+        _last_storage_error_at = datetime.utcnow()
         current_app.logger.warning(
             "analytics_storage_degraded retry_seconds=%s error=%s",
             retry_seconds,
@@ -321,6 +364,15 @@ def safe_track_api_request(path, method, status_code, response_time_ms):
         return False
 
 
+def analytics_storage_status():
+    fallback_active = time.monotonic() < _storage_retry_after
+    return {
+        "fallback_active": fallback_active,
+        "last_error": _last_storage_error,
+        "last_error_at": _last_storage_error_at.isoformat() if _last_storage_error_at else None,
+    }
+
+
 def live_summary():
     now_monotonic = time.monotonic()
     cache_seconds = max(10, min(int(os.environ.get("ADMIN_ANALYTICS_CACHE_SECONDS", "60")), 600))
@@ -328,7 +380,9 @@ def live_summary():
         if _live_cache["value"] is not None and _live_cache["expires_at"] > now_monotonic:
             return _live_cache["value"]
 
-    since = datetime.utcnow() - timedelta(hours=24)
+    now = datetime.utcnow()
+    since = now - timedelta(hours=24)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     human_filter = (
         AnalyticsEvent.created_at >= since,
         AnalyticsEvent.is_bot.is_(False),
@@ -337,16 +391,65 @@ def live_summary():
     )
     events = AnalyticsEvent.query.filter(*human_filter).order_by(AnalyticsEvent.created_at.desc()).limit(2000).all()
     api_rows = ApiRequestMetric.query.filter(ApiRequestMetric.created_at >= since).order_by(ApiRequestMetric.created_at.desc()).limit(1000).all()
+    today_events = [event for event in events if event.created_at and event.created_at >= today_start]
     sessions = {event.session_id for event in events if event.session_id}
+    today_sessions = {event.session_id for event in today_events if event.session_id}
     event_counts = Counter(event.event_type for event in events)
+    today_event_counts = Counter(event.event_type for event in today_events)
     slow_counter = Counter(row.path for row in api_rows if (row.response_time_ms or 0) >= 2000)
+    hourly_page_views = Counter()
+    hourly_sessions = {}
+    hourly_app_events = Counter()
+    hourly_api_errors = Counter()
+    for event in events:
+        if not event.created_at:
+            continue
+        hour_key = event.created_at.replace(minute=0, second=0, microsecond=0).strftime("%H:00")
+        if event.event_type == "page_view":
+            hourly_page_views[hour_key] += 1
+        if event.session_id:
+            hourly_sessions.setdefault(hour_key, set()).add(event.session_id)
+        if event.traffic_type == "app" or event.event_type in {"app_open", "screen_view"}:
+            hourly_app_events[hour_key] += 1
+    for row in api_rows:
+        if not row.created_at or (row.status_code or 0) < 500:
+            continue
+        hour_key = row.created_at.replace(minute=0, second=0, microsecond=0).strftime("%H:00")
+        hourly_api_errors[hour_key] += 1
+    hour_labels = [
+        (now - timedelta(hours=index)).replace(minute=0, second=0, microsecond=0).strftime("%H:00")
+        for index in range(23, -1, -1)
+    ]
+    hourly_24h = [
+        {
+            "hour": label,
+            "page_views": hourly_page_views[label],
+            "sessions": len(hourly_sessions.get(label, set())),
+            "app_events": hourly_app_events[label],
+            "api_errors": hourly_api_errors[label],
+        }
+        for label in hour_labels
+    ]
+    storage_status = analytics_storage_status()
     value = {
+        "db_status": "OK",
+        "analytics_fallback_active": storage_status["fallback_active"],
+        "last_analytics_error": storage_status["last_error"] or "None",
+        "last_analytics_error_at": storage_status["last_error_at"],
+        "human_page_views_today": today_event_counts["page_view"],
+        "human_sessions_today": len(today_sessions),
+        "app_opens_today": today_event_counts["app_open"],
+        "new_events_today": len(today_events),
+        "api_errors_today": sum(1 for row in api_rows if row.created_at and row.created_at >= today_start and (row.status_code or 0) >= 500),
         "human_sessions_24h": len(sessions),
         "page_views_24h": event_counts["page_view"],
         "app_opens_24h": event_counts["app_open"],
         "api_errors_24h": sum(1 for row in api_rows if (row.status_code or 0) >= 500),
         "failed_logins_24h": event_counts["login_failure"],
+        "hourly_24h": hourly_24h,
         "feature_usage_24h": dict(event_counts),
+        "top_sources": Counter(_source_bucket(event.source) for event in events).most_common(10),
+        "top_features": Counter(_feature_bucket(event.path, event.event_type) for event in events).most_common(10),
         "top_countries": Counter(event.country or "Unknown" for event in events).most_common(10),
         "top_cities": Counter(event.city or "Unknown" for event in events).most_common(10),
         "devices": Counter(event.device_type or "Unknown" for event in events).most_common(10),
@@ -370,12 +473,24 @@ def safe_live_summary():
     except Exception:
         db.session.rollback()
         return {
+            "db_status": "Limited",
+            "analytics_fallback_active": True,
+            "last_analytics_error": "Analytics summary unavailable",
+            "last_analytics_error_at": None,
+            "human_page_views_today": 0,
+            "human_sessions_today": 0,
+            "app_opens_today": 0,
+            "new_events_today": 0,
+            "api_errors_today": 0,
             "human_sessions_24h": 0,
             "page_views_24h": 0,
             "app_opens_24h": 0,
             "api_errors_24h": 0,
             "failed_logins_24h": 0,
+            "hourly_24h": [],
             "feature_usage_24h": {},
+            "top_sources": [],
+            "top_features": [],
             "top_countries": [],
             "top_cities": [],
             "devices": [],

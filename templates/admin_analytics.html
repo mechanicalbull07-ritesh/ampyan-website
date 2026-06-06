@@ -29,6 +29,13 @@
 
 {% if section == "overview" %}
 <div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Human Views Today</span><div class="stat-number">{{ live_analytics.human_page_views_today }}</div></div>
+<div class="stat-card"><span>Human Sessions Today</span><div class="stat-number">{{ live_analytics.human_sessions_today }}</div></div>
+<div class="stat-card"><span>App Opens Today</span><div class="stat-number">{{ live_analytics.app_opens_today }}</div></div>
+<div class="stat-card"><span>API Errors Today</span><div class="stat-number">{{ live_analytics.api_errors_today }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
 <div class="stat-card"><span>Public Views</span><div class="stat-number">{{ visit_count }}</div></div>
 <div class="stat-card"><span>Today Public Views</span><div class="stat-number">{{ today_page_views }}</div></div>
 <div class="stat-card"><span>Unique Visitors</span><div class="stat-number">{{ total_unique_visitors }}</div></div>
@@ -51,12 +58,49 @@
 
 <div class="admin-analytics-grid card-spacer">
 <div class="admin-analytics-panel">
-<h3>Last 12 hours</h3>
+<h3>Last 24 hours</h3>
+<div class="admin-table-wrap">
+<table class="admin-analytics-table">
+<thead><tr><th>Hour</th><th>Views</th><th>Sessions</th><th>App</th><th>API Errors</th></tr></thead>
+<tbody>
+{% for row in live_analytics.hourly_24h[-12:] %}
+<tr><td>{{ row.hour }}</td><td>{{ row.page_views }}</td><td>{{ row.sessions }}</td><td>{{ row.app_events }}</td><td>{{ row.api_errors }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Website visits</h3>
 <div class="admin-bar-list">
 {% for label, count in hourly_traffic[-12:] %}
 <div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 8, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
 {% endfor %}
 </div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Top sources</h3>
+{% if live_analytics.top_sources %}
+<div class="ui-meta-list">
+{% for source, count in live_analytics.top_sources[:8] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ source }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No source data yet.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Top pages/features</h3>
+{% if live_analytics.top_features %}
+<div class="ui-meta-list">
+{% for label, count in live_analytics.top_features[:8] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No feature data yet.</p>
+{% endif %}
 </div>
 <div class="admin-analytics-panel">
 <h3>Top referrers</h3>
@@ -254,6 +298,43 @@
 {% for label, count in live_analytics.slow_endpoints %}
 <div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
 {% endfor %}
+</div>
+</div>
+</div>
+{% endif %}
+
+{% if section == "safety" %}
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>DB Status</span><div class="stat-number stat-number-sm">{{ live_analytics.db_status }}</div></div>
+<div class="stat-card"><span>Fallback Active</span><div class="stat-number stat-number-sm">{{ "Yes" if live_analytics.analytics_fallback_active else "No" }}</div></div>
+<div class="stat-card"><span>API Errors 24h</span><div class="stat-number">{{ live_analytics.api_errors_24h }}</div></div>
+<div class="stat-card"><span>Failed Logins 24h</span><div class="stat-number">{{ live_analytics.failed_logins_24h }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Last analytics error</h3>
+<div class="ui-meta-list">
+<div class="ui-meta-item"><span class="ui-meta-label">Error</span><span class="ui-meta-value">{{ live_analytics.last_analytics_error }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Time</span><span class="ui-meta-value">{{ live_analytics.last_analytics_error_at or "N/A" }}</span></div>
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Slow endpoints</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.slow_endpoints %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% else %}
+<div class="ui-meta-item"><span class="ui-meta-label">None</span><span class="ui-meta-value">0</span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Separated traffic</h3>
+<div class="admin-mini-stats">
+<div><span>Bots</span><strong>{{ live_analytics.bot_events_24h }}</strong></div>
+<div><span>Internal</span><strong>{{ live_analytics.internal_events_24h }}</strong></div>
+<div><span>Admin</span><strong>{{ live_analytics.admin_events_24h }}</strong></div>
 </div>
 </div>
 </div>
