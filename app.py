@@ -219,6 +219,7 @@ IMAGE_FORMATS = {
 }
 DEFAULT_NEWS_IMAGE_FILENAME = "AMPYAN_-_Powering_Intelligent_Mobility.png"
 DEFAULT_NEWS_IMAGE_PATH = f"news_images/{DEFAULT_NEWS_IMAGE_FILENAME}"
+DEFAULT_PLACEHOLDER_IMAGE_PATH = "images/logo.png"
 MAX_NEWS_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024
 MAX_NEWS_IMAGE_PIXELS = 24_000_000
 NEWS_IMAGE_MAX_WIDTH = 1200
@@ -509,6 +510,8 @@ def static_image_url_if_exists(folder, filename, fallback=None):
 
     if folder == "news_images":
         return url_for("static", filename=DEFAULT_NEWS_IMAGE_PATH)
+    if folder in {"profile_images", "post_images"}:
+        return url_for("static", filename=DEFAULT_PLACEHOLDER_IMAGE_PATH)
 
     return None
 
@@ -783,6 +786,30 @@ def uploaded_news_image(filename):
         )
 
     return send_from_directory(upload_folder, safe_filename)
+
+
+@app.route("/static/profile_images/<path:filename>")
+def static_profile_image(filename):
+    safe_filename = secure_filename(os.path.basename(filename))
+    profile_folder = os.path.join(app.static_folder, "profile_images")
+    if safe_filename:
+        profile_path = os.path.join(profile_folder, safe_filename)
+        if os.path.isfile(profile_path):
+            return send_from_directory(profile_folder, safe_filename)
+    app.logger.info("profile_image_fallback filename=%s", safe_filename or filename)
+    return send_from_directory(os.path.join(app.static_folder, "images"), "logo.png")
+
+
+@app.route("/static/post_images/<path:filename>")
+def static_post_image(filename):
+    safe_filename = secure_filename(os.path.basename(filename))
+    post_folder = os.path.join(app.static_folder, "post_images")
+    if safe_filename:
+        post_path = os.path.join(post_folder, safe_filename)
+        if os.path.isfile(post_path):
+            return send_from_directory(post_folder, safe_filename)
+    app.logger.info("post_image_fallback filename=%s", safe_filename or filename)
+    return send_from_directory(os.path.join(app.static_folder, "images"), "logo.png")
 
 
 @app.route("/favicon.ico")

@@ -7,7 +7,6 @@ from urllib import error, request as urllib_request
 from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request
 from flask_login import current_user, login_required
 from flask import current_app
-from werkzeug.utils import secure_filename
 from models.models import Car, Post, db
 from services.car_health_engine import calculate_car_health
 from services.maintenance_engine import get_maintenance_suggestions
@@ -18,6 +17,7 @@ from services.driving_pattern_engine import analyze_driving_pattern
 from services.service_schedule_engine import get_service_schedule
 from services.component_health_engine import get_component_health
 from services.garage_summary import enrich_car_for_garage, serialize_garage_car
+from services.public_image_storage import public_image_url, store_public_image
 import os
 
 user_bp = Blueprint("user", __name__)
@@ -45,6 +45,9 @@ def _remote_request(path, method="GET", payload=None, timeout=3):
 
 
 def _sync_current_user_profile():
+    profile_url = public_image_url("profile_images", current_user.profile_photo) if current_user.profile_photo else ""
+    if profile_url and profile_url.startswith("/"):
+        profile_url = f"{request.url_root.rstrip('/')}{profile_url}"
     return _remote_request(
         "/profile/sync",
         method="POST",
@@ -53,6 +56,9 @@ def _sync_current_user_profile():
             "email": current_user.email,
             "phone": current_user.mobile or "",
             "user_email": current_user.email,
+            "profile_photo": profile_url,
+            "profile_image": profile_url,
+            "avatar_url": profile_url,
         },
     )
 
@@ -145,6 +151,9 @@ def _load_remote_profile_posts():
 
 
 def serialize_user(user):
+    profile_url = public_image_url("profile_images", user.profile_photo) if user.profile_photo else ""
+    if profile_url and profile_url.startswith("/"):
+        profile_url = f"{request.url_root.rstrip('/')}{profile_url}"
     return {
         "id": user.id,
         "username": user.username,
@@ -162,6 +171,9 @@ def serialize_user(user):
         "ai_uses_today": user.ai_uses_today,
         "email_verified": user.email_verified,
         "profile_photo": user.profile_photo,
+        "profile_photo_url": profile_url,
+        "profile_image": profile_url,
+        "avatar_url": profile_url,
     }
 
 
@@ -205,11 +217,12 @@ def update_profile():
 
     photo = request.files.get("profile_photo")
     if photo and photo.filename != "":
-        filename = secure_filename(photo.filename)
-        save_path = os.path.join(current_app.config["PROFILE_UPLOAD"], filename)
-        os.makedirs("static/profile_images", exist_ok=True)
-        photo.save(save_path)
-        current_user.profile_photo = filename
+        upload_result = store_public_image(photo, "profile", current_app.config["PROFILE_UPLOAD"])
+        if upload_result.get("ok"):
+            current_user.profile_photo = upload_result["stored_value"]
+        else:
+            current_app.logger.warning("profile_photo_upload_failed reason=%s", upload_result.get("reason"))
+            flash("Profile photo could not be uploaded. Other profile details were saved.")
 
     db.session.commit()
     _sync_current_user_profile()

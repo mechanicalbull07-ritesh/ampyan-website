@@ -7,9 +7,9 @@ from urllib import error, parse, request as urllib_request
 from flask import Blueprint, current_app, flash, jsonify, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from models.models import CarCommunity, Comment, Post, User, Vote, db
+from services.public_image_storage import public_image_url, store_public_image
 from sqlalchemy import or_
 from sqlalchemy.orm import selectinload
-from werkzeug.utils import secure_filename
 
 community_bp = Blueprint("community", __name__)
 REMOTE_POST_CACHE = {"expires_at": None, "posts": []}
@@ -54,21 +54,23 @@ def _safe_remote_call(path, method="GET", payload=None, timeout=3):
 
 
 def _sync_user_profile(user):
+    profile_url = _author_avatar_url(getattr(user, "profile_photo", None))
+    if profile_url and profile_url.startswith("/"):
+        profile_url = parse.urljoin(request.url_root, profile_url.lstrip("/"))
     payload = {
         "name": user.username,
         "email": user.email,
         "phone": user.mobile or "",
         "user_email": user.email,
+        "profile_photo": profile_url,
+        "profile_image": profile_url,
+        "avatar_url": profile_url,
     }
     return _safe_remote_call("/profile/sync", method="POST", payload=payload)
 
 
 def _author_avatar_url(profile_photo):
-    if not profile_photo:
-        return None
-    if profile_photo.startswith("http://") or profile_photo.startswith("https://"):
-        return profile_photo
-    return url_for("static", filename=f"profile_images/{profile_photo}")
+    return public_image_url("profile_images", profile_photo, placeholder=True)
 
 
 def _slugify(text):
@@ -139,7 +141,7 @@ def _decorate_local_post(post):
     post.edit_url = url_for("community.edit_post", post_id=post.id)
     post.vote_count = len(post.votes)
     post.reply_count = len(post.comments)
-    post.image_url = url_for("static", filename=f"post_images/{post.image}") if post.image else None
+    post.image_url = public_image_url("post_images", post.image, placeholder=True) if post.image else None
     post.community_name = post.car_community.name if post.car_community else "General Community"
     post.community_slug = post.car_community.slug if post.car_community else None
     post.community_url = (
@@ -213,6 +215,14 @@ def _absolute_image_url(image_url):
     return parse.urljoin(request.url_root, str(image_url).lstrip("/"))
 
 
+def _absolute_public_url(value):
+    if not value:
+        return value
+    if str(value).startswith(("http://", "https://")):
+        return value
+    return parse.urljoin(request.url_root, str(value).lstrip("/"))
+
+
 def _post_social_context(post):
     return {
         "meta_title": post.title,
@@ -230,6 +240,14 @@ def _build_remote_comment(reply):
     user = reply.get("user") or {}
     author_name = _remote_author_name(reply, user)
     content = _remote_text(reply)
+    profile_photo = (
+        user.get("profile_photo")
+        or user.get("profile_image")
+        or user.get("avatar_url")
+        or user.get("author_avatar")
+        or user.get("photo_url")
+        or reply.get("author_avatar")
+    )
     return SimpleNamespace(
         id=f"remote-reply-{reply.get('id')}",
         user_id=user.get("id"),
@@ -238,7 +256,7 @@ def _build_remote_comment(reply):
         created_at=reply.get("created_at"),
         author_name=author_name,
         author_badge=user.get("role", "user").title(),
-        author_avatar_url=_author_avatar_url(user.get("profile_photo")),
+        author_avatar_url=_author_avatar_url(profile_photo),
         author_avatar_letter=(author_name[:1] or "U").upper(),
         can_edit=False,
         edit_url=None,
@@ -254,9 +272,24 @@ def _build_remote_post(post):
     replies = [_build_remote_comment(reply) for reply in (post.get("replies") or [])]
     content = _remote_text(post)
     title = (post.get("title") or "").strip() or _remote_title(content)
-    image_url = post.get("imagePath") or post.get("imageUrl") or post.get("image_url") or post.get("image")
+    image_url = (
+        post.get("image_url")
+        or post.get("imageUrl")
+        or post.get("imagePath")
+        or post.get("attachment_url")
+        or post.get("photo_url")
+        or post.get("image")
+    )
     if image_url and not str(image_url).startswith(("http://", "https://", "/")):
         image_url = None
+    profile_photo = (
+        user.get("profile_photo")
+        or user.get("profile_image")
+        or user.get("avatar_url")
+        or user.get("author_avatar")
+        or user.get("photo_url")
+        or post.get("author_avatar")
+    )
     return SimpleNamespace(
         id=f"remote-post-{post.get('id')}",
         remote_id=post.get("id"),
@@ -287,14 +320,14 @@ def _build_remote_post(post):
         author_badge=user.get("role", "user").title(),
         author_reputation=user.get("reputation", 0),
         author_city=post.get("location") or user.get("city"),
-        author_avatar_url=_author_avatar_url(user.get("profile_photo")),
+        author_avatar_url=_author_avatar_url(profile_photo),
         author_avatar_letter=(author_name[:1] or "U").upper(),
         author=SimpleNamespace(
             username=author_name,
             badge=user.get("role", "user").title(),
             reputation=user.get("reputation", 0),
             city=post.get("location") or user.get("city"),
-            profile_photo=user.get("profile_photo"),
+            profile_photo=profile_photo,
             email=user.get("email"),
         ),
         preview_text=content[:180] + ("..." if len(content) > 180 else ""),
@@ -452,6 +485,7 @@ def _serialize_comment(comment):
 
     content = getattr(comment, "content", "") or ""
     replies = sorted(getattr(comment, "replies", []), key=_comment_sort_key)
+    author_avatar_url = _absolute_public_url(getattr(comment, "author_avatar_url", None))
     return {
         "id": str(getattr(comment, "id", "")),
         "post_id": getattr(comment, "post_id", None),
@@ -463,7 +497,9 @@ def _serialize_comment(comment):
             "id": getattr(comment, "user_id", None),
             "name": author_name or "Community Member",
             "badge": getattr(comment, "author_badge", None) or getattr(user, "badge", "Member"),
-            "profile_photo": getattr(comment, "author_avatar_url", None),
+            "profile_photo": author_avatar_url,
+            "profile_image": author_avatar_url,
+            "avatar_url": author_avatar_url,
         },
         "author_name": author_name or "Community Member",
         "replies": [_serialize_comment(reply) for reply in replies],
@@ -471,6 +507,8 @@ def _serialize_comment(comment):
 
 
 def _serialize_post(post):
+    image_url = _absolute_public_url(getattr(post, "image_url", None))
+    author_avatar_url = _absolute_public_url(getattr(post, "author_avatar_url", None))
     return {
         "id": str(getattr(post, "id", "")),
         "remote_id": getattr(post, "remote_id", None),
@@ -478,7 +516,10 @@ def _serialize_post(post):
         "title": getattr(post, "title", "") or "",
         "content": getattr(post, "content", "") or "",
         "created_at": _isoformat(getattr(post, "created_at", None)),
-        "image_url": getattr(post, "image_url", None),
+        "image_url": image_url,
+        "image": image_url,
+        "imageUrl": image_url,
+        "attachment_url": image_url,
         "detail_url": getattr(post, "detail_url", None),
         "share_url": getattr(post, "share_url", None),
         "vote_count": getattr(post, "vote_count", 0) or 0,
@@ -492,7 +533,9 @@ def _serialize_post(post):
             "badge": getattr(post, "author_badge", "Member"),
             "reputation": getattr(post, "author_reputation", 0) or 0,
             "city": getattr(post, "author_city", None),
-            "profile_photo": getattr(post, "author_avatar_url", None),
+            "profile_photo": author_avatar_url,
+            "profile_image": author_avatar_url,
+            "avatar_url": author_avatar_url,
         },
         "comments": [_serialize_comment(comment) for comment in getattr(post, "reply_threads", [])],
     }
@@ -841,10 +884,15 @@ def create_post():
         external_image_url = None
 
         if image and image.filename != "":
-            filename = secure_filename(image.filename)
-            upload_path = os.path.join("static/post_images", filename)
-            image.save(upload_path)
-            external_image_url = url_for("static", filename=f"post_images/{filename}", _external=True)
+            upload_result = store_public_image(image, "community", current_app.config["POST_IMAGE_UPLOAD"])
+            if upload_result.get("ok"):
+                filename = upload_result["stored_value"]
+                external_image_url = upload_result["public_url"]
+                if external_image_url and external_image_url.startswith("/"):
+                    external_image_url = parse.urljoin(request.url_root, external_image_url.lstrip("/"))
+            else:
+                current_app.logger.warning("community_post_image_upload_failed reason=%s", upload_result.get("reason"))
+                flash("Post image could not be uploaded. Your text post was saved.")
 
         post = _create_local_post(
             title=title,

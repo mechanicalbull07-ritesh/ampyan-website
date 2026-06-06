@@ -13,6 +13,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from models.models import User, db
 from services.analytics_service import safe_track_event
 from services.email_service import send_email
+from services.public_image_storage import public_image_url
 
 auth_bp = Blueprint("auth", __name__)
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -60,6 +61,9 @@ def _apply_admin_policy(user):
 
 
 def _api_user_payload(user):
+    profile_url = public_image_url("profile_images", user.profile_photo) if user.profile_photo else ""
+    if profile_url and profile_url.startswith("/"):
+        profile_url = f"{request.url_root.rstrip('/')}{profile_url}"
     return {
         "id": user.id,
         "username": user.username,
@@ -75,6 +79,9 @@ def _api_user_payload(user):
         "posts_count": user.posts_count,
         "email_verified": user.email_verified,
         "profile_photo": user.profile_photo,
+        "profile_photo_url": profile_url,
+        "profile_image": profile_url,
+        "avatar_url": profile_url,
     }
 
 
