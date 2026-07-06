@@ -4,7 +4,7 @@
 <div class="simple-list-card reply-card {% if reply.parent_id %}nested-reply{% endif %}">
 <p class="body-copy-lg" style="margin-top:0;">{{ reply.content }}</p>
 <div class="post-actions">
-<small class="page-subtitle" style="margin:0;">{{ reply.user.username }} • {{ reply.created_at.strftime('%d %b %Y') }}</small>
+<small class="page-subtitle" style="margin:0;">{{ reply.user.username if reply.user else 'AMPYAN member' }} &middot; {{ reply.created_at.strftime('%d %b %Y') if reply.created_at else 'Recently' }}</small>
 {% if current_user.is_authenticated and (current_user.id == reply.user_id or current_user.role == "admin") %}
 <div class="ui-button-row">
 <a href="{{ url_for('edit_news_reply', reply_id=reply.id) }}" class="ui-button-secondary">Edit</a>
@@ -18,7 +18,7 @@
 {% if current_user.is_authenticated %}
 <form method="POST" action="{{ url_for('add_news_reply', news_id=news.id) }}" class="inline-reply-form">
 <input type="hidden" name="parent_id" value="{{ reply.id }}">
-<textarea name="content" placeholder="Reply to {{ reply.user.username }}..." required class="profile-input"></textarea>
+<textarea name="content" placeholder="Reply to {{ reply.user.username if reply.user else 'this member' }}..." required class="profile-input"></textarea>
 <button type="submit" class="ui-button-secondary">Reply</button>
 </form>
 {% endif %}
@@ -29,47 +29,53 @@
 </div>
 {% endmacro %}
 
-<section class="page-shell">
 {% set image_url = news_image_url(news.image) %}
-<div class="ui-card narrow-card">
-<div class="page-header">
-<div class="page-header-copy">
-<p class="page-kicker">AMPYAN News</p>
-<h1 class="page-title">{{ news.title }}</h1>
-<p class="page-subtitle">{{ news.created_at.strftime('%d %B %Y') }}</p>
-</div>
+{% set fallback_image = news_image_url(None) %}
+{% set share_url = url_for('news_detail', news_id=news.id, _external=True) %}
 
-<div class="ui-button-row">
+<article class="news-article-shell">
+<header class="news-article-header">
+<a href="{{ url_for('news_list') }}" class="news-back-link"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>News</span></a>
+<span class="news-category-badge">{{ news_category_label(effective_news_category(news)) }}</span>
+<h1>{{ news.title }}</h1>
+<div class="news-meta-row article-meta">
+<span>{{ news.created_at.strftime('%d %B %Y') if news.created_at else 'AMPYAN News' }}</span>
+<span>{{ news_read_time(news.content) }} min read</span>
+<span>{{ news.reply_count }} repl{{ 'y' if news.reply_count == 1 else 'ies' }}</span>
+</div>
 {% if current_user.is_authenticated and current_user.role == "admin" %}
+<div class="ui-button-row">
 <a href="/admin/news/edit/{{ news.id }}" class="ui-button-secondary">Edit</a>
 <a href="/admin/news/delete/{{ news.id }}" class="ui-button-danger" onclick="return confirm('Delete this news?')">Delete</a>
+</div>
 {% endif %}
-</div>
-</div>
+</header>
 
-{% set share_url = url_for('news_detail', news_id=news.id, _external=True) %}
-<div class="social-share-panel" aria-label="Share this news">
+<figure class="news-article-media">
+<img src="{{ image_url }}" alt="{{ news.title }}" loading="eager" fetchpriority="high" width="1200" height="675" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
+</figure>
+
+<div class="social-share-panel news-share-panel" aria-label="Share this news">
 <span class="social-share-label">Share</span>
 <a class="social-share-action facebook-share" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f"></i><span>Facebook</span></a>
 <a class="social-share-action whatsapp-share" href="https://wa.me/?text={{ (news.title ~ ' ' ~ share_url)|urlencode }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>
 <a class="social-share-action x-share" href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}&text={{ news.title|urlencode }}" target="_blank" rel="noopener" title="Share on X"><i class="fa-brands fa-x-twitter"></i><span>X</span></a>
-<button type="button" class="social-share-action share-btn instagram-share" data-share-url="{{ share_url }}" data-share-title="{{ news.title }}" title="Share to Instagram story from your phone"><i class="fa-brands fa-instagram"></i><span>Story</span></button>
-<a class="social-share-action story-card-share" href="{{ url_for('news_story', news_id=news.id) }}" target="_blank" rel="noopener" title="Open Instagram-ready story image"><i class="fa-solid fa-mobile-screen"></i><span>Story PNG</span></a>
+<button type="button" class="social-share-action share-btn instagram-share" data-share-url="{{ share_url }}" data-share-title="{{ news.title }}" title="Share"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
+<a class="social-share-action story-card-share" href="{{ url_for('news_story', news_id=news.id) }}" target="_blank" rel="noopener" title="Open story image"><i class="fa-solid fa-mobile-screen"></i><span>Story</span></a>
 <button type="button" class="social-share-action copy-share-btn" data-share-url="{{ share_url }}" title="Copy link"><i class="fa-solid fa-link"></i><span>Copy</span></button>
 </div>
 
-{% if image_url %}
-<img src="{{ image_url }}" class="news-detail-image" alt="{{ news.title }}">
+<div class="news-article-body">
+{% for paragraph in news.content.split('\n') %}
+{% if paragraph.strip() %}
+<p>{{ paragraph }}</p>
 {% endif %}
-
-<div class="body-copy-lg">
-{{ news.content }}
+{% endfor %}
 </div>
-</div>
+</article>
 
-<div class="ui-card narrow-card">
+<section class="news-replies-shell">
 <h2 class="section-heading">Replies ({{ news.reply_count }})</h2>
-
 {% if news.reply_threads %}
 <div class="ui-grid">
 {% for reply in news.reply_threads %}
@@ -90,7 +96,5 @@
 {% else %}
 <p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" style="color:#ff3b3b;">login</a> to reply.</p>
 {% endif %}
-</div>
 </section>
-
 {% endblock %}

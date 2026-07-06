@@ -33,6 +33,7 @@ print("Failure database loaded")
 # ================= FLASK =================
 from flask import Flask, Response, g, render_template, request, redirect, flash, url_for, jsonify, send_file, send_from_directory, abort
 from sqlalchemy import func, inspect, text
+from sqlalchemy.orm import selectinload
 print("Flask core loaded")
 
 # ================= MODELS =================
@@ -225,11 +226,66 @@ MAX_NEWS_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024
 MAX_NEWS_IMAGE_PIXELS = 24_000_000
 NEWS_IMAGE_MAX_WIDTH = 1200
 NEWS_IMAGE_TARGET_BYTES = 500 * 1024
+NEWS_THUMBNAIL_WIDTH = 640
+NEWS_THUMBNAIL_TARGET_BYTES = 120 * 1024
+NEWS_PAGE_SIZE = 18
+NEWS_MAX_PAGE_SIZE = 30
 
 
 def is_external_image_url(value):
     parsed = urlparse(value or "")
     return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _webp_bytes(image, quality=76):
+    output = BytesIO()
+    image.save(output, format="WEBP", quality=quality, method=4)
+    return output.getvalue()
+
+
+def _resize_news_image(image, width):
+    if image.width <= width:
+        return image.copy()
+    ratio = width / float(image.width)
+    height = max(1, int(image.height * ratio))
+    return image.resize((width, height), Image.Resampling.LANCZOS)
+
+
+def _center_crop_ratio(image, ratio_width=16, ratio_height=9):
+    target_ratio = ratio_width / float(ratio_height)
+    image_ratio = image.width / float(image.height or 1)
+    if image_ratio > target_ratio:
+        crop_width = int(image.height * target_ratio)
+        left = max(0, (image.width - crop_width) // 2)
+        return image.crop((left, 0, left + crop_width, image.height))
+    crop_height = int(image.width / target_ratio)
+    top = max(0, (image.height - crop_height) // 2)
+    return image.crop((0, top, image.width, top + crop_height))
+
+
+def _bounded_page_number(raw_value):
+    try:
+        return max(1, int(raw_value or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _bounded_page_size(raw_value):
+    try:
+        requested = int(raw_value or NEWS_PAGE_SIZE)
+    except (TypeError, ValueError):
+        requested = NEWS_PAGE_SIZE
+    return min(NEWS_MAX_PAGE_SIZE, max(6, requested))
+
+
+def news_thumbnail_filename(filename):
+    if not filename or is_external_image_url(filename):
+        return None
+    safe_filename = secure_filename(filename)
+    stem, extension = os.path.splitext(safe_filename)
+    if not stem or not extension:
+        return None
+    return f"{stem}_thumb{extension}"
 
 
 def cloudinary_settings():
@@ -330,10 +386,7 @@ def compress_news_image_to_bytes(image_file):
 
             app.logger.info("image_compression_started")
             img = ImageOps.exif_transpose(img)
-            if img.width > NEWS_IMAGE_MAX_WIDTH:
-                ratio = NEWS_IMAGE_MAX_WIDTH / float(img.width)
-                height = max(1, int(img.height * ratio))
-                img = img.resize((NEWS_IMAGE_MAX_WIDTH, height), Image.Resampling.LANCZOS)
+            img = _resize_news_image(img, NEWS_IMAGE_MAX_WIDTH)
 
             has_alpha = img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
             if has_alpha:
@@ -347,24 +400,36 @@ def compress_news_image_to_bytes(image_file):
 
             final_bytes = None
             for quality in (82, 76, 70, 64):
-                output = BytesIO()
-                output_image.save(output, format=output_format, quality=quality, method=4)
-                candidate = output.getvalue()
+                candidate = _webp_bytes(output_image, quality=quality)
                 final_bytes = candidate
                 if len(candidate) <= NEWS_IMAGE_TARGET_BYTES:
                     break
 
+            thumbnail_image = _resize_news_image(
+                _center_crop_ratio(output_image),
+                NEWS_THUMBNAIL_WIDTH,
+            )
+            thumbnail_bytes = None
+            for quality in (78, 72, 66, 60):
+                candidate = _webp_bytes(thumbnail_image, quality=quality)
+                thumbnail_bytes = candidate
+                if len(candidate) <= NEWS_THUMBNAIL_TARGET_BYTES:
+                    break
+
             app.logger.info(
-                "image_compression_success original_size=%s final_size=%s",
+                "image_compression_success original_size=%s final_size=%s thumbnail_size=%s",
                 original_size,
                 len(final_bytes or b""),
+                len(thumbnail_bytes or b""),
             )
             return {
                 "bytes": final_bytes,
+                "thumbnail_bytes": thumbnail_bytes,
                 "extension": extension,
                 "original_filename": original_filename,
                 "original_size": original_size,
                 "final_size": len(final_bytes or b""),
+                "thumbnail_size": len(thumbnail_bytes or b""),
             }, None
     except Exception as exc:
         app.logger.warning("image_validation_failed reason=%s", exc.__class__.__name__)
@@ -400,6 +465,11 @@ def store_news_image(image_file, prefix):
         upload_path = os.path.join(upload_folder, filename)
         with open(upload_path, "wb") as output:
             output.write(compressed["bytes"])
+        thumbnail_filename = news_thumbnail_filename(filename)
+        if thumbnail_filename and compressed.get("thumbnail_bytes"):
+            thumbnail_path = os.path.join(upload_folder, thumbnail_filename)
+            with open(thumbnail_path, "wb") as output:
+                output.write(compressed["thumbnail_bytes"])
 
         app.logger.warning("local_image_fallback_used")
         app.logger.warning("image_storage_persistent=false")
@@ -509,12 +579,50 @@ def static_image_url_if_exists(folder, filename, fallback=None):
         if os.path.isfile(absolute_path):
             return url_for("static", filename=relative_path.replace(os.sep, "/"))
 
-    if folder == "news_images":
+    if folder == "news_images" and fallback:
         return url_for("static", filename=DEFAULT_NEWS_IMAGE_PATH)
     if folder in {"profile_images", "post_images"}:
         return url_for("static", filename=DEFAULT_PLACEHOLDER_IMAGE_PATH)
 
     return None
+
+
+def cloudinary_transformed_url(image_url, width=640):
+    if not is_external_image_url(image_url):
+        return image_url
+    parsed = urlparse(image_url)
+    if "cloudinary.com" not in (parsed.netloc or "") or "/upload/" not in parsed.path:
+        return image_url
+    transform = f"f_auto,q_auto:good,w_{int(width)},c_fill,ar_16:9"
+    path = parsed.path.replace("/upload/", f"/upload/{transform}/", 1)
+    return parsed._replace(path=path).geturl()
+
+
+def news_card_image_url(filename):
+    if is_external_image_url(filename):
+        return cloudinary_transformed_url(filename, width=640)
+    thumbnail = news_thumbnail_filename(filename)
+    if thumbnail:
+        thumbnail_url = static_image_url_if_exists("news_images", thumbnail, fallback=None)
+        if thumbnail_url:
+            return thumbnail_url
+    return static_image_url_if_exists(
+        "news_images",
+        filename,
+        fallback=DEFAULT_NEWS_IMAGE_FILENAME,
+    )
+
+
+def news_summary(text, limit=150):
+    cleaned = re.sub(r"\s+", " ", (text or "")).strip()
+    if not cleaned:
+        return "Read the latest AMPYAN automotive update."
+    return cleaned[: limit - 1].rstrip() + "..." if len(cleaned) > limit else cleaned
+
+
+def news_read_time(text):
+    words = len(re.findall(r"\w+", text or ""))
+    return max(1, round(words / 220.0))
 
 def social_preview_text(text, fallback="AMPYAN automotive update"):
     cleaned = re.sub(r"\s+", " ", (text or "")).strip()
@@ -620,6 +728,9 @@ def inject_image_helpers():
             filename,
             fallback=DEFAULT_NEWS_IMAGE_FILENAME,
         ),
+        news_card_image_url=news_card_image_url,
+        news_summary=news_summary,
+        news_read_time=news_read_time,
         profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename),
         news_category_label=news_category_label,
         effective_news_category=effective_news_category,
@@ -2095,33 +2206,69 @@ def effective_news_category(news):
 @app.route("/news")
 def news_list():
     active_category = normalize_news_category(request.args.get("category")) if request.args.get("category") else ""
+    page = _bounded_page_number(request.args.get("page"))
+    per_page = _bounded_page_size(request.args.get("per_page"))
+    has_next = False
+    has_prev = page > 1
+    total_count = None
     news_items = []
     if database_ready_for_queries():
         try:
-            query = News.query.order_by(News.id.desc()).limit(50)
-            news_items = query.all()
             if active_category:
-                news_items = [
-                    news
-                    for news in news_items
-                    if effective_news_category(news) == active_category
-                ]
+                if active_category == "auto-news":
+                    category_filter = db.or_(News.category == active_category, News.category.is_(None), News.category == "")
+                else:
+                    category_filter = News.category == active_category
+                query = News.query.filter(category_filter)
+            else:
+                query = News.query
+
+            query = query.order_by(News.id.desc())
+            news_items = query.offset((page - 1) * per_page).limit(per_page + 1).all()
+            has_next = len(news_items) > per_page
+            news_items = news_items[:per_page]
         except Exception as exc:
             db.session.rollback()
             app.logger.warning("news_section_error=list error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
+    else:
+        app.logger.warning("news_section_error=list error=database_unavailable")
     return render_template(
         "news.html",
         news_items=news_items,
         news_categories=NEWS_CATEGORIES,
         active_category=active_category,
+        page=page,
+        per_page=per_page,
+        has_next=has_next,
+        has_prev=has_prev,
+        total_count=total_count,
+        db_available=database_ready_for_queries(),
     )
 
 
 @app.route("/news/<int:news_id>")
 def news_detail(news_id):
-    news = News.query.get_or_404(news_id)
-    news.reply_threads = [reply for reply in news.replies if reply.parent_id is None]
-    news.reply_count = len(news.replies)
+    if not database_ready_for_queries():
+        app.logger.warning("news_section_error=detail error=database_unavailable news_id=%s", news_id)
+        abort(503)
+    try:
+        news = (
+            News.query.options(
+                selectinload(News.replies).selectinload(NewsReply.user),
+                selectinload(News.replies).selectinload(NewsReply.replies),
+            )
+            .filter(News.id == news_id)
+            .first()
+        )
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("news_section_error=detail error=%s news_id=%s", exc.__class__.__name__, news_id)
+        abort(503)
+    if not news:
+        abort(404)
+    replies = sorted(news.replies, key=lambda reply: reply.id)
+    news.reply_threads = [reply for reply in replies if reply.parent_id is None]
+    news.reply_count = len(replies)
     image_url = static_image_url_if_exists(
         "news_images",
         news.image,
@@ -3021,7 +3168,34 @@ def ensure_database_ready():
 def handle_not_found(error):
     if wants_json_response():
         return jsonify({"status": "error", "message": "Not found"}), 404
-    return "Not found", 404
+    is_news_path = (request.path or "").startswith("/news")
+    return render_template(
+        "error.html",
+        eyebrow="AMPYAN News" if is_news_path else "AMPYAN",
+        title="Article not found" if is_news_path else "Page not found",
+        message=(
+            "This story may have been moved, deleted, or published under a different link."
+            if is_news_path
+            else "The page you requested could not be found."
+        ),
+        action_url=url_for("news_list") if is_news_path else "/",
+        action_label="Back to News" if is_news_path else "Back Home",
+    ), 404
+
+
+@app.errorhandler(503)
+def handle_service_unavailable(error):
+    db.session.rollback()
+    if wants_json_response():
+        return jsonify({"status": "error", "message": "Service temporarily unavailable"}), 503
+    return render_template(
+        "error.html",
+        eyebrow="AMPYAN News",
+        title="News is temporarily unavailable",
+        message="We could not load this news page right now. Please retry in a moment.",
+        action_url=request.path,
+        action_label="Retry",
+    ), 503
 
 
 @app.errorhandler(500)
@@ -3029,7 +3203,13 @@ def handle_server_error(error):
     db.session.rollback()
     if wants_json_response():
         return jsonify({"status": "error", "message": "Internal server error"}), 500
-    return "Something went wrong. Please try again later.", 500
+    return render_template(
+        "error.html",
+        title="Something went wrong",
+        message="The page could not be loaded safely. Please try again in a moment.",
+        action_url=url_for("news_list"),
+        action_label="Back to News",
+    ), 500
 
 
 @app.errorhandler(Exception)
@@ -3044,7 +3224,13 @@ def handle_unexpected_error(error):
     )
     if wants_json_response():
         return jsonify({"status": "error", "message": "Internal server error"}), 500
-    return "Something went wrong. Please try again later.", 500
+    return render_template(
+        "error.html",
+        title="Something went wrong",
+        message="The page could not be loaded safely. Please try again in a moment.",
+        action_url=url_for("news_list"),
+        action_label="Back to News",
+    ), 500
 
 
 @app.route("/robots.txt")

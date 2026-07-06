@@ -1,58 +1,124 @@
 {% extends "base.html" %}
 {% block content %}
+{% set fallback_image = news_image_url(None) %}
+{% set hero = news_items[0] if news_items else none %}
+{% set latest_items = news_items[1:] if hero else [] %}
 
-<section class="page-shell">
-
-<div class="page-header">
-<div class="page-header-copy">
+<section class="news-portal-shell">
+<div class="news-topbar">
+<div>
 <p class="page-kicker">AMPYAN Updates</p>
 <h1 class="page-title">Automotive News</h1>
-<p class="page-subtitle">Latest launches, industry updates and platform highlights in one clean feed.</p>
+<p class="page-subtitle">Fast, readable updates for Indian car owners and enthusiasts.</p>
 </div>
-
 {% if current_user.is_authenticated and current_user.role == "admin" %}
 <a href="/admin/news/create" class="auth-button">Create News</a>
 {% endif %}
 </div>
 
-<div class="news-filter-row">
+<form class="news-search" role="search" action="{{ url_for('news_list') }}" method="GET">
+{% if active_category %}<input type="hidden" name="category" value="{{ active_category }}">{% endif %}
+<i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+<input id="newsSearchInput" type="search" placeholder="Search automotive news..." autocomplete="off" aria-label="Search automotive news">
+</form>
+
+<div class="news-filter-row" aria-label="Trending topics">
 <a href="{{ url_for('news_list') }}" class="news-filter-chip {% if not active_category %}active{% endif %}">All</a>
 {% for key, label in news_categories %}
 <a href="{{ url_for('news_list', category=key) }}" class="news-filter-chip {% if active_category == key %}active{% endif %}">{{ label }}</a>
 {% endfor %}
 </div>
 
-{% if news_items %}
-<div class="news-grid">
-{% for news in news_items %}
-{% set image_url = news_image_url(news.image) %}
-<article class="ui-card news-card-ui">
-<a href="/news/{{ news.id }}">
-{% if image_url %}
-<img src="{{ image_url }}" class="news-card-image" alt="{{ news.title }}">
-{% endif %}
+{% if not db_available %}
+<div class="news-status-card">
+<h2>News is temporarily unavailable</h2>
+<p>We are having trouble reaching the news database. Please try again in a moment.</p>
+<a href="{{ url_for('news_list') }}" class="auth-button">Retry</a>
+</div>
+{% elif hero %}
+<article class="news-hero-card js-news-item" data-news-text="{{ (hero.title ~ ' ' ~ hero.content ~ ' ' ~ news_category_label(effective_news_category(hero)))|lower }}">
+<a href="{{ url_for('news_detail', news_id=hero.id) }}">
+<img src="{{ news_card_image_url(hero.image) }}" alt="{{ hero.title }}" loading="eager" fetchpriority="high" width="1200" height="675" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
+<div class="news-hero-overlay">
+<span class="news-category-badge">{{ news_category_label(effective_news_category(hero)) }}</span>
+<h2>{{ hero.title }}</h2>
+<p>{{ news_summary(hero.content, 170) }}</p>
+<div class="news-meta-row">
+<span>{{ hero.created_at.strftime('%d %b %Y') if hero.created_at else 'AMPYAN News' }}</span>
+<span>{{ news_read_time(hero.content) }} min read</span>
+</div>
+<span class="news-read-button">Read Story</span>
+</div>
+</a>
+</article>
 
+<div class="news-section-heading">
+<h2>Latest News</h2>
+<span>Page {{ page }}</span>
+</div>
+
+<div class="news-grid compact-news-grid">
+{% for news in latest_items %}
+{% set card_url = url_for('news_detail', news_id=news.id) %}
+<article class="news-card-ui compact-news-card js-news-item" data-news-text="{{ (news.title ~ ' ' ~ news.content ~ ' ' ~ news_category_label(effective_news_category(news)))|lower }}">
+<a href="{{ card_url }}" class="news-card-link">
+<img src="{{ news_card_image_url(news.image) }}" class="news-card-image" alt="{{ news.title }}" loading="lazy" decoding="async" width="640" height="360" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
 <div class="news-card-body">
 <span class="news-category-badge">{{ news_category_label(effective_news_category(news)) }}</span>
 <h3 class="news-card-title">{{ news.title }}</h3>
-<p class="news-card-date">{{ news.created_at.strftime('%d %b %Y') }}</p>
+<p class="news-card-summary">{{ news_summary(news.content, 132) }}</p>
+<div class="news-meta-row">
+<span>{{ news.created_at.strftime('%d %b %Y') if news.created_at else 'AMPYAN News' }}</span>
+<span>{{ news_read_time(news.content) }} min</span>
+<span><i class="fa-regular fa-eye" aria-hidden="true"></i> News</span>
+</div>
 </div>
 </a>
-
 <div class="news-card-actions">
-<button type="button" class="ui-button-secondary share-btn" data-share-url="{{ url_for('news_detail', news_id=news.id, _external=True) }}" data-share-title="{{ news.title }}">Share</button>
+<button type="button" class="news-icon-button share-btn" data-share-url="{{ url_for('news_detail', news_id=news.id, _external=True) }}" data-share-title="{{ news.title }}" title="Share"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i><span>Share</span></button>
 {% if current_user.is_authenticated and current_user.role == "admin" %}
-<a href="/admin/news/edit/{{ news.id }}" class="ui-button-secondary">Edit</a>
-<a href="/admin/news/delete/{{ news.id }}" class="ui-button-danger" onclick="return confirm('Delete this news?')">Delete</a>
+<a href="/admin/news/edit/{{ news.id }}" class="news-admin-link">Edit</a>
+<a href="/admin/news/delete/{{ news.id }}" class="news-admin-link danger" onclick="return confirm('Delete this news?')">Delete</a>
 {% endif %}
 </div>
 </article>
 {% endfor %}
 </div>
-{% else %}
-<div class="empty-state">No news available in this category right now.</div>
-{% endif %}
 
+<div id="newsNoMatches" class="empty-state" hidden>No news available</div>
+
+<div class="news-pagination">
+{% if has_prev %}
+<a href="{{ url_for('news_list', category=active_category, page=page-1, per_page=per_page) if active_category else url_for('news_list', page=page-1, per_page=per_page) }}" class="ui-button-secondary">Previous</a>
+{% endif %}
+{% if has_next %}
+<a href="{{ url_for('news_list', category=active_category, page=page+1, per_page=per_page) if active_category else url_for('news_list', page=page+1, per_page=per_page) }}" class="auth-button">More News</a>
+{% endif %}
+</div>
+{% else %}
+<div class="news-status-card">
+<h2>No news available</h2>
+<p>Fresh AMPYAN automotive stories will appear here soon.</p>
+</div>
+{% endif %}
 </section>
 
+<script>
+document.addEventListener("DOMContentLoaded",function(){
+var input=document.getElementById("newsSearchInput");
+if(!input) return;
+var items=Array.prototype.slice.call(document.querySelectorAll(".js-news-item"));
+var empty=document.getElementById("newsNoMatches");
+input.addEventListener("input",function(){
+var query=input.value.trim().toLowerCase();
+var visible=0;
+items.forEach(function(item){
+var match=!query || (item.dataset.newsText || "").indexOf(query) !== -1;
+item.hidden=!match;
+if(match) visible += 1;
+});
+if(empty) empty.hidden = visible !== 0;
+});
+});
+</script>
 {% endblock %}
