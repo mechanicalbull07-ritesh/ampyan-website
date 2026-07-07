@@ -36,12 +36,12 @@
 <a href="{{ url_for('news_list') }}" class="auth-button">Retry</a>
 </div>
 {% elif hero %}
-<article class="news-hero-card js-news-item" data-news-text="{{ (hero.title ~ ' ' ~ hero.content ~ ' ' ~ news_category_label(effective_news_category(hero)))|lower }}">
+<article class="news-hero-card js-news-item" data-news-text="{{ ((hero.title or '') ~ ' ' ~ (hero.content or '') ~ ' ' ~ news_category_label(effective_news_category(hero)))|lower }}">
 <a href="{{ url_for('news_detail', news_id=hero.id) }}">
-<img src="{{ news_card_image_url(hero.image) }}" alt="{{ hero.title }}" loading="eager" fetchpriority="high" width="1200" height="675" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
+<img src="{{ news_card_image_url(hero.image) }}" alt="{{ hero.title or 'AMPYAN automotive news' }}" loading="eager" fetchpriority="high" width="1200" height="675" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
 <div class="news-hero-overlay">
 <span class="news-category-badge">{{ news_category_label(effective_news_category(hero)) }}</span>
-<h2>{{ hero.title }}</h2>
+<h2>{{ hero.title or 'AMPYAN Automotive Update' }}</h2>
 <p>{{ news_summary(hero.content, 170) }}</p>
 <div class="news-meta-row">
 <span>{{ hero.created_at.strftime('%d %b %Y') if hero.created_at else 'AMPYAN News' }}</span>
@@ -60,12 +60,12 @@
 <div class="news-grid compact-news-grid">
 {% for news in latest_items %}
 {% set card_url = url_for('news_detail', news_id=news.id) %}
-<article class="news-card-ui compact-news-card js-news-item" data-news-text="{{ (news.title ~ ' ' ~ news.content ~ ' ' ~ news_category_label(effective_news_category(news)))|lower }}">
+<article class="news-card-ui compact-news-card js-news-item" data-news-text="{{ ((news.title or '') ~ ' ' ~ (news.content or '') ~ ' ' ~ news_category_label(effective_news_category(news)))|lower }}">
 <a href="{{ card_url }}" class="news-card-link">
-<img src="{{ news_card_image_url(news.image) }}" class="news-card-image" alt="{{ news.title }}" loading="lazy" decoding="async" width="640" height="360" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
+<img src="{{ news_card_image_url(news.image) }}" class="news-card-image" alt="{{ news.title or 'AMPYAN automotive news' }}" loading="lazy" decoding="async" width="640" height="360" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
 <div class="news-card-body">
 <span class="news-category-badge">{{ news_category_label(effective_news_category(news)) }}</span>
-<h3 class="news-card-title">{{ news.title }}</h3>
+<h3 class="news-card-title">{{ news.title or 'AMPYAN Automotive Update' }}</h3>
 <p class="news-card-summary">{{ news_summary(news.content, 132) }}</p>
 <div class="news-meta-row">
 <span>{{ news.created_at.strftime('%d %b %Y') if news.created_at else 'AMPYAN News' }}</span>
@@ -75,7 +75,7 @@
 </div>
 </a>
 <div class="news-card-actions">
-<button type="button" class="news-icon-button share-btn" data-share-url="{{ url_for('news_detail', news_id=news.id, _external=True) }}" data-share-title="{{ news.title }}" title="Share"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i><span>Share</span></button>
+<button type="button" class="news-icon-button share-btn" data-share-url="{{ url_for('news_detail', news_id=news.id, _external=True) }}" data-share-title="{{ news.title or 'AMPYAN Automotive Update' }}" title="Share"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i><span>Share</span></button>
 {% if current_user.is_authenticated and current_user.role == "admin" %}
 <a href="/admin/news/edit/{{ news.id }}" class="news-admin-link">Edit</a>
 <a href="/admin/news/delete/{{ news.id }}" class="news-admin-link danger" onclick="return confirm('Delete this news?')">Delete</a>

@@ -2283,7 +2283,7 @@ def news_detail(news_id):
     return render_template(
         "news_detail.html",
         news=news,
-        meta_title=news.title,
+        meta_title=news.title or "AMPYAN Automotive Update",
         meta_description=social_preview_text(news.content, "Read this AMPYAN automotive news update."),
         meta_url=url_for("news_detail", news_id=news.id, _external=True),
         meta_image=meta_image,
@@ -2295,9 +2295,9 @@ def news_detail(news_id):
 def news_story(news_id):
     news = News.query.get_or_404(news_id)
     return story_response(
-        title=news.title,
-        subtitle=news.created_at.strftime("%d %B %Y"),
-        body=news.content,
+        title=news.title or "AMPYAN Automotive Update",
+        subtitle=news.created_at.strftime("%d %B %Y") if news.created_at else "AMPYAN News",
+        body=news.content or "Read the latest AMPYAN automotive update.",
         footer="Read full news on AMPYAN",
         source_url=url_for("news_detail", news_id=news.id, _external=True),
         accent=(255, 89, 44),
@@ -2356,7 +2356,13 @@ def diagnosis_story():
 def add_news_reply(news_id):
     news = News.query.get_or_404(news_id)
     content = (request.form.get("content") or "").strip()
-    parent_id = request.form.get("parent_id") or None
+    parent_id = None
+    raw_parent_id = (request.form.get("parent_id") or "").strip()
+    if raw_parent_id:
+        try:
+            parent_id = int(raw_parent_id)
+        except ValueError:
+            parent_id = None
 
     if content:
         if parent_id and not NewsReply.query.filter_by(id=parent_id, news_id=news.id).first():
@@ -2412,7 +2418,17 @@ def create_news():
 
         image_file = request.files.get("image")
         filename = None
+        title = (request.form.get("title") or "").strip()
+        content = (request.form.get("content") or "").strip()
         selected_category = resolve_news_category(request.form.get("category"), context="create")
+
+        if not title or not content:
+            flash("Title and story body are required.", "warning")
+            return render_template(
+                "create_news.html",
+                news_categories=NEWS_CATEGORIES,
+                selected_category=selected_category,
+            ), 400
 
         if image_file and image_file.filename != "":
             upload_result = store_news_image(image_file, "news")
@@ -2424,8 +2440,8 @@ def create_news():
                 flash("Image upload failed, so the news was saved with the default image.", "warning")
 
         news = News(
-            title=request.form["title"],
-            content=request.form["content"],
+            title=title,
+            content=content,
             category=selected_category,
             image=filename
         )
@@ -2468,8 +2484,15 @@ def edit_news(news_id):
             previous_category=previous_category,
             context="update",
         )
-        news.title = request.form["title"]
-        news.content = request.form["content"]
+        title = (request.form.get("title") or "").strip()
+        content = (request.form.get("content") or "").strip()
+        if not title or not content:
+            flash("Title and story body are required.", "warning")
+            news.category = selected_category
+            return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES), 400
+
+        news.title = title
+        news.content = content
         news.category = selected_category
 
         image_file = request.files.get("image")

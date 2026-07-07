@@ -32,12 +32,14 @@
 {% set image_url = news_image_url(news.image) %}
 {% set fallback_image = news_image_url(None) %}
 {% set share_url = url_for('news_detail', news_id=news.id, _external=True) %}
+{% set article_title = news.title or 'AMPYAN Automotive Update' %}
+{% set article_body = news.content or 'Read the latest AMPYAN automotive update.' %}
 
 <article class="news-article-shell">
 <header class="news-article-header">
 <a href="{{ url_for('news_list') }}" class="news-back-link"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>News</span></a>
 <span class="news-category-badge">{{ news_category_label(effective_news_category(news)) }}</span>
-<h1>{{ news.title }}</h1>
+<h1>{{ article_title }}</h1>
 <div class="news-meta-row article-meta">
 <span>{{ news.created_at.strftime('%d %B %Y') if news.created_at else 'AMPYAN News' }}</span>
 <span>{{ news_read_time(news.content) }} min read</span>
@@ -52,21 +54,21 @@
 </header>
 
 <figure class="news-article-media">
-<img src="{{ image_url }}" alt="{{ news.title }}" loading="eager" fetchpriority="high" width="1200" height="675" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
+<img src="{{ image_url }}" alt="{{ article_title }}" loading="eager" fetchpriority="high" width="1200" height="675" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
 </figure>
 
 <div class="social-share-panel news-share-panel" aria-label="Share this news">
 <span class="social-share-label">Share</span>
 <a class="social-share-action facebook-share" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f"></i><span>Facebook</span></a>
-<a class="social-share-action whatsapp-share" href="https://wa.me/?text={{ (news.title ~ ' ' ~ share_url)|urlencode }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>
-<a class="social-share-action x-share" href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}&text={{ news.title|urlencode }}" target="_blank" rel="noopener" title="Share on X"><i class="fa-brands fa-x-twitter"></i><span>X</span></a>
-<button type="button" class="social-share-action share-btn instagram-share" data-share-url="{{ share_url }}" data-share-title="{{ news.title }}" title="Share"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
+<a class="social-share-action whatsapp-share" href="https://wa.me/?text={{ (article_title ~ ' ' ~ share_url)|urlencode }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>
+<a class="social-share-action x-share" href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}&text={{ article_title|urlencode }}" target="_blank" rel="noopener" title="Share on X"><i class="fa-brands fa-x-twitter"></i><span>X</span></a>
+<button type="button" class="social-share-action share-btn instagram-share" data-share-url="{{ share_url }}" data-share-title="{{ article_title }}" title="Share"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
 <a class="social-share-action story-card-share" href="{{ url_for('news_story', news_id=news.id) }}" target="_blank" rel="noopener" title="Open story image"><i class="fa-solid fa-mobile-screen"></i><span>Story</span></a>
 <button type="button" class="social-share-action copy-share-btn" data-share-url="{{ share_url }}" title="Copy link"><i class="fa-solid fa-link"></i><span>Copy</span></button>
 </div>
 
 <div class="news-article-body">
-{% for paragraph in news.content.split('\n') %}
+{% for paragraph in article_body.split('\n') %}
 {% if paragraph.strip() %}
 <p>{{ paragraph }}</p>
 {% endif %}
