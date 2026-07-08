@@ -3,7 +3,8 @@ from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, jsonify, render_template, request, redirect, flash, url_for
 from flask_login import current_user, login_required
-from sqlalchemy import or_
+from sqlalchemy import func, inspect as sqlalchemy_inspect, or_
+from sqlalchemy.orm import load_only
 from werkzeug.utils import secure_filename
 
 from models.models import db, Post, News, Car, User, MechanicProfile, MechanicReview, MarketplaceListing, MarketplaceMessage, Video
@@ -56,7 +57,7 @@ def _boolish(value):
 
 
 def _garage_image_url(mechanic):
-    image_value = getattr(mechanic, "image_url", None)
+    image_value = _mechanic_value(mechanic, "image_url")
     parsed = urlparse(image_value or "")
     if parsed.scheme in {"http", "https"} and parsed.netloc:
         return image_value
@@ -66,54 +67,149 @@ def _garage_image_url(mechanic):
 
 
 def _listing_status(mechanic):
-    return getattr(mechanic, "listing_status", None) or (
-        "listed" if mechanic.is_verified else "pending_review"
+    return _mechanic_value(mechanic, "listing_status") or (
+        "listed" if _mechanic_value(mechanic, "is_verified", False) else "pending_review"
     )
 
 
 def _is_public_garage_listing(mechanic):
-    return bool(mechanic.is_verified) or _listing_status(mechanic) == "public_unverified"
+    return bool(_mechanic_value(mechanic, "is_verified", False)) or _listing_status(mechanic) == "public_unverified"
+
+
+def _mechanic_profile_columns():
+    try:
+        inspector = sqlalchemy_inspect(db.engine)
+        if not inspector.has_table("mechanic_profile"):
+            return set()
+        return {column["name"] for column in inspector.get_columns("mechanic_profile")}
+    except Exception:
+        current_app.logger.exception("mechanic_profile_column_inspection_failed")
+        return {column.name for column in MechanicProfile.__table__.columns}
+
+
+def _mechanic_query():
+    columns = _mechanic_profile_columns()
+    mapped_columns = {column.name for column in MechanicProfile.__table__.columns}
+    loadable_columns = sorted(columns & mapped_columns)
+    query = MechanicProfile.query
+    if loadable_columns:
+        query = query.options(load_only(*(getattr(MechanicProfile, name) for name in loadable_columns)))
+    return query, columns
+
+
+def _mechanic_value(mechanic, name, default=None, columns=None):
+    if columns is None:
+        columns = _mechanic_profile_columns()
+    if columns and name not in columns:
+        return default
+    try:
+        value = getattr(mechanic, name)
+    except Exception:
+        current_app.logger.exception("mechanic_profile_value_unavailable", extra={"column": name})
+        return default
+    return default if value is None else value
+
+
+def _garage_order_by(query, columns):
+    order_columns = []
+    if "is_featured" in columns:
+        order_columns.append(MechanicProfile.is_featured.desc())
+    if "trust_score" in columns:
+        order_columns.append(MechanicProfile.trust_score.desc())
+    order_columns.append(MechanicProfile.id.desc())
+    return query.order_by(*order_columns)
+
+
+def _mechanic_metrics(mechanic, columns):
+    writable_reputation_columns = {
+        "address",
+        "pincode",
+        "specialties",
+        "service_types",
+        "about",
+        "accepts_emergency",
+        "pickup_drop_available",
+        "experience_years",
+        "is_verified",
+        "is_featured",
+        "trust_score",
+        "trust_level",
+    }
+    if writable_reputation_columns.issubset(columns):
+        return refresh_mechanic_reputation(mechanic)
+
+    try:
+        review_count = len(mechanic.reviews)
+        average_rating = (
+            sum(review.rating for review in mechanic.reviews) / review_count
+            if review_count else 0
+        )
+    except Exception:
+        current_app.logger.exception("mechanic_profile_reviews_unavailable")
+        review_count = 0
+        average_rating = 0
+
+    trust_score = _mechanic_value(mechanic, "trust_score", 30, columns)
+    return {
+        "review_count": review_count,
+        "average_rating": round(average_rating, 1) if review_count else 0,
+        "trust_score": trust_score,
+        "trust_level": _mechanic_value(
+            mechanic,
+            "trust_level",
+            trust_level_from_score(trust_score),
+            columns,
+        ),
+    }
 
 
 def _serialize_mechanic(mechanic, include_reviews=False):
-    metrics = refresh_mechanic_reputation(mechanic)
-    services = _split_services(mechanic.service_types or mechanic.specialties)
-    area = getattr(mechanic, "area", None) or mechanic.state or mechanic.pincode
+    columns = _mechanic_profile_columns()
+    metrics = _mechanic_metrics(mechanic, columns)
+    service_types = _mechanic_value(mechanic, "service_types", "", columns)
+    specialties = _mechanic_value(mechanic, "specialties", "", columns)
+    is_verified = bool(_mechanic_value(mechanic, "is_verified", False, columns))
+    services = _split_services(service_types or specialties)
+    area = (
+        _mechanic_value(mechanic, "area", None, columns)
+        or _mechanic_value(mechanic, "state", None, columns)
+        or _mechanic_value(mechanic, "pincode", None, columns)
+    )
     image_url = _garage_image_url(mechanic)
     listing_status = _listing_status(mechanic)
-    listing_label = "AMPYAN Verified" if mechanic.is_verified else "Listed for discovery"
-    verification_label = "AMPYAN Verified" if mechanic.is_verified else "Not verified by AMPYAN yet"
-    description = mechanic.about or "Public garage information listed for discovery on AMPYAN. Verification can be completed by the business owner."
-    average_rating = metrics["average_rating"] if mechanic.is_verified else None
+    listing_label = "AMPYAN Verified" if is_verified else "Listed for discovery"
+    verification_label = "AMPYAN Verified" if is_verified else "Not verified by AMPYAN yet"
+    description = _mechanic_value(mechanic, "about", None, columns) or "Public garage information listed for discovery on AMPYAN. Verification can be completed by the business owner."
+    average_rating = metrics["average_rating"] if is_verified else None
     payload = {
-        "id": mechanic.id,
-        "business_name": mechanic.business_name,
-        "name": mechanic.business_name or "Garage",
-        "owner_name": mechanic.owner_name,
-        "owner": mechanic.owner_name,
-        "email": mechanic.email,
-        "phone": mechanic.phone,
-        "city": mechanic.city,
+        "id": _mechanic_value(mechanic, "id", None, columns),
+        "business_name": _mechanic_value(mechanic, "business_name", "Garage", columns),
+        "name": _mechanic_value(mechanic, "business_name", None, columns) or "Garage",
+        "owner_name": _mechanic_value(mechanic, "owner_name", None, columns),
+        "owner": _mechanic_value(mechanic, "owner_name", None, columns),
+        "email": _mechanic_value(mechanic, "email", None, columns),
+        "phone": _mechanic_value(mechanic, "phone", None, columns),
+        "city": _mechanic_value(mechanic, "city", None, columns),
         "area": area,
-        "state": mechanic.state,
-        "country": mechanic.country,
-        "pincode": mechanic.pincode,
-        "address": mechanic.address,
-        "specialties": mechanic.specialties,
-        "service_types": mechanic.service_types,
+        "state": _mechanic_value(mechanic, "state", None, columns),
+        "country": _mechanic_value(mechanic, "country", "India", columns),
+        "pincode": _mechanic_value(mechanic, "pincode", None, columns),
+        "address": _mechanic_value(mechanic, "address", None, columns),
+        "specialties": specialties,
+        "service_types": service_types,
         "services": services,
-        "experience_years": mechanic.experience_years,
-        "about": mechanic.about,
+        "experience_years": _mechanic_value(mechanic, "experience_years", 0, columns),
+        "about": _mechanic_value(mechanic, "about", None, columns),
         "description": description,
-        "trust_score": mechanic.trust_score if mechanic.is_verified else None,
-        "trust_level": mechanic.trust_level if mechanic.is_verified else "Listed for discovery",
-        "is_featured": bool(mechanic.is_featured),
-        "is_verified": bool(mechanic.is_verified),
-        "is_ampyan_verified": bool(mechanic.is_verified),
-        "accepts_emergency": bool(mechanic.accepts_emergency),
-        "pickup_drop_available": bool(mechanic.pickup_drop_available),
-        "latitude": getattr(mechanic, "latitude", None),
-        "longitude": getattr(mechanic, "longitude", None),
+        "trust_score": metrics["trust_score"] if is_verified else None,
+        "trust_level": metrics["trust_level"] if is_verified else "Listed for discovery",
+        "is_featured": bool(_mechanic_value(mechanic, "is_featured", False, columns)),
+        "is_verified": is_verified,
+        "is_ampyan_verified": is_verified,
+        "accepts_emergency": bool(_mechanic_value(mechanic, "accepts_emergency", False, columns)),
+        "pickup_drop_available": bool(_mechanic_value(mechanic, "pickup_drop_available", False, columns)),
+        "latitude": _mechanic_value(mechanic, "latitude", None, columns),
+        "longitude": _mechanic_value(mechanic, "longitude", None, columns),
         "image_url": image_url,
         "image": image_url,
         "listing_status": listing_status,
@@ -121,9 +217,9 @@ def _serialize_mechanic(mechanic, include_reviews=False):
         "verification_label": verification_label,
         "claim_cta": "Own this garage? Claim this listing.",
         "claim_url": url_for("main.register_garage", _external=True),
-        "source": getattr(mechanic, "source", None) or "website",
-        "created_at": _isoformat(mechanic.created_at),
-        "review_count": metrics["review_count"] if mechanic.is_verified else 0,
+        "source": _mechanic_value(mechanic, "source", None, columns) or "website",
+        "created_at": _isoformat(_mechanic_value(mechanic, "created_at", None, columns)),
+        "review_count": metrics["review_count"] if is_verified else 0,
         "average_rating": average_rating,
         "rating": average_rating,
     }
@@ -145,40 +241,46 @@ def _serialize_mechanic(mechanic, include_reviews=False):
 
 
 def _garage_query_from_request():
+    query, columns = _mechanic_query()
     city = (request.args.get("city") or "").strip()
     service = (request.args.get("service") or request.args.get("service_type") or "").strip()
     search = (request.args.get("search") or request.args.get("q") or "").strip()
     include_unverified = _is_admin_account(current_user) and request.args.get("include_unverified") == "true"
 
-    query = MechanicProfile.query
     if not include_unverified:
-        query = query.filter(or_(
-            MechanicProfile.is_verified.is_(True),
-            MechanicProfile.listing_status == "public_unverified",
-        ))
+        public_filters = []
+        if "is_verified" in columns:
+            public_filters.append(MechanicProfile.is_verified.is_(True))
+        if "listing_status" in columns:
+            public_filters.append(MechanicProfile.listing_status == "public_unverified")
+        if public_filters:
+            query = query.filter(or_(*public_filters))
     if city:
-        query = query.filter(or_(
-            MechanicProfile.city.ilike(f"%{city}%"),
-            MechanicProfile.area.ilike(f"%{city}%"),
-        ))
+        city_filters = []
+        if "city" in columns:
+            city_filters.append(MechanicProfile.city.ilike(f"%{city}%"))
+        if "area" in columns:
+            city_filters.append(MechanicProfile.area.ilike(f"%{city}%"))
+        if city_filters:
+            query = query.filter(or_(*city_filters))
     if service:
-        query = query.filter(or_(
-            MechanicProfile.service_types.ilike(f"%{service}%"),
-            MechanicProfile.specialties.ilike(f"%{service}%"),
-        ))
+        service_filters = []
+        if "service_types" in columns:
+            service_filters.append(MechanicProfile.service_types.ilike(f"%{service}%"))
+        if "specialties" in columns:
+            service_filters.append(MechanicProfile.specialties.ilike(f"%{service}%"))
+        if service_filters:
+            query = query.filter(or_(*service_filters))
     if search:
         pattern = f"%{search}%"
-        query = query.filter(or_(
-            MechanicProfile.business_name.ilike(pattern),
-            MechanicProfile.owner_name.ilike(pattern),
-            MechanicProfile.city.ilike(pattern),
-            MechanicProfile.area.ilike(pattern),
-            MechanicProfile.address.ilike(pattern),
-            MechanicProfile.specialties.ilike(pattern),
-            MechanicProfile.service_types.ilike(pattern),
-        ))
+        search_filters = []
+        for column_name in ("business_name", "owner_name", "city", "area", "address", "specialties", "service_types"):
+            if column_name in columns:
+                search_filters.append(getattr(MechanicProfile, column_name).ilike(pattern))
+        if search_filters:
+            query = query.filter(or_(*search_filters))
 
-    return query
+    return query, columns
 
 
 def _static_image_url_if_exists(folder, filename, fallback=None):
@@ -481,24 +583,19 @@ def garage_network():
     city = (request.args.get("city") or "").strip()
     city_mode = (request.args.get("view") or "list").strip()
 
-    query = _garage_query_from_request().order_by(
-        MechanicProfile.is_featured.desc(),
-        MechanicProfile.trust_score.desc(),
-        MechanicProfile.id.desc()
-    )
+    query, columns = _garage_query_from_request()
+    query = _garage_order_by(query, columns)
 
     mechanics = query.all()
-
-    for mechanic in mechanics:
-        refresh_mechanic_reputation(mechanic)
+    serialized_mechanics = [_serialize_mechanic(mechanic) for mechanic in mechanics]
 
     city_groups = {}
-    for mechanic in mechanics:
-        city_groups.setdefault(mechanic.city, []).append(mechanic)
+    for mechanic in serialized_mechanics:
+        city_groups.setdefault(mechanic.get("city") or "Unknown", []).append(mechanic)
 
     return render_template(
         "garage_network.html",
-        mechanics=mechanics,
+        mechanics=serialized_mechanics,
         selected_city=city,
         city_mode=city_mode,
         city_groups=city_groups
@@ -510,16 +607,11 @@ def garage_network():
 def api_garages():
     page = _bounded_int(request.args.get("page"), 1, 1, 10_000)
     per_page = _bounded_int(request.args.get("per_page") or request.args.get("limit"), 20, 1, 100)
-    query = _garage_query_from_request()
-    total = query.count()
+    query, columns = _garage_query_from_request()
+    total = query.order_by(None).with_entities(func.count(MechanicProfile.id)).scalar() or 0
 
     mechanics = (
-        query
-        .order_by(
-            MechanicProfile.is_featured.desc(),
-            MechanicProfile.trust_score.desc(),
-            MechanicProfile.id.desc(),
-        )
+        _garage_order_by(query, columns)
         .offset((page - 1) * per_page)
         .limit(per_page)
         .all()
@@ -539,7 +631,8 @@ def api_garages():
 
 @main_bp.route("/api/garages/<int:mechanic_id>")
 def api_garage_detail(mechanic_id):
-    mechanic = MechanicProfile.query.get_or_404(mechanic_id)
+    query, _columns = _mechanic_query()
+    mechanic = query.filter(MechanicProfile.id == mechanic_id).first_or_404()
     if not _is_public_garage_listing(mechanic) and not _is_admin_account(current_user):
         return jsonify({"status": "error", "message": "garage not found"}), 404
 
@@ -626,24 +719,26 @@ def api_register_garage():
 @main_bp.route("/garage-network/<int:mechanic_id>")
 def garage_profile(mechanic_id):
 
-    mechanic = MechanicProfile.query.get_or_404(mechanic_id)
+    query, columns = _mechanic_query()
+    mechanic = query.filter(MechanicProfile.id == mechanic_id).first_or_404()
 
     if not _is_public_garage_listing(mechanic) and not _is_admin_account(current_user):
         flash("This garage profile is awaiting admin approval.")
         return redirect(url_for("main.garage_network"))
 
-    metrics = refresh_mechanic_reputation(mechanic)
+    metrics = _mechanic_metrics(mechanic, columns)
+    mechanic_payload = _serialize_mechanic(mechanic, include_reviews=True)
     existing_review = None
 
     if current_user.is_authenticated:
         existing_review = MechanicReview.query.filter_by(
-            mechanic_id=mechanic.id,
+            mechanic_id=_mechanic_value(mechanic, "id", mechanic_id, columns),
             user_id=current_user.id
         ).first()
 
     return render_template(
         "garage_profile.html",
-        mechanic=mechanic,
+        mechanic=mechanic_payload,
         review_count=metrics["review_count"],
         average_rating=metrics["average_rating"],
         existing_review=existing_review

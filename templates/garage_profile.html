@@ -87,8 +87,8 @@
 <div class="ui-grid">
 {% for review in mechanic.reviews|sort(attribute='id', reverse=True) %}
 <div class="simple-list-card">
-<h4>{{ review.author.username }}</h4>
-<p class="section-copy">{{ review.rating }}/5 • {{ review.created_at.strftime('%d %b %Y') }}</p>
+<h4>{{ review.author.name if review.author else "Member" }}</h4>
+<p class="section-copy">{{ review.rating }}/5{% if review.created_at %} • {{ review.created_at }}{% endif %}</p>
 <p class="section-copy">{{ review.review_text or "No written review shared." }}</p>
 </div>
 {% endfor %}
