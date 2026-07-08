@@ -37,7 +37,7 @@ from sqlalchemy.orm import selectinload
 print("Flask core loaded")
 
 # ================= MODELS =================
-from models.models import db, User, Post, Comment, Vote, News, NewsReply, Video, VideoReply, DiagnosticLearning, HelpReport, Car, CarCommunity, WebsiteVisit, WebsiteEvent
+from models.models import db, User, Post, Comment, Vote, News, NewsReply, Video, VideoReply, DiagnosticLearning, HelpReport, Car, CarCommunity, WebsiteVisit, WebsiteEvent, MechanicProfile
 print("Models loaded")
 
 # ================= SECURITY =================
@@ -2842,6 +2842,39 @@ def ensure_car_schema():
     db.session.commit()
 
 
+def ensure_mechanic_profile_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("mechanic_profile"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("mechanic_profile")}
+    dialect = db.engine.dialect.name
+    string_type = "VARCHAR"
+    float_type = "DOUBLE PRECISION" if dialect == "postgresql" else "FLOAT"
+
+    column_definitions = {
+        "area": f"{string_type}(120)",
+        "latitude": float_type,
+        "longitude": float_type,
+        "image_url": f"{string_type}(500)",
+        "listing_status": f"{string_type}(30) DEFAULT 'pending_review'",
+        "source": f"{string_type}(50)",
+    }
+
+    for column_name, column_definition in column_definitions.items():
+        if column_name in existing_columns:
+            continue
+        db.session.execute(text(f"ALTER TABLE mechanic_profile ADD COLUMN {column_name} {column_definition}"))
+
+    if dialect == "postgresql":
+        for column in inspect(db.engine).get_columns("mechanic_profile"):
+            if column["name"] == "owner_name" and not column.get("nullable", True):
+                db.session.execute(text("ALTER TABLE mechanic_profile ALTER COLUMN owner_name DROP NOT NULL"))
+                break
+
+    db.session.commit()
+
+
 def ensure_website_visit_schema():
     inspector = inspect(db.engine)
     if not inspector.has_table("website_visit"):
@@ -3109,6 +3142,7 @@ def initialize_database():
             db.create_all()
             ensure_user_schema()
             ensure_car_schema()
+            ensure_mechanic_profile_schema()
             ensure_website_visit_schema()
             ensure_analytics_schema()
             ensure_reply_schema()

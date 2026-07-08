@@ -7,13 +7,19 @@
 <div class="page-header-copy">
 <p class="page-kicker">Garage Profile</p>
 <h1 class="page-title">{{ mechanic.business_name }}</h1>
-<p class="page-subtitle">{{ mechanic.city }}{% if mechanic.state %}, {{ mechanic.state }}{% endif %} • {{ mechanic.trust_level }}</p>
+<p class="page-subtitle">{{ mechanic.city }}{% if mechanic.state %}, {{ mechanic.state }}{% endif %} • {{ "AMPYAN Verified" if mechanic.is_verified else "Listed for discovery" }}</p>
 </div>
 
 <div class="ui-pill-row">
+{% if mechanic.is_verified %}
 <span class="garage-trust-level">{{ mechanic.trust_level }}</span>
 <span class="garage-trust-score">Trust {{ mechanic.trust_score }}/100</span>
 <span class="garage-trust-score">{{ average_rating }}/5 rating</span>
+{% else %}
+<span class="garage-trust-level">Listed for discovery</span>
+<span class="garage-trust-score">Not verified by AMPYAN yet</span>
+<a href="/garages/register" class="ui-button-secondary">Own this garage? Claim this listing.</a>
+{% endif %}
 </div>
 </div>
 
@@ -21,13 +27,15 @@
 <div class="ui-card">
 <h2 class="section-heading">Garage Details</h2>
 <div class="ui-meta-list">
-<div class="ui-meta-item"><span class="ui-meta-label">Owner</span><span class="ui-meta-value">{{ mechanic.owner_name }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Owner</span><span class="ui-meta-value">{{ mechanic.owner_name or "Not claimed" }}</span></div>
 <div class="ui-meta-item"><span class="ui-meta-label">Phone</span><span class="ui-meta-value">{{ mechanic.phone }}</span></div>
+{% if mechanic.is_verified %}
 <div class="ui-meta-item"><span class="ui-meta-label">Experience</span><span class="ui-meta-value">{{ mechanic.experience_years or 0 }} years</span></div>
 <div class="ui-meta-item"><span class="ui-meta-label">Reviews</span><span class="ui-meta-value">{{ review_count }}</span></div>
+{% endif %}
 <div class="ui-meta-item"><span class="ui-meta-label">Address</span><span class="ui-meta-value">{{ mechanic.address or mechanic.city }}</span></div>
 </div>
-<p class="section-copy" style="margin-top:18px;">{{ mechanic.about or "Independent automotive workshop listed on the AMPYAN network." }}</p>
+<p class="section-copy" style="margin-top:18px;">{{ mechanic.about or "Public garage information listed for discovery on AMPYAN. Verification can be completed by the business owner." }}</p>
 </div>
 
 <div class="ui-card">
@@ -47,10 +55,12 @@
 {% endif %}
 {% if mechanic.is_verified %}
 <span class="ui-pill">Admin Approved</span>
+{% else %}
+<span class="ui-pill">Not verified by AMPYAN yet</span>
 {% endif %}
 </div>
 
-{% if current_user.is_authenticated and current_user.role != "mechanic" %}
+{% if mechanic.is_verified and current_user.is_authenticated and current_user.role != "mechanic" %}
 <form method="POST" action="/garages/{{ mechanic.id }}/review" class="mechanic-review-form">
 <h3 class="section-heading">Rate This Garage</h3>
 <select name="rating" class="profile-input" required>
@@ -62,12 +72,15 @@
 <textarea name="review_text" class="profile-input mechanic-textarea mechanic-textarea-sm" placeholder="Share your service experience">{% if existing_review %}{{ existing_review.review_text or '' }}{% endif %}</textarea>
 <button type="submit" class="auth-button mechanic-submit-btn">{{ "Update Review" if existing_review else "Submit Review" }}</button>
 </form>
-{% elif not current_user.is_authenticated %}
+{% elif mechanic.is_verified and not current_user.is_authenticated %}
 <p class="section-copy" style="margin-top:18px;">Login as a user account to rate this garage.</p>
+{% elif not mechanic.is_verified %}
+<p class="section-copy" style="margin-top:18px;">Own this garage? Claim this listing to complete OTP/business verification.</p>
 {% endif %}
 </div>
 </div>
 
+{% if mechanic.is_verified %}
 <div class="ui-card">
 <h2 class="section-heading">Reviews</h2>
 {% if mechanic.reviews %}
@@ -84,6 +97,7 @@
 <div class="empty-state">No reviews yet. Be the first to rate this garage.</div>
 {% endif %}
 </div>
+{% endif %}
 
 </section>
 

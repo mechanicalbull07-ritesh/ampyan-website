@@ -48,14 +48,21 @@
 <div class="garage-map-pin"><i class="fa-solid fa-location-dot"></i></div>
 <div class="garage-map-body">
 <div class="garage-trust-top">
+{% if not mechanic.is_verified %}
+<span class="garage-trust-level">Listed for discovery</span>
+{% else %}
 <span class="garage-trust-level">{{ mechanic.trust_level }}</span>
+{% endif %}
 <span class="garage-trust-score">{{ mechanic.city }}</span>
 </div>
 <h3>{{ mechanic.business_name }}</h3>
-<p class="garage-owner-name">{{ mechanic.owner_name }}</p>
+<p class="garage-owner-name">{{ mechanic.owner_name or "Not claimed" }}</p>
 <p class="section-copy">{{ mechanic.address or mechanic.city }}</p>
 <div class="ui-button-row">
 <a href="/garages/{{ mechanic.id }}" class="auth-button">View Profile</a>
+{% if not mechanic.is_verified %}
+<a href="/garages/register" class="ui-button-secondary">Own this garage? Claim this listing.</a>
+{% endif %}
 </div>
 </div>
 </article>
@@ -66,14 +73,19 @@
 {% for mechanic in mechanics %}
 <article class="garage-network-card">
 <div class="garage-trust-top">
+{% if not mechanic.is_verified %}
+<span class="garage-trust-level">Listed for discovery</span>
+<span class="garage-trust-score">Not verified by AMPYAN yet</span>
+{% else %}
 <span class="garage-trust-level">{{ mechanic.trust_level }}</span>
 <span class="garage-trust-score">Trust {{ mechanic.trust_score }}/100</span>
+{% endif %}
 </div>
 <h3>{{ mechanic.business_name }}</h3>
-<p class="garage-owner-name">{{ mechanic.owner_name }}</p>
+<p class="garage-owner-name">{{ mechanic.owner_name or "Not claimed" }}</p>
 <p class="garage-location">{{ mechanic.city }}{% if mechanic.state %}, {{ mechanic.state }}{% endif %}</p>
 <p class="garage-meta">{{ mechanic.specialties or "General automotive service" }}</p>
-<p class="section-copy">{{ mechanic.about or "Independent local garage listed on the AMPYAN network." }}</p>
+<p class="section-copy">{{ mechanic.about or "Public garage information listed for discovery on AMPYAN. Verification can be completed by the business owner." }}</p>
 
 <div class="ui-meta-list">
 <div class="ui-meta-item">
@@ -95,6 +107,8 @@
 {% endif %}
 {% if mechanic.is_verified %}
 <span class="ui-pill">Verified Account</span>
+{% else %}
+<span class="ui-pill">Not verified by AMPYAN yet</span>
 {% endif %}
 {% if mechanic.service_types %}
 <span class="ui-pill">{{ mechanic.service_types }}</span>
@@ -102,6 +116,9 @@
 </div>
 <div class="ui-button-row garage-card-actions">
 <a href="/garages/{{ mechanic.id }}" class="auth-button">View Profile</a>
+{% if not mechanic.is_verified %}
+<a href="/garages/register" class="ui-button-secondary">Own this garage? Claim this listing.</a>
+{% endif %}
 </div>
 </article>
 {% endfor %}

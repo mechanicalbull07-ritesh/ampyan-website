@@ -67,7 +67,7 @@ class MechanicProfile(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
 
     business_name = db.Column(db.String(150), nullable=False)
-    owner_name = db.Column(db.String(120), nullable=False)
+    owner_name = db.Column(db.String(120))
     email = db.Column(db.String(150))
     phone = db.Column(db.String(30), nullable=False)
 
@@ -76,6 +76,12 @@ class MechanicProfile(db.Model):
     country = db.Column(db.String(100), default="India")
     pincode = db.Column(db.String(20))
     address = db.Column(db.String(255))
+    area = db.Column(db.String(120))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    image_url = db.Column(db.String(500))
+    listing_status = db.Column(db.String(30), default="pending_review")
+    source = db.Column(db.String(50))
 
     specialties = db.Column(db.String(255))
     service_types = db.Column(db.String(255))

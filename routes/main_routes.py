@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, jsonify, render_template, request, redirect, flash, url_for
 from flask_login import current_user, login_required
+from sqlalchemy import or_
 from werkzeug.utils import secure_filename
 
 from models.models import db, Post, News, Car, User, MechanicProfile, MechanicReview, MarketplaceListing, MarketplaceMessage, Video
@@ -30,32 +31,101 @@ def _isoformat(value):
     return value.isoformat() if hasattr(value, "isoformat") else value
 
 
+def _split_services(value):
+    return [
+        item.strip()
+        for item in (value or "").replace("|", ",").split(",")
+        if item.strip()
+    ]
+
+
+def _bounded_int(value, default, minimum, maximum):
+    try:
+        parsed = int(value or default)
+    except (TypeError, ValueError):
+        parsed = default
+    return min(maximum, max(minimum, parsed))
+
+
+def _boolish(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
+
+
+def _garage_image_url(mechanic):
+    image_value = getattr(mechanic, "image_url", None)
+    parsed = urlparse(image_value or "")
+    if parsed.scheme in {"http", "https"} and parsed.netloc:
+        return image_value
+    if image_value:
+        return url_for("static", filename=image_value.lstrip("/"), _external=True)
+    return url_for("static", filename="images/logo.png", _external=True)
+
+
+def _listing_status(mechanic):
+    return getattr(mechanic, "listing_status", None) or (
+        "listed" if mechanic.is_verified else "pending_review"
+    )
+
+
+def _is_public_garage_listing(mechanic):
+    return bool(mechanic.is_verified) or _listing_status(mechanic) == "public_unverified"
+
+
 def _serialize_mechanic(mechanic, include_reviews=False):
     metrics = refresh_mechanic_reputation(mechanic)
+    services = _split_services(mechanic.service_types or mechanic.specialties)
+    area = getattr(mechanic, "area", None) or mechanic.state or mechanic.pincode
+    image_url = _garage_image_url(mechanic)
+    listing_status = _listing_status(mechanic)
+    listing_label = "AMPYAN Verified" if mechanic.is_verified else "Listed for discovery"
+    verification_label = "AMPYAN Verified" if mechanic.is_verified else "Not verified by AMPYAN yet"
+    description = mechanic.about or "Public garage information listed for discovery on AMPYAN. Verification can be completed by the business owner."
+    average_rating = metrics["average_rating"] if mechanic.is_verified else None
     payload = {
         "id": mechanic.id,
         "business_name": mechanic.business_name,
+        "name": mechanic.business_name or "Garage",
         "owner_name": mechanic.owner_name,
+        "owner": mechanic.owner_name,
         "email": mechanic.email,
         "phone": mechanic.phone,
         "city": mechanic.city,
+        "area": area,
         "state": mechanic.state,
         "country": mechanic.country,
         "pincode": mechanic.pincode,
         "address": mechanic.address,
         "specialties": mechanic.specialties,
         "service_types": mechanic.service_types,
+        "services": services,
         "experience_years": mechanic.experience_years,
         "about": mechanic.about,
-        "trust_score": mechanic.trust_score,
-        "trust_level": mechanic.trust_level,
+        "description": description,
+        "trust_score": mechanic.trust_score if mechanic.is_verified else None,
+        "trust_level": mechanic.trust_level if mechanic.is_verified else "Listed for discovery",
         "is_featured": bool(mechanic.is_featured),
         "is_verified": bool(mechanic.is_verified),
+        "is_ampyan_verified": bool(mechanic.is_verified),
         "accepts_emergency": bool(mechanic.accepts_emergency),
         "pickup_drop_available": bool(mechanic.pickup_drop_available),
+        "latitude": getattr(mechanic, "latitude", None),
+        "longitude": getattr(mechanic, "longitude", None),
+        "image_url": image_url,
+        "image": image_url,
+        "listing_status": listing_status,
+        "listing_label": listing_label,
+        "verification_label": verification_label,
+        "claim_cta": "Own this garage? Claim this listing.",
+        "claim_url": url_for("main.register_garage", _external=True),
+        "source": getattr(mechanic, "source", None) or "website",
         "created_at": _isoformat(mechanic.created_at),
-        "review_count": metrics["review_count"],
-        "average_rating": metrics["average_rating"],
+        "review_count": metrics["review_count"] if mechanic.is_verified else 0,
+        "average_rating": average_rating,
+        "rating": average_rating,
     }
     if include_reviews:
         payload["reviews"] = [
@@ -72,6 +142,43 @@ def _serialize_mechanic(mechanic, include_reviews=False):
             for review in mechanic.reviews
         ]
     return payload
+
+
+def _garage_query_from_request():
+    city = (request.args.get("city") or "").strip()
+    service = (request.args.get("service") or request.args.get("service_type") or "").strip()
+    search = (request.args.get("search") or request.args.get("q") or "").strip()
+    include_unverified = _is_admin_account(current_user) and request.args.get("include_unverified") == "true"
+
+    query = MechanicProfile.query
+    if not include_unverified:
+        query = query.filter(or_(
+            MechanicProfile.is_verified.is_(True),
+            MechanicProfile.listing_status == "public_unverified",
+        ))
+    if city:
+        query = query.filter(or_(
+            MechanicProfile.city.ilike(f"%{city}%"),
+            MechanicProfile.area.ilike(f"%{city}%"),
+        ))
+    if service:
+        query = query.filter(or_(
+            MechanicProfile.service_types.ilike(f"%{service}%"),
+            MechanicProfile.specialties.ilike(f"%{service}%"),
+        ))
+    if search:
+        pattern = f"%{search}%"
+        query = query.filter(or_(
+            MechanicProfile.business_name.ilike(pattern),
+            MechanicProfile.owner_name.ilike(pattern),
+            MechanicProfile.city.ilike(pattern),
+            MechanicProfile.area.ilike(pattern),
+            MechanicProfile.address.ilike(pattern),
+            MechanicProfile.specialties.ilike(pattern),
+            MechanicProfile.service_types.ilike(pattern),
+        ))
+
+    return query
 
 
 def _static_image_url_if_exists(folder, filename, fallback=None):
@@ -374,14 +481,11 @@ def garage_network():
     city = (request.args.get("city") or "").strip()
     city_mode = (request.args.get("view") or "list").strip()
 
-    query = MechanicProfile.query.filter_by(is_verified=True).order_by(
+    query = _garage_query_from_request().order_by(
         MechanicProfile.is_featured.desc(),
         MechanicProfile.trust_score.desc(),
         MechanicProfile.id.desc()
     )
-
-    if city:
-        query = query.filter(MechanicProfile.city.ilike(f"%{city}%"))
 
     mechanics = query.all()
 
@@ -402,15 +506,12 @@ def garage_network():
 
 
 @main_bp.route("/api/garages")
+@main_bp.route("/api/nearby-garages")
 def api_garages():
-    city = (request.args.get("city") or "").strip()
-    include_unverified = _is_admin_account(current_user) and request.args.get("include_unverified") == "true"
-
-    query = MechanicProfile.query
-    if not include_unverified:
-        query = query.filter_by(is_verified=True)
-    if city:
-        query = query.filter(MechanicProfile.city.ilike(f"%{city}%"))
+    page = _bounded_int(request.args.get("page"), 1, 1, 10_000)
+    per_page = _bounded_int(request.args.get("per_page") or request.args.get("limit"), 20, 1, 100)
+    query = _garage_query_from_request()
+    total = query.count()
 
     mechanics = (
         query
@@ -419,25 +520,106 @@ def api_garages():
             MechanicProfile.trust_score.desc(),
             MechanicProfile.id.desc(),
         )
-        .limit(100)
+        .offset((page - 1) * per_page)
+        .limit(per_page)
         .all()
     )
     return jsonify({
+        "success": True,
         "status": "success",
         "garages": [_serialize_mechanic(mechanic) for mechanic in mechanics],
+        "pagination": {
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "pages": (total + per_page - 1) // per_page if per_page else 0,
+        },
     })
 
 
 @main_bp.route("/api/garages/<int:mechanic_id>")
 def api_garage_detail(mechanic_id):
     mechanic = MechanicProfile.query.get_or_404(mechanic_id)
-    if not mechanic.is_verified and not _is_admin_account(current_user):
+    if not _is_public_garage_listing(mechanic) and not _is_admin_account(current_user):
         return jsonify({"status": "error", "message": "garage not found"}), 404
 
     return jsonify({
+        "success": True,
         "status": "success",
         "garage": _serialize_mechanic(mechanic, include_reviews=True),
     })
+
+
+@main_bp.route("/api/garages/register", methods=["POST"])
+def api_register_garage():
+    data = request.get_json(silent=True) or request.form
+    form_data = {
+        "business_name": (data.get("business_name") or data.get("name") or "").strip(),
+        "owner_name": (data.get("owner_name") or data.get("owner") or "").strip(),
+        "email": (data.get("email") or "").strip().lower(),
+        "phone": (data.get("phone") or "").strip(),
+        "city": (data.get("city") or "").strip(),
+        "area": (data.get("area") or "").strip(),
+        "state": (data.get("state") or "").strip(),
+        "country": (data.get("country") or "India").strip(),
+        "pincode": (data.get("pincode") or "").strip(),
+        "address": (data.get("address") or "").strip(),
+        "specialties": (data.get("specialties") or "").strip(),
+        "service_types": (data.get("service_types") or "").strip(),
+        "experience_years": data.get("experience_years") or 0,
+        "about": (data.get("about") or data.get("description") or "").strip(),
+        "image_url": (data.get("image_url") or data.get("image") or "").strip(),
+        "accepts_emergency": _boolish(data.get("accepts_emergency")),
+        "pickup_drop_available": _boolish(data.get("pickup_drop_available")),
+    }
+    if not form_data["service_types"] and isinstance(data.get("services"), list):
+        form_data["service_types"] = ", ".join(str(item).strip() for item in data.get("services") if str(item).strip())
+
+    missing = [field for field in ("business_name", "phone", "city") if not form_data.get(field)]
+    if missing:
+        return jsonify({
+            "success": False,
+            "status": "error",
+            "message": "Business name, phone and city are required.",
+            "missing": missing,
+        }), 400
+
+    trust_score = calculate_trust_profile_score(form_data)
+    profile = MechanicProfile(
+        user_id=current_user.id if current_user.is_authenticated else None,
+        business_name=form_data["business_name"],
+        owner_name=form_data["owner_name"] or "Not provided",
+        email=form_data["email"] or None,
+        phone=form_data["phone"],
+        city=form_data["city"],
+        area=form_data["area"] or None,
+        state=form_data["state"] or None,
+        country=form_data["country"] or "India",
+        pincode=form_data["pincode"] or None,
+        address=form_data["address"] or None,
+        specialties=form_data["specialties"] or None,
+        service_types=form_data["service_types"] or None,
+        experience_years=_bounded_int(form_data["experience_years"], 0, 0, 80),
+        about=form_data["about"] or None,
+        image_url=form_data["image_url"] or None,
+        listing_status="pending_review",
+        source="api",
+        trust_score=trust_score,
+        trust_level=trust_level_from_score(trust_score),
+        accepts_emergency=form_data["accepts_emergency"],
+        pickup_drop_available=form_data["pickup_drop_available"],
+        is_verified=False,
+        is_featured=False,
+    )
+    db.session.add(profile)
+    refresh_mechanic_reputation(profile)
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "status": "success",
+        "message": "Garage registered and pending review.",
+        "garage": _serialize_mechanic(profile),
+    }), 201
 
 
 @main_bp.route("/garages/<int:mechanic_id>")
@@ -446,7 +628,7 @@ def garage_profile(mechanic_id):
 
     mechanic = MechanicProfile.query.get_or_404(mechanic_id)
 
-    if not mechanic.is_verified and not _is_admin_account(current_user):
+    if not _is_public_garage_listing(mechanic) and not _is_admin_account(current_user):
         flash("This garage profile is awaiting admin approval.")
         return redirect(url_for("main.garage_network"))
 
