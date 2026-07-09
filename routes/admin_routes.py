@@ -4,6 +4,8 @@ import secrets
 
 from flask import Blueprint, current_app, jsonify, render_template, redirect, flash, request, url_for
 from flask_login import login_required, current_user
+from sqlalchemy import inspect as sqlalchemy_inspect
+from sqlalchemy.orm import load_only
 from werkzeug.security import generate_password_hash
 
 from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEvent, MechanicProfile, MechanicReview, Car, CarCommunity
@@ -573,20 +575,98 @@ def _safe_admin_scalar(load_value, default=0):
         return default
 
 
+def _mechanic_profile_columns():
+    try:
+        inspector = sqlalchemy_inspect(db.engine)
+        if not inspector.has_table("mechanic_profile"):
+            return set()
+        return {column["name"] for column in inspector.get_columns("mechanic_profile")}
+    except Exception:
+        current_app.logger.warning("admin_mechanic_column_inspection_failed", exc_info=True)
+        return {column.name for column in MechanicProfile.__table__.columns}
+
+
+def _admin_mechanic_query():
+    columns = _mechanic_profile_columns()
+    mapped_columns = {column.name for column in MechanicProfile.__table__.columns}
+    loadable_columns = sorted(columns & mapped_columns)
+    query = MechanicProfile.query
+    if loadable_columns:
+        query = query.options(load_only(*(getattr(MechanicProfile, name) for name in loadable_columns)))
+    return query, columns
+
+
+def _admin_mechanic_value(mechanic, name, default=None, columns=None):
+    columns = columns if columns is not None else _mechanic_profile_columns()
+    if columns and name not in columns:
+        return default
+    try:
+        value = getattr(mechanic, name)
+    except Exception:
+        db.session.rollback()
+        current_app.logger.warning("admin_mechanic_value_unavailable column=%s", name, exc_info=True)
+        return default
+    return default if value is None else value
+
+
+def _admin_mechanic_order(query, columns):
+    order_columns = []
+    if "is_verified" in columns:
+        order_columns.append(MechanicProfile.is_verified.asc())
+    if "is_featured" in columns:
+        order_columns.append(MechanicProfile.is_featured.desc())
+    order_columns.append(MechanicProfile.id.desc())
+    return query.order_by(*order_columns)
+
+
+def _admin_mechanic_payload(mechanic, columns):
+    is_verified = bool(_admin_mechanic_value(mechanic, "is_verified", False, columns))
+    trust_score = _admin_mechanic_value(mechanic, "trust_score", 30, columns)
+    return {
+        "id": _admin_mechanic_value(mechanic, "id", None, columns),
+        "business_name": _admin_mechanic_value(mechanic, "business_name", "Garage", columns),
+        "owner_name": _admin_mechanic_value(mechanic, "owner_name", None, columns),
+        "city": _admin_mechanic_value(mechanic, "city", None, columns),
+        "state": _admin_mechanic_value(mechanic, "state", None, columns),
+        "trust_score": trust_score,
+        "trust_level": (
+            _admin_mechanic_value(mechanic, "trust_level", None, columns)
+            or ("AMPYAN Verified" if is_verified else "Listed for discovery")
+        ),
+        "is_verified": is_verified,
+        "is_featured": bool(_admin_mechanic_value(mechanic, "is_featured", False, columns)),
+    }
+
+
+def _admin_mechanic_payloads(limit=500):
+    query, columns = _admin_mechanic_query()
+    mechanics = _admin_mechanic_order(query, columns).limit(limit).all()
+    return [_admin_mechanic_payload(mechanic, columns) for mechanic in mechanics], columns
+
+
+def _admin_mechanic_count(columns, column_name=None, value=None, fallback=0):
+    if column_name and column_name in columns:
+        return _safe_admin_scalar(
+            lambda: MechanicProfile.query.filter(getattr(MechanicProfile, column_name).is_(value)).count(),
+            fallback,
+        )
+    return _safe_admin_scalar(lambda: MechanicProfile.query.count(), fallback) if not column_name else fallback
+
+
 def _render_degraded_admin_dashboard():
     users = _safe_admin_rows(lambda: User.query.order_by(User.id.desc()).limit(50).all())
     posts = _safe_admin_rows(lambda: Post.query.order_by(Post.id.desc()).limit(30).all())
     comments = _safe_admin_rows(lambda: Comment.query.order_by(Comment.id.desc()).limit(30).all())
     news = _safe_admin_rows(lambda: News.query.order_by(News.id.desc()).limit(30).all())
-    mechanics = _safe_admin_rows(lambda: MechanicProfile.query.order_by(MechanicProfile.id.desc()).limit(50).all())
+    mechanics, mechanic_columns = _safe_admin_rows(lambda: _admin_mechanic_payloads(limit=50)) or ([], set())
     reviews = _safe_admin_rows(lambda: MechanicReview.query.order_by(MechanicReview.id.desc()).limit(10).all())
     cars = _safe_admin_rows(lambda: Car.query.order_by(Car.created_at.desc()).limit(50).all())
     managed_personas = _safe_admin_rows(
         lambda: User.query.filter_by(is_managed_persona=True).order_by(User.id.desc()).limit(60).all()
     )
     car_communities = _safe_admin_rows(lambda: CarCommunity.query.order_by(CarCommunity.name.asc()).all())
-    pending_mechanics = [mechanic for mechanic in mechanics if not mechanic.is_verified]
-    approved_mechanics = [mechanic for mechanic in mechanics if mechanic.is_verified][:8]
+    pending_mechanics = [mechanic for mechanic in mechanics if not mechanic["is_verified"]]
+    approved_mechanics = [mechanic for mechanic in mechanics if mechanic["is_verified"]][:8]
     banned_users = [user for user in users if user.is_banned][:8]
     return render_template(
         "admin.html",
@@ -623,9 +703,9 @@ def _render_degraded_admin_dashboard():
         click_events_count=0,
         banned_users_count=_safe_admin_scalar(lambda: User.query.filter_by(is_banned=True).count(), len(banned_users)),
         admin_users_count=_safe_admin_scalar(lambda: User.query.filter_by(role="admin").count()),
-        pending_garages_count=len(pending_mechanics),
-        approved_garages_count=len([mechanic for mechanic in mechanics if mechanic.is_verified]),
-        featured_garages_count=len([mechanic for mechanic in mechanics if mechanic.is_featured]),
+        pending_garages_count=_admin_mechanic_count(mechanic_columns, "is_verified", False, len(pending_mechanics)),
+        approved_garages_count=_admin_mechanic_count(mechanic_columns, "is_verified", True, len(approved_mechanics)),
+        featured_garages_count=_admin_mechanic_count(mechanic_columns, "is_featured", True, len([mechanic for mechanic in mechanics if mechanic["is_featured"]])),
         total_cars=len(cars),
         car_owner_count=0,
         service_due_cars=[],
@@ -662,11 +742,7 @@ def _render_admin_dashboard():
     posts = Post.query.order_by(Post.id.desc()).limit(300).all()
     comments = Comment.query.order_by(Comment.id.desc()).limit(300).all()
     news = News.query.order_by(News.id.desc()).limit(300).all()
-    mechanics = MechanicProfile.query.order_by(
-        MechanicProfile.is_verified.asc(),
-        MechanicProfile.is_featured.desc(),
-        MechanicProfile.id.desc()
-    ).limit(500).all()
+    mechanics, mechanic_columns = _admin_mechanic_payloads(limit=500)
     reviews = MechanicReview.query.order_by(MechanicReview.id.desc()).limit(10).all()
     cars = Car.query.order_by(Car.created_at.desc()).limit(500).all()
 
@@ -719,9 +795,9 @@ def _render_admin_dashboard():
     total_users = User.query.count()
     banned_users_count = User.query.filter_by(is_banned=True).count()
     admin_users_count = User.query.filter_by(role="admin").count()
-    pending_garages_count = MechanicProfile.query.filter_by(is_verified=False).count()
-    approved_garages_count = MechanicProfile.query.filter_by(is_verified=True).count()
-    featured_garages_count = MechanicProfile.query.filter_by(is_featured=True).count()
+    pending_garages_count = _admin_mechanic_count(mechanic_columns, "is_verified", False, len([mechanic for mechanic in mechanics if not mechanic["is_verified"]]))
+    approved_garages_count = _admin_mechanic_count(mechanic_columns, "is_verified", True, len([mechanic for mechanic in mechanics if mechanic["is_verified"]]))
+    featured_garages_count = _admin_mechanic_count(mechanic_columns, "is_featured", True, len([mechanic for mechanic in mechanics if mechanic["is_featured"]]))
     recent_visit_rows = public_visits_query.filter(WebsiteVisit.visit_time >= last_365d).order_by(
         WebsiteVisit.visit_time.desc()
     ).limit(5000).all()
@@ -828,11 +904,8 @@ def _render_admin_dashboard():
         if car.pollution_expiry and car.pollution_expiry < today
     ]
 
-    for mechanic in mechanics:
-        refresh_mechanic_reputation(mechanic)
-
-    pending_mechanics = [mechanic for mechanic in mechanics if not mechanic.is_verified]
-    approved_mechanics = [mechanic for mechanic in mechanics if mechanic.is_verified][:8]
+    pending_mechanics = [mechanic for mechanic in mechanics if not mechanic["is_verified"]]
+    approved_mechanics = [mechanic for mechanic in mechanics if mechanic["is_verified"]][:8]
     recent_users = users[:10]
     recent_posts = posts[:8]
     recent_cars = cars[:12]

@@ -391,8 +391,8 @@
 <div class="ui-grid">
 {% for review in reviews %}
 <div class="simple-list-card">
-<h4>{{ review.mechanic.business_name }}</h4>
-<p class="section-copy">By {{ review.author.username }} • {{ review.rating }}/5</p>
+<h4>{{ review.mechanic.business_name if review.mechanic else "Garage unavailable" }}</h4>
+<p class="section-copy">By {{ review.author.username if review.author else "Member" }} • {{ review.rating }}/5</p>
 <p class="section-copy">{{ review.review_text or "No written review." }}</p>
 </div>
 {% endfor %}
