@@ -12,6 +12,8 @@ services:
         value: "true"
       - key: ADMIN_ANALYTICS_CACHE_SECONDS
         value: "60"
+      - key: SECRET_KEY
+        sync: false
       - key: GA4_MEASUREMENT_ID
         sync: false
       - key: CLARITY_PROJECT_ID
