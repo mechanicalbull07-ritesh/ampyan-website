@@ -1,129 +1,540 @@
 [
   {
-    "name": "Malik Car Care",
-    "phone": "08511621348",
-    "address": "Golf Course Road, Sikanderpur Ghosi",
-    "city": "Gurgaon",
-    "state": "Haryana",
-    "area": "Sikanderpur Ghosi",
+    "name": "Bright Automobile",
+    "phone": "09606234612",
+    "address": "Old Palam Road Dwarka Sector 13, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Dwarka Sector 13",
     "services": [
-      "Engine Repair",
-      "General Service",
-      "Pickup and Drop"
+      "Garage",
+      "Car Wash"
     ],
     "owner_name": "Listing Owner Not Provided"
   },
   {
-    "name": "KCM Automobiles",
-    "phone": "07947159431",
-    "address": "Sector 18",
+    "name": "Auto Mechanic Garage",
+    "phone": "07411662819",
+    "address": "OLD DELHI GURGAON ROAD Gurgaon Sector 18, Gurgaon",
     "city": "Gurgaon",
-    "state": "Haryana",
-    "area": "Sector 18",
+    "state": null,
+    "area": "Gurgaon Sector 18",
     "services": [
-      "Car Repair",
-      "General Service",
-      "Authorised Service"
+      "Garage",
+      "Car Wash",
+      "Car Detailing"
     ],
     "owner_name": "Listing Owner Not Provided"
   },
   {
-    "name": "Pasco Automobiles",
-    "phone": "08460220069",
-    "address": "Sector 17/18 Dividing Road",
-    "city": "Gurgaon",
-    "state": "Haryana",
-    "area": "Sector 18",
+    "name": "Total Car Care",
+    "phone": "08971814300",
+    "address": "Vasant Kunj Marg Mahipalpur, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Mahipalpur",
     "services": [
-      "Car Service",
-      "On-site Service",
-      "Insurance Assistance"
+      "Car Dealers",
+      "Company Authorised Dealer",
+      "Car Insurance Services"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "The Car Junction",
+    "phone": "07411561815",
+    "address": "Near Tata Telco Service Station Rangpuri, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Rangpuri",
+    "services": [
+      "DoorStep Service",
+      "Auto Detailing",
+      "Oil Change"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Bablu A1 Multi Barnd Garages",
+    "phone": "08123195876",
+    "address": "Murga Market Wazirpur Ashok Vihar, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Wazirpur Ashok Vihar",
+    "services": [
+      "Emission Testing",
+      "Oil Change",
+      "Car Services"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Beena Keys & Lock Centre",
+    "phone": "08971173284",
+    "address": "Main 100 Futa Road Durgapuri, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Durgapuri",
+    "services": [],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "A One Car Care",
+    "phone": "08460430109",
+    "address": "Main Road Hindan Vihar, Ghaziabad",
+    "city": "Ghaziabad",
+    "state": null,
+    "area": "Hindan Vihar",
+    "services": [
+      "DoorStep Service",
+      "Garage",
+      "Car Wash"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Mr Imran",
+    "phone": "09035772430",
+    "address": "Okhla Tank Road Okhla, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Okhla",
+    "services": [
+      "Garage",
+      "Doorstep Service"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Avinash Motors",
+    "phone": "09608424521",
+    "address": "PANDAV NAGR GURUDWARA Pandav Nagar, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Pandav Nagar",
+    "services": [
+      "Garage",
+      "Delivery Available",
+      "Shop In Store"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Vikranta Motors",
+    "phone": "09725707422",
+    "address": "E-16 Site 4 Surajpur Site 4, Greater Noida",
+    "city": "Greater Noida",
+    "state": null,
+    "area": "Surajpur Site 4",
+    "services": [
+      "Car Dealers",
+      "DoorStep Service",
+      "Garage"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "G.S MOTORS",
+    "phone": "09725147696",
+    "address": "Sector 93 Noida Sector 93, Noida",
+    "city": "Noida",
+    "state": null,
+    "area": "Sector 93",
+    "services": [
+      "Car AC Repair & Services",
+      "Car Battery Repair & Services"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Krishna Auto Parts",
+    "phone": "08147962782",
+    "address": "Central Auto Market Noida Sector 16, Noida",
+    "city": "Noida",
+    "state": null,
+    "area": "Noida Sector 16",
+    "services": [
+      "Car Dealers",
+      "Company Authorised Dealer",
+      "Garage"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "M.s. Motors",
+    "phone": "07942593625",
+    "address": "Janata Majid Colony Road Shahdara, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Shahdara",
+    "services": [
+      "DoorStep Service",
+      "24 Hours Towing Services",
+      "Garage"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Miyaji Motors",
+    "phone": "08197134329",
+    "address": "Mini Market Janakpuri, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Janakpuri",
+    "services": [
+      "Cash Less Service",
+      "Car Services",
+      "DoorStep Service"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Jagadamba Automobiles",
+    "phone": "07411790693",
+    "address": "Ndtpl Office Mangolpuri, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Mangolpuri",
+    "services": [
+      "24 Hours Towing Services",
+      "Car Services",
+      "DoorStep Service"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Mytvs Rolling Wheelz Automobiles Pvt Ltd",
+    "phone": "08867859647",
+    "address": "Samaypur - Libaspur Road Samaypur, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Samaypur",
+    "services": [
+      "On Site Services",
+      "Car Dealers",
+      "Company Authorised Dealer"
     ],
     "owner_name": "Listing Owner Not Provided"
   },
   {
     "name": "Car Re Hub",
     "phone": "08867689446",
-    "address": "Opposite Royal Enfield Showroom, Sector 63",
+    "address": "Opposite Royal Enfield Showroom Noida Sector 63, Noida",
     "city": "Noida",
-    "state": "Uttar Pradesh",
-    "area": "Sector 63",
+    "state": null,
+    "area": "Noida Sector 63",
     "services": [
-      "Car Repair",
-      "Periodic Service",
-      "General Service"
+      "Alto Car Repair & Service",
+      "Astar Car Repair & Service",
+      "Celerio Car Repair & Service"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Car Care Centre Bpcl Petrol Pump",
+    "phone": "08105202393",
+    "address": "Bharat Petroleum Petrol Pump Lodhi Road, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Lodhi Road",
+    "services": [],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "N S Automobiles",
+    "phone": "07411722866",
+    "address": "Chaudhary Hukam Chand Marg Green Park, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Green Park",
+    "services": [
+      "Garage"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "A To Z Motor",
+    "phone": "08123676713",
+    "address": "Pizza Relation Noida Sector 93, Noida",
+    "city": "Noida",
+    "state": null,
+    "area": "Noida Sector 93",
+    "services": [
+      "On Site Services",
+      "Car Dealers",
+      "Company Authorised Dealer"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Malik Car Care",
+    "phone": "08511621348",
+    "address": "Golf Course Road Sikanderpur Ghosi, Gurgaon",
+    "city": "Gurgaon",
+    "state": null,
+    "area": "Sikanderpur Ghosi",
+    "services": [
+      "Car Engine Repair And Service",
+      "Car Engine Repair Services",
+      "Car Pickup And Drop"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Aqil Car Repair and Service",
+    "phone": "08490011344",
+    "address": "Gandhi Market Minto Road, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Minto Road",
+    "services": [
+      "Garage"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Rk Motors",
+    "phone": "07383102761",
+    "address": "Lodhi Complex Mini Market Lodhi Colony, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Lodhi Colony",
+    "services": [
+      "DoorStep Service",
+      "Garage",
+      "Car Wash"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Shreenath Automobiles",
+    "phone": "08460551558",
+    "address": "Shakti Khand 3-indirapuram, Ghaziabad",
+    "city": "Ghaziabad",
+    "state": null,
+    "area": "Shakti Khand 3-indirapuram",
+    "services": [
+      "Company Authorised Dealer",
+      "DoorStep Service",
+      "Garage"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Zaira Motors (Bosch Car Service Center)",
+    "phone": "08123311314",
+    "address": "Industrial Area Upsidc Greater Noida, Greater Noida",
+    "city": "Greater Noida",
+    "state": null,
+    "area": "Industrial Area Upsidc",
+    "services": [
+      "DoorStep Service",
+      "Garage",
+      "Auto Detailing"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Andautomotive",
+    "phone": "08511741755",
+    "address": "Dwarka Expressway Gurgaon Sector 104, Gurgaon",
+    "city": "Gurgaon",
+    "state": null,
+    "area": "Gurgaon Sector 104",
+    "services": [
+      "Auto Detailing",
+      "Car Services",
+      "DoorStep Service"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "A R Car Service",
+    "phone": "09845454797",
+    "address": "Near By IP Extension, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "IP Extension",
+    "services": [
+      "Oil Change",
+      "24 Hours Towing Services",
+      "Delivery Available"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Yash Car Workshop & Accesories",
+    "phone": "08460415220",
+    "address": "Pataudi Road Gurgaon Sector 95, Gurgaon",
+    "city": "Gurgaon",
+    "state": null,
+    "area": "Gurgaon Sector 95",
+    "services": [
+      "Car Dealers",
+      "Pickup And Drop Facility",
+      "Same Day Delivery"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Super Motor",
+    "phone": "08460393051",
+    "address": "Jat Bhawan Faridabad Sector 3, Faridabad",
+    "city": "Faridabad",
+    "state": null,
+    "area": "Faridabad Sector 3",
+    "services": [
+      "Garage"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "A K Tyre Service",
+    "phone": "08401055348",
+    "address": "Main Road Vaishali Sector 3, Ghaziabad",
+    "city": "Ghaziabad",
+    "state": null,
+    "area": "Vaishali Sector 3",
+    "services": [
+      "Company Authorised Dealer",
+      "Garage",
+      "Car Wash"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "GUPTA AUTOMOBILES",
+    "phone": "08050092659",
+    "address": "NAJAFGARH ROAD INDL. AREA Moti Nagar, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Moti Nagar",
+    "services": [
+      "Cash Less Service",
+      "Garage",
+      "Oil Change"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Car Clinic",
+    "phone": "08460306208",
+    "address": "Ground Floor Rohini Sector 25, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Rohini Sector 25",
+    "services": [
+      "Garage"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Cars Inn India",
+    "phone": "08108193290",
+    "address": "Ring Road Ashram, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Ashram",
+    "services": [
+      "Garage"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Gaurav Motors",
+    "phone": "08105335590",
+    "address": "Mahajan Tower Shreshth Vihar, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Shreshth Vihar",
+    "services": [
+      "Garage",
+      "On-site Repair",
+      "Locked / Lost Keys"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Yaseen Car Mechanic & Electrician",
+    "phone": "08460543513",
+    "address": "Pandit Deendayal Upadhay Mandir House, Delhi",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Pandit Deendayal Upadhay Mandir House",
+    "services": [
+      "Car Services",
+      "Garage",
+      "Car Wash"
     ],
     "owner_name": "Listing Owner Not Provided"
   },
   {
     "name": "MBA Automobile & Repairing Center",
     "phone": "08105581551",
-    "address": "Sector Pi",
+    "address": "Sector Pi Greater Noida, Greater Noida",
     "city": "Greater Noida",
-    "state": "Uttar Pradesh",
+    "state": null,
     "area": "Sector Pi",
     "services": [
-      "Car Repair",
-      "Two Wheeler Repair",
-      "General Service"
+      "Company Authorized Dealer",
+      "Two Wheeler Repair & Service",
+      "Garage"
     ],
     "owner_name": "Listing Owner Not Provided"
   },
   {
-    "name": "G S Motors",
-    "phone": "09725147696",
-    "address": "Sector 93",
-    "city": "Noida",
-    "state": "Uttar Pradesh",
-    "area": "Sector 93",
-    "services": [
-      "AC Repair",
-      "Battery Repair",
-      "Clutch Repair",
-      "Body Repair"
-    ],
-    "owner_name": "Listing Owner Not Provided"
-  },
-  {
-    "name": "Multi Brand Car Service Centre",
-    "phone": "08123410363",
-    "address": "Nasirpur Village, Palam",
+    "name": "Bombay Motives",
+    "phone": "08147430629",
+    "address": "Road No 3 Mahipalpur Extension, Delhi",
     "city": "Delhi",
     "state": "Delhi",
-    "area": "Palam",
+    "area": "Mahipalpur Extension",
     "services": [
-      "AC Repair",
-      "Battery Repair",
-      "Clutch Service",
-      "General Service"
+      "DL Test preparation",
+      "Same Day Delivery",
+      "Garage"
     ],
     "owner_name": "Listing Owner Not Provided"
   },
   {
     "name": "German Automotive",
     "phone": "07383367627",
-    "address": "Okhla Industrial Area, Phase 3",
+    "address": "Okhla Industrial Area Phase 3, Delhi",
     "city": "Delhi",
     "state": "Delhi",
     "area": "Okhla Industrial Area Phase 3",
     "services": [
-      "Premium Car Service",
+      "Car Services",
       "Doorstep Service",
-      "General Repair"
+      "Garage"
     ],
     "owner_name": "Listing Owner Not Provided"
   },
   {
-    "name": "Mecha Car Service",
-    "phone": "08460258966",
-    "address": "Khichripur, Mayur Vihar Phase 2",
-    "city": "Delhi",
-    "state": "Delhi",
-    "area": "Mayur Vihar Phase 2",
+    "name": "The Wolf Automobiles-The Premium Car Workshop",
+    "phone": "08460296010",
+    "address": "Old Delhi Road Sarhaul, Gurgaon",
+    "city": "Gurgaon",
+    "state": null,
+    "area": "Sarhaul",
     "services": [
-      "Car Repair",
-      "General Service",
-      "24 Hour Towing"
+      "Car Services",
+      "Doorstep Service",
+      "24 Hours Towing Services"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Medi Cars",
+    "phone": "08460451149",
+    "address": "NH8 Manesar, Gurgaon",
+    "city": "Gurgaon",
+    "state": null,
+    "area": "Manesar",
+    "services": [
+      "DoorStep Service",
+      "Oil Change",
+      "Garage"
     ],
     "owner_name": "Listing Owner Not Provided"
   }
