@@ -3,7 +3,10 @@ import argparse
 import json
 import re
 import sys
+from datetime import datetime
 from pathlib import Path
+
+from sqlalchemy import text
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -15,6 +18,37 @@ from models.models import MechanicProfile, db
 DEFAULT_SEED_PATHS = (
     ROOT / "garage_seed.json",
     ROOT / "scripts" / "garage_seed.json",
+)
+
+STABLE_INSERT_COLUMNS = (
+    "business_name",
+    "owner_name",
+    "phone",
+    "city",
+    "state",
+    "country",
+    "address",
+    "specialties",
+    "service_types",
+    "experience_years",
+    "trust_score",
+    "trust_level",
+    "is_featured",
+    "accepts_emergency",
+    "pickup_drop_available",
+    "is_verified",
+    "created_at",
+)
+OPTIONAL_INSERT_COLUMNS = (
+    "area",
+    "latitude",
+    "longitude",
+    "image_url",
+    "listing_status",
+    "source",
+    "email",
+    "pincode",
+    "about",
 )
 
 
@@ -125,6 +159,67 @@ def _normalize(raw):
     }
 
 
+def _mechanic_profile_columns():
+    if db.engine.dialect.name == "postgresql":
+        rows = db.session.execute(text("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_schema = current_schema()
+              AND table_name = 'mechanic_profile'
+        """))
+        return {row.column_name for row in rows}
+    if db.engine.dialect.name == "sqlite":
+        rows = db.session.execute(text("PRAGMA table_info(mechanic_profile)"))
+        return {row.name for row in rows}
+    raise RuntimeError(f"Unsupported database dialect: {db.engine.dialect.name}")
+
+
+def _insert_mechanic_profile(data, available_columns):
+    missing_columns = [name for name in STABLE_INSERT_COLUMNS if name not in available_columns]
+    if missing_columns:
+        raise RuntimeError(f"mechanic_profile is missing required columns: {', '.join(missing_columns)}")
+
+    payload = {
+        "business_name": data["business_name"],
+        "owner_name": data["owner_name"],
+        "phone": data["phone"],
+        "city": data["city"],
+        "state": data["state"],
+        "country": data["country"],
+        "address": data["address"],
+        "specialties": data["specialties"],
+        "service_types": data["service_types"],
+        "experience_years": data["experience_years"],
+        "trust_score": data["trust_score"],
+        "trust_level": data["trust_level"],
+        "is_featured": False,
+        "accepts_emergency": data["accepts_emergency"],
+        "pickup_drop_available": data["pickup_drop_available"],
+        "is_verified": False,
+        "created_at": datetime.utcnow(),
+        "area": data["area"],
+        "latitude": data["latitude"],
+        "longitude": data["longitude"],
+        "image_url": data["image_url"],
+        "listing_status": data["listing_status"],
+        "source": data["source"],
+        "email": data["email"],
+        "pincode": data["pincode"],
+        "about": data["about"],
+    }
+    insert_columns = [
+        name
+        for name in (*STABLE_INSERT_COLUMNS, *OPTIONAL_INSERT_COLUMNS)
+        if name in available_columns
+    ]
+    column_sql = ", ".join(insert_columns)
+    value_sql = ", ".join(f":{name}" for name in insert_columns)
+    db.session.execute(
+        text(f"INSERT INTO mechanic_profile ({column_sql}) VALUES ({value_sql})"),
+        {name: payload[name] for name in insert_columns},
+    )
+
+
 def _duplicate_query(data):
     phone = data.get("phone")
     if phone:
@@ -174,6 +269,10 @@ def import_seed(path, limit=None, commit=False):
     }
 
     try:
+        available_columns = _mechanic_profile_columns()
+        missing_columns = [name for name in STABLE_INSERT_COLUMNS if name not in available_columns]
+        if missing_columns:
+            raise RuntimeError(f"mechanic_profile is missing required columns: {', '.join(missing_columns)}")
         seen_phones = set()
         seen_identities = set()
         for index, raw in enumerate(rows, start=1):
@@ -229,33 +328,7 @@ def import_seed(path, limit=None, commit=False):
                 continue
 
             if commit:
-                db.session.add(MechanicProfile(
-                    business_name=data["business_name"],
-                    owner_name=data["owner_name"],
-                    email=data["email"],
-                    phone=data["phone"],
-                    city=data["city"],
-                    area=data["area"],
-                    state=data["state"],
-                    country=data["country"],
-                    pincode=data["pincode"],
-                    address=data["address"],
-                    specialties=data["specialties"],
-                    service_types=data["service_types"],
-                    experience_years=data["experience_years"],
-                    about=data["about"],
-                    accepts_emergency=data["accepts_emergency"],
-                    pickup_drop_available=data["pickup_drop_available"],
-                    latitude=data["latitude"],
-                    longitude=data["longitude"],
-                    image_url=data["image_url"],
-                    listing_status=data["listing_status"],
-                    source="public_manual_seed",
-                    trust_score=data["trust_score"],
-                    trust_level=data["trust_level"],
-                    is_verified=False,
-                    is_featured=False,
-                ))
+                _insert_mechanic_profile(data, available_columns)
             result["created"] += 1
             result["will_insert"].append(_record_summary(data))
             if data.get("phone"):
