@@ -540,6 +540,7 @@ def admin_analytics(section="overview"):
             "admin_analytics_degraded section=%s error=%s",
             section,
             exc.__class__.__name__,
+            exc_info=True,
         )
         context = _empty_admin_analytics_context(section)
     return render_template("admin_analytics.html", **context)
@@ -644,6 +645,43 @@ def _admin_mechanic_payloads(limit=500):
     return [_admin_mechanic_payload(mechanic, columns) for mechanic in mechanics], columns
 
 
+def _admin_review_payloads(mechanics, limit=10):
+    reviews = (
+        MechanicReview.query
+        .options(load_only(
+            MechanicReview.id,
+            MechanicReview.mechanic_id,
+            MechanicReview.user_id,
+            MechanicReview.rating,
+            MechanicReview.review_text,
+            MechanicReview.created_at,
+        ))
+        .order_by(MechanicReview.id.desc())
+        .limit(limit)
+        .all()
+    )
+    author_ids = {review.user_id for review in reviews if review.user_id}
+    author_names = dict(
+        User.query
+        .options(load_only(User.id, User.username))
+        .filter(User.id.in_(author_ids))
+        .with_entities(User.id, User.username)
+        .all()
+    ) if author_ids else {}
+    mechanic_names = {
+        mechanic["id"]: mechanic["business_name"]
+        for mechanic in mechanics
+        if mechanic.get("id") is not None
+    }
+    return [{
+        "id": review.id,
+        "garage_name": mechanic_names.get(review.mechanic_id, "Garage unavailable"),
+        "author_name": author_names.get(review.user_id, "Member"),
+        "rating": review.rating,
+        "review_text": review.review_text,
+    } for review in reviews]
+
+
 def _admin_mechanic_count(columns, column_name=None, value=None, fallback=0):
     if column_name and column_name in columns:
         return _safe_admin_scalar(
@@ -659,7 +697,7 @@ def _render_degraded_admin_dashboard():
     comments = _safe_admin_rows(lambda: Comment.query.order_by(Comment.id.desc()).limit(30).all())
     news = _safe_admin_rows(lambda: News.query.order_by(News.id.desc()).limit(30).all())
     mechanics, mechanic_columns = _safe_admin_rows(lambda: _admin_mechanic_payloads(limit=50)) or ([], set())
-    reviews = _safe_admin_rows(lambda: MechanicReview.query.order_by(MechanicReview.id.desc()).limit(10).all())
+    reviews = _safe_admin_rows(lambda: _admin_review_payloads(mechanics))
     cars = _safe_admin_rows(lambda: Car.query.order_by(Car.created_at.desc()).limit(50).all())
     managed_personas = _safe_admin_rows(
         lambda: User.query.filter_by(is_managed_persona=True).order_by(User.id.desc()).limit(60).all()
@@ -732,7 +770,11 @@ def admin_dashboard():
         return _render_admin_dashboard()
     except Exception as exc:
         db.session.rollback()
-        current_app.logger.warning("admin_dashboard_degraded error=%s", exc.__class__.__name__)
+        current_app.logger.warning(
+            "admin_dashboard_degraded error=%s",
+            exc.__class__.__name__,
+            exc_info=True,
+        )
         return _render_degraded_admin_dashboard()
 
 
@@ -743,7 +785,7 @@ def _render_admin_dashboard():
     comments = Comment.query.order_by(Comment.id.desc()).limit(300).all()
     news = News.query.order_by(News.id.desc()).limit(300).all()
     mechanics, mechanic_columns = _admin_mechanic_payloads(limit=500)
-    reviews = MechanicReview.query.order_by(MechanicReview.id.desc()).limit(10).all()
+    reviews = _admin_review_payloads(mechanics)
     cars = Car.query.order_by(Car.created_at.desc()).limit(500).all()
 
     total_ai_usage = db.session.query(db.func.sum(User.ai_uses_today)).scalar() or 0
