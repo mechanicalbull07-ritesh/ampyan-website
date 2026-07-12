@@ -9,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app import app, ensure_mechanic_profile_schema
+from app import app
 from models.models import MechanicProfile, db
 
 DEFAULT_SEED_PATHS = (
@@ -128,16 +128,24 @@ def _normalize(raw):
 def _duplicate_query(data):
     phone = data.get("phone")
     if phone:
-        existing_with_phone = MechanicProfile.query.filter(MechanicProfile.phone.isnot(None)).all()
+        existing_with_phone = (
+            MechanicProfile.query
+            .with_entities(MechanicProfile.id, MechanicProfile.phone)
+            .filter(MechanicProfile.phone.isnot(None))
+            .all()
+        )
         for existing in existing_with_phone:
             if _existing_phone_digits(existing.phone) == phone:
                 return existing
     name = _normalized_text(data["business_name"])
     city = _normalized_text(data["city"])
     address = _normalized_text(data["address"])
-    candidates = MechanicProfile.query.filter(
-        db.func.lower(MechanicProfile.city) == city,
-    ).all()
+    candidates = (
+        MechanicProfile.query
+        .with_entities(MechanicProfile.id, MechanicProfile.business_name, MechanicProfile.address)
+        .filter(db.func.lower(MechanicProfile.city) == city)
+        .all()
+    )
     for candidate in candidates:
         if (
             _normalized_text(candidate.business_name) == name
@@ -283,16 +291,29 @@ def main():
 
     try:
         with app.app_context():
-            ensure_mechanic_profile_schema()
             result = import_seed(path, limit=args.limit, commit=args.commit)
         print(json.dumps(result, indent=2, sort_keys=True))
         return 0
     except Exception as exc:
+        details = str(exc)
+        cause = exc
+        is_lock_timeout = False
+        while cause is not None:
+            cause_text = str(cause).lower()
+            cause_code = getattr(cause, "pgcode", None)
+            if cause_code == "55P03" or "locknotavailable" in cause_text or "lock timeout" in cause_text:
+                is_lock_timeout = True
+                break
+            cause = cause.__cause__ or cause.__context__
         print(json.dumps({
             "mode": "commit" if args.commit else "dry-run",
             "failed": True,
-            "error": exc.__class__.__name__,
-            "message": str(exc),
+            "error": "LockTimeout" if is_lock_timeout else exc.__class__.__name__,
+            "message": (
+                "Database lock timeout while reading garage records; no inserts were attempted. Retry after the lock is released."
+                if is_lock_timeout and not args.commit
+                else details
+            ),
         }, indent=2, sort_keys=True))
         return 1
 
