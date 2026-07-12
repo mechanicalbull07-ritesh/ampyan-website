@@ -1,1 +1,102 @@
-[]
+[
+  {
+    "name": "Demo Garage 01",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000001",
+    "address": "Sector 18",
+    "city": "Gurgaon",
+    "state": "Haryana",
+    "area": "Sector 18",
+    "services": ["General Service", "Oil Change"]
+  },
+  {
+    "name": "Demo Garage 02",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000002",
+    "address": "Golf Course Road",
+    "city": "Gurgaon",
+    "state": "Haryana",
+    "area": "DLF Phase 1",
+    "services": ["Brake Service", "Wheel Alignment"]
+  },
+  {
+    "name": "Demo Garage 03",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000003",
+    "address": "MG Road",
+    "city": "Gurgaon",
+    "state": "Haryana",
+    "area": "MG Road",
+    "services": ["AC Service", "Battery Replacement"]
+  },
+  {
+    "name": "Demo Garage 04",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000004",
+    "address": "Sector 62",
+    "city": "Noida",
+    "state": "Uttar Pradesh",
+    "area": "Sector 62",
+    "services": ["Suspension Repair", "Engine Diagnostics"]
+  },
+  {
+    "name": "Demo Garage 05",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000005",
+    "address": "Sector 18",
+    "city": "Noida",
+    "state": "Uttar Pradesh",
+    "area": "Sector 18",
+    "services": ["Periodic Service", "Clutch Repair"]
+  },
+  {
+    "name": "Demo Garage 06",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000006",
+    "address": "Karol Bagh",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Karol Bagh",
+    "services": ["Tyre Service", "Wheel Balancing"]
+  },
+  {
+    "name": "Demo Garage 07",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000007",
+    "address": "Lajpat Nagar",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Lajpat Nagar",
+    "services": ["Denting", "Painting"]
+  },
+  {
+    "name": "Demo Garage 08",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000008",
+    "address": "Vaishali",
+    "city": "Ghaziabad",
+    "state": "Uttar Pradesh",
+    "area": "Vaishali",
+    "services": ["Car Wash", "Detailing"]
+  },
+  {
+    "name": "Demo Garage 09",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000009",
+    "address": "Indirapuram",
+    "city": "Ghaziabad",
+    "state": "Uttar Pradesh",
+    "area": "Indirapuram",
+    "services": ["Engine Repair", "Transmission Service"]
+  },
+  {
+    "name": "Demo Garage 10",
+    "owner_name": "Listing Owner Not Provided",
+    "phone": "9000000010",
+    "address": "Dwarka Sector 10",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Dwarka",
+    "services": ["General Service", "Brake Inspection", "Battery Check"]
+  }
+]

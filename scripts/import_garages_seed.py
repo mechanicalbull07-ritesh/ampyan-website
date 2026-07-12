@@ -99,7 +99,7 @@ def _normalize(raw):
     phone, phone_error = _phone_digits(raw.get("phone"))
     return {
         "business_name": name,
-        "owner_name": None,
+        "owner_name": _text(raw.get("owner_name")) or "Listing Owner Not Provided",
         "email": None,
         "phone": phone,
         "phone_error": phone_error,
