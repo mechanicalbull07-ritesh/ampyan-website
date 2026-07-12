@@ -1,102 +1,144 @@
 [
   {
-    "name": "Demo Garage 01",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000001",
+    "name": "Malik Car Care",
+    "phone": "08511621348",
+    "address": "Golf Course Road, Sikanderpur Ghosi",
+    "city": "Gurgaon",
+    "state": "Haryana",
+    "area": "Sikanderpur Ghosi",
+    "services": [
+      "Engine Repair",
+      "General Service",
+      "Pickup and Drop"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "KCM Automobiles",
+    "phone": "07947159431",
     "address": "Sector 18",
     "city": "Gurgaon",
     "state": "Haryana",
     "area": "Sector 18",
-    "services": ["General Service", "Oil Change"]
+    "services": [
+      "Car Repair",
+      "General Service",
+      "Authorised Service"
+    ],
+    "owner_name": "Listing Owner Not Provided"
   },
   {
-    "name": "Demo Garage 02",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000002",
-    "address": "Golf Course Road",
+    "name": "D D Motors Nexa Repair and Service",
+    "phone": null,
+    "address": "New Rohtak Road, Udyog Nagar",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Udyog Nagar",
+    "services": [
+      "Nexa Repair",
+      "Car Service",
+      "General Repair"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Pasco Automobiles",
+    "phone": "08460220069",
+    "address": "Sector 17/18 Dividing Road",
     "city": "Gurgaon",
     "state": "Haryana",
-    "area": "DLF Phase 1",
-    "services": ["Brake Service", "Wheel Alignment"]
-  },
-  {
-    "name": "Demo Garage 03",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000003",
-    "address": "MG Road",
-    "city": "Gurgaon",
-    "state": "Haryana",
-    "area": "MG Road",
-    "services": ["AC Service", "Battery Replacement"]
-  },
-  {
-    "name": "Demo Garage 04",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000004",
-    "address": "Sector 62",
-    "city": "Noida",
-    "state": "Uttar Pradesh",
-    "area": "Sector 62",
-    "services": ["Suspension Repair", "Engine Diagnostics"]
-  },
-  {
-    "name": "Demo Garage 05",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000005",
-    "address": "Sector 18",
-    "city": "Noida",
-    "state": "Uttar Pradesh",
     "area": "Sector 18",
-    "services": ["Periodic Service", "Clutch Repair"]
+    "services": [
+      "Car Service",
+      "On-site Service",
+      "Insurance Assistance"
+    ],
+    "owner_name": "Listing Owner Not Provided"
   },
   {
-    "name": "Demo Garage 06",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000006",
-    "address": "Karol Bagh",
-    "city": "Delhi",
-    "state": "Delhi",
-    "area": "Karol Bagh",
-    "services": ["Tyre Service", "Wheel Balancing"]
-  },
-  {
-    "name": "Demo Garage 07",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000007",
-    "address": "Lajpat Nagar",
-    "city": "Delhi",
-    "state": "Delhi",
-    "area": "Lajpat Nagar",
-    "services": ["Denting", "Painting"]
-  },
-  {
-    "name": "Demo Garage 08",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000008",
-    "address": "Vaishali",
-    "city": "Ghaziabad",
+    "name": "Car Re Hub",
+    "phone": "08867689446",
+    "address": "Opposite Royal Enfield Showroom, Sector 63",
+    "city": "Noida",
     "state": "Uttar Pradesh",
-    "area": "Vaishali",
-    "services": ["Car Wash", "Detailing"]
+    "area": "Sector 63",
+    "services": [
+      "Car Repair",
+      "Periodic Service",
+      "General Service"
+    ],
+    "owner_name": "Listing Owner Not Provided"
   },
   {
-    "name": "Demo Garage 09",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000009",
-    "address": "Indirapuram",
-    "city": "Ghaziabad",
+    "name": "MBA Automobile & Repairing Center",
+    "phone": "08105581551",
+    "address": "Sector Pi",
+    "city": "Greater Noida",
     "state": "Uttar Pradesh",
-    "area": "Indirapuram",
-    "services": ["Engine Repair", "Transmission Service"]
+    "area": "Sector Pi",
+    "services": [
+      "Car Repair",
+      "Two Wheeler Repair",
+      "General Service"
+    ],
+    "owner_name": "Listing Owner Not Provided"
   },
   {
-    "name": "Demo Garage 10",
-    "owner_name": "Listing Owner Not Provided",
-    "phone": "9000000010",
-    "address": "Dwarka Sector 10",
+    "name": "G S Motors",
+    "phone": "09725147696",
+    "address": "Sector 93",
+    "city": "Noida",
+    "state": "Uttar Pradesh",
+    "area": "Sector 93",
+    "services": [
+      "AC Repair",
+      "Battery Repair",
+      "Clutch Repair",
+      "Body Repair"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Multi Brand Car Service Centre",
+    "phone": "08123410363",
+    "address": "Nasirpur Village, Palam",
     "city": "Delhi",
     "state": "Delhi",
-    "area": "Dwarka",
-    "services": ["General Service", "Brake Inspection", "Battery Check"]
+    "area": "Palam",
+    "services": [
+      "AC Repair",
+      "Battery Repair",
+      "Clutch Service",
+      "General Service"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "German Automotive",
+    "phone": "07383367627",
+    "address": "Okhla Industrial Area, Phase 3",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Okhla Industrial Area Phase 3",
+    "services": [
+      "Premium Car Service",
+      "Doorstep Service",
+      "General Repair"
+    ],
+    "owner_name": "Listing Owner Not Provided"
+  },
+  {
+    "name": "Mecha Car Service",
+    "phone": "08460258966",
+    "address": "Khichripur, Mayur Vihar Phase 2",
+    "city": "Delhi",
+    "state": "Delhi",
+    "area": "Mayur Vihar Phase 2",
+    "services": [
+      "Car Repair",
+      "General Service",
+      "24 Hour Towing"
+    ],
+    "owner_name": "Listing Owner Not Provided"
   }
 ]
