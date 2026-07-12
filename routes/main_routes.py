@@ -19,6 +19,7 @@ from services.app_api_sync import sync_garage_to_app
 from services.india_car_catalog import catalog_image_path
 
 main_bp = Blueprint("main", __name__)
+PUBLIC_SEED_OWNER_NAME = "Listing Owner Not Provided"
 
 
 def _is_admin_account(user):
@@ -67,9 +68,14 @@ def _garage_image_url(mechanic, columns=None):
 
 
 def _listing_status(mechanic, columns=None):
-    return _mechanic_value(mechanic, "listing_status", columns=columns) or (
-        "listed" if _mechanic_value(mechanic, "is_verified", False, columns) else "pending_review"
-    )
+    columns = columns if columns is not None else _mechanic_profile_columns()
+    if "listing_status" in columns:
+        return _mechanic_value(mechanic, "listing_status", columns=columns) or "pending_review"
+    if _mechanic_value(mechanic, "is_verified", False, columns):
+        return "listed"
+    if _mechanic_value(mechanic, "owner_name", None, columns) == PUBLIC_SEED_OWNER_NAME:
+        return "public_unverified"
+    return "pending_review"
 
 
 def _is_public_garage_listing(mechanic, columns=None):
@@ -249,6 +255,8 @@ def _garage_query_from_request():
             public_filters.append(MechanicProfile.is_verified.is_(True))
         if "listing_status" in columns:
             public_filters.append(MechanicProfile.listing_status == "public_unverified")
+        elif "owner_name" in columns:
+            public_filters.append(MechanicProfile.owner_name == PUBLIC_SEED_OWNER_NAME)
         if public_filters:
             query = query.filter(or_(*public_filters))
     if city:
