@@ -34,6 +34,13 @@
 {% set share_url = url_for('news_detail', news_id=news.id, _external=True) %}
 {% set article_title = news.title or 'AMPYAN Automotive Update' %}
 {% set article_body = news.content or 'Read the latest AMPYAN automotive update.' %}
+{% macro render_inline(runs) %}
+{% for run in runs %}
+{% if run.link %}<a href="{{ run.link }}" target="_blank" rel="noopener noreferrer">{% endif %}
+{% if run.bold %}<strong>{% endif %}{% if run.italic %}<em>{% endif %}{{ run.text }}{% if run.italic %}</em>{% endif %}{% if run.bold %}</strong>{% endif %}
+{% if run.link %}</a>{% endif %}
+{% endfor %}
+{% endmacro %}
 
 <article class="news-article-shell">
 <header class="news-article-header">
@@ -68,13 +75,39 @@
 </div>
 
 <div class="news-article-body">
+{% if rich_content and rich_content.blocks %}
+{% for block in rich_content.blocks %}
+{% if block.type == 'paragraph' %}<p>{{ render_inline(block.content) }}</p>
+{% elif block.type == 'heading' %}<h2 class="news-block-heading level-{{ block.level }}">{{ block.text }}</h2>
+{% elif block.type == 'subheading' %}<p class="news-block-subheading">{{ block.text }}</p>
+{% elif block.type in ['bullet_list', 'numbered_list'] %}
+{% if block.type == 'bullet_list' %}<ul class="news-block-list">{% else %}<ol class="news-block-list">{% endif %}
+{% for item in block['items'] %}<li>{{ render_inline(item) }}</li>{% endfor %}
+{% if block.type == 'bullet_list' %}</ul>{% else %}</ol>{% endif %}
+{% elif block.type == 'image' %}
+<figure class="news-block-image"><button type="button" class="news-lightbox-trigger" data-image-url="{{ block.url }}" data-image-alt="{{ block.alt_text }}"><img src="{{ block.url }}" alt="{{ block.alt_text or block.caption or 'AMPYAN article image' }}" loading="lazy" decoding="async"></button>{% if block.caption %}<figcaption>{{ block.caption }}</figcaption>{% endif %}</figure>
+{% elif block.type == 'gallery' %}
+<div class="news-block-gallery" aria-label="Article image gallery">{% for image in block.images %}<figure><button type="button" class="news-lightbox-trigger" data-image-url="{{ image.url }}" data-image-alt="{{ image.alt_text }}"><img src="{{ image.url }}" alt="{{ image.alt_text or image.caption or 'AMPYAN gallery image' }}" loading="lazy" decoding="async"></button>{% if image.caption %}<figcaption>{{ image.caption }}</figcaption>{% endif %}</figure>{% endfor %}</div>
+{% elif block.type == 'quote' %}<blockquote class="news-block-quote">{{ render_inline(block.content) }}{% if block.cite %}<cite>{{ block.cite }}</cite>{% endif %}</blockquote>
+{% elif block.type == 'highlight' %}<aside class="news-block-highlight">{% if block.title %}<strong>{{ block.title }}</strong>{% endif %}<p>{{ render_inline(block.content) }}</p></aside>
+{% elif block.type == 'key_data' %}<dl class="news-key-data">{% for item in block['items'] %}<div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>{% endfor %}</dl>
+{% elif block.type == 'table' %}<div class="news-table-scroll" role="region" aria-label="Article data table" tabindex="0"><table><thead><tr>{% for header in block.headers %}<th scope="col">{{ header }}</th>{% endfor %}</tr></thead><tbody>{% for row in block.rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+{% elif block.type == 'divider' %}<hr class="news-block-divider">
+{% elif block.type == 'youtube' %}<section class="news-embed-block"><div class="news-video-frame"><iframe src="{{ block.embed_url }}" title="YouTube video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><a href="{{ block.url }}" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></section>
+{% elif block.type == 'instagram' %}<section class="news-embed-block news-instagram-block"><iframe src="{{ block.url }}embed/captioned/" title="Instagram post" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowtransparency="true"></iframe><a href="{{ block.url }}" target="_blank" rel="noopener noreferrer">View on Instagram</a></section>
+{% endif %}
+{% endfor %}
+{% else %}
 {% for paragraph in article_body.split('\n') %}
 {% if paragraph.strip() %}
 <p>{{ paragraph }}</p>
 {% endif %}
 {% endfor %}
+{% endif %}
 </div>
 </article>
+
+<dialog class="news-lightbox" id="newsLightbox"><button type="button" class="news-lightbox-close" aria-label="Close image preview">&times;</button><img alt=""></dialog>
 
 <section class="news-replies-shell">
 <h2 class="section-heading">Replies ({{ news.reply_count }})</h2>
@@ -99,4 +132,16 @@
 <p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" style="color:#ff3b3b;">login</a> to reply.</p>
 {% endif %}
 </section>
+<script>
+(function(){
+var dialog=document.getElementById('newsLightbox');
+if(!dialog)return;
+var image=dialog.querySelector('img');
+document.addEventListener('click',function(event){
+var trigger=event.target.closest('.news-lightbox-trigger');
+if(trigger){image.src=trigger.dataset.imageUrl||'';image.alt=trigger.dataset.imageAlt||'Article image';dialog.showModal();return;}
+if(event.target.closest('.news-lightbox-close')||event.target===dialog){dialog.close();image.removeAttribute('src');}
+});
+})();
+</script>
 {% endblock %}

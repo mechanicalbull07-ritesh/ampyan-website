@@ -3,6 +3,7 @@ from urllib.parse import urlparse
 
 import requests
 from flask import current_app, url_for
+from services.news_content import normalize_content_blocks
 
 
 APP_API_BASE_URL = os.environ.get(
@@ -84,6 +85,9 @@ def sync_news_to_app(news):
         "website_url": url_for("news_detail", news_id=news.id, _external=True),
         "published_at": news.created_at.isoformat() + "Z" if news.created_at else "",
     }
+    content_blocks = normalize_content_blocks(getattr(news, "content_blocks", None))
+    if content_blocks:
+        payload["content_blocks"] = content_blocks
     return _request(
         "PUT",
         f"/news/articles/{app_article_id}",

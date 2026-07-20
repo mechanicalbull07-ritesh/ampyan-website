@@ -1,57 +1,19 @@
 {% extends "base.html" %}
 {% block content %}
-
-<div style="max-width:700px;margin:auto;padding:40px 20px;">
-
-<h2>Edit News</h2>
-
-{% with messages = get_flashed_messages(with_categories=true) %}
-{% if messages %}
-{% for category, message in messages %}
-<div class="auth-flash {{ category }}">{{ message }}</div>
-{% endfor %}
-{% endif %}
-{% endwith %}
-
+<section class="news-editor-shell" data-news-editor data-upload-url="{{ url_for('upload_news_body_image') }}">
+<p class="page-kicker">News Studio</p><h1>Edit News</h1>
+<p class="news-editor-help">Legacy content remains the fallback. Rich blocks are optional and can be reordered or removed without rewriting older articles automatically.</p>
+{% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="auth-flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
 <form method="POST" enctype="multipart/form-data">
-
-<input
-type="text"
-name="title"
-value="{{ news.title }}"
-class="auth-input"
-required
->
-
-<textarea
-name="content"
-class="auth-input"
-style="height:200px"
-required
->{{ news.content }}</textarea>
-
-<label>Category</label>
-<select name="category" class="auth-input" required>
-{% for key, label in news_categories %}
-<option value="{{ key }}" {% if news.category == key %}selected{% endif %}>{{ label }}</option>
-{% endfor %}
-</select>
-
-<label>Change Image</label>
-
-<input
-type="file"
-name="image"
-accept="image/png, image/jpeg, image/webp"
-class="auth-input"
->
-
-<button type="submit" class="auth-button">
-Update News
-</button>
-
-</form>
-
-</div>
-
+<label>Headline<input type="text" name="title" value="{{ news.title }}" class="auth-input" required></label>
+<label>Category<select name="category" class="auth-input" required>{% for key, label in news_categories %}<option value="{{ key }}" {% if news.category == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+<label>Change cover image<input type="file" name="image" accept="image/png,image/jpeg,image/webp" class="auth-input"></label>
+<label>Legacy article body<textarea name="content" class="auth-input" style="min-height:240px" required>{{ news.content }}</textarea></label>
+<input type="hidden" name="content_blocks" value="">
+<script type="application/json" id="initialNewsBlocks">{{ (news.content_blocks if news.content_blocks else {'version': 1, 'blocks': []})|tojson }}</script>
+<div class="news-editor-toolbar"><button type="button" data-convert-paste>Convert pasted text to blocks</button><select data-block-type class="auth-input" aria-label="Block type"><option value="paragraph">Paragraph</option><option value="heading">Heading</option><option value="subheading">Subheading</option><option value="bullet_list">Bullet list</option><option value="numbered_list">Numbered list</option><option value="image">Image</option><option value="gallery">Gallery</option><option value="table">Table</option><option value="quote">Quote</option><option value="highlight">Highlight</option><option value="key_data">Key-data cards</option><option value="youtube">YouTube</option><option value="instagram">Instagram</option><option value="divider">Divider</option></select><button type="button" data-add-block>Add block</button><button type="button" data-preview>Preview</button></div>
+<p class="news-editor-status" data-editor-status aria-live="polite"></p><div data-blocks></div><section class="news-editor-preview" data-editor-preview hidden></section>
+<button type="submit" class="auth-button">Update News</button>
+</form></section>
+<script src="{{ url_for('static', filename='js/news-editor.js') }}" defer></script>
 {% endblock %}

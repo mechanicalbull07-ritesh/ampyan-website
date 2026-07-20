@@ -65,6 +65,7 @@ print("Admin routes loaded")
 from services.email_service import send_email
 print("Email service loaded")
 from services.app_api_sync import delete_news_from_app, sync_news_to_app
+from services.news_content import blocks_plain_text, normalize_content_blocks
 
 # ================= OTHER IMPORTS =================
 from flask import session
@@ -624,6 +625,10 @@ def news_read_time(text):
     words = len(re.findall(r"\w+", text or ""))
     return max(1, round(words / 220.0))
 
+
+def news_render_blocks(news):
+    return normalize_content_blocks(getattr(news, "content_blocks", None))
+
 def social_preview_text(text, fallback="AMPYAN automotive update"):
     cleaned = re.sub(r"\s+", " ", (text or "")).strip()
     if not cleaned:
@@ -731,6 +736,7 @@ def inject_image_helpers():
         news_card_image_url=news_card_image_url,
         news_summary=news_summary,
         news_read_time=news_read_time,
+        news_render_blocks=news_render_blocks,
         profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename),
         news_category_label=news_category_label,
         effective_news_category=effective_news_category,
@@ -2288,6 +2294,7 @@ def news_detail(news_id):
         meta_url=url_for("news_detail", news_id=news.id, _external=True),
         meta_image=meta_image,
         meta_type="article",
+        rich_content=news_render_blocks(news),
     )
 
 
@@ -2421,13 +2428,34 @@ def create_news():
         title = (request.form.get("title") or "").strip()
         content = (request.form.get("content") or "").strip()
         selected_category = resolve_news_category(request.form.get("category"), context="create")
-
+        raw_content_blocks = (request.form.get("content_blocks") or "").strip()
+        content_blocks = None
+        if raw_content_blocks:
+            try:
+                content_blocks = normalize_content_blocks(json.loads(raw_content_blocks))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                content_blocks = None
+            if content_blocks is None:
+                flash("Rich article blocks were invalid. Review the article and try again.", "warning")
+                return render_template(
+                    "create_news.html",
+                    news_categories=NEWS_CATEGORIES,
+                    selected_category=selected_category,
+                    form_title=title,
+                    form_content=content,
+                    form_content_blocks=raw_content_blocks,
+                ), 400
+        if not content and content_blocks:
+            content = blocks_plain_text(content_blocks)
         if not title or not content:
             flash("Title and story body are required.", "warning")
             return render_template(
                 "create_news.html",
                 news_categories=NEWS_CATEGORIES,
                 selected_category=selected_category,
+                form_title=title,
+                form_content=content,
+                form_content_blocks=raw_content_blocks,
             ), 400
 
         if image_file and image_file.filename != "":
@@ -2442,6 +2470,7 @@ def create_news():
         news = News(
             title=title,
             content=content,
+            content_blocks=content_blocks,
             category=selected_category,
             image=filename
         )
@@ -2486,6 +2515,18 @@ def edit_news(news_id):
         )
         title = (request.form.get("title") or "").strip()
         content = (request.form.get("content") or "").strip()
+        raw_content_blocks = (request.form.get("content_blocks") or "").strip()
+        content_blocks = None
+        if raw_content_blocks:
+            try:
+                content_blocks = normalize_content_blocks(json.loads(raw_content_blocks))
+            except (TypeError, ValueError, json.JSONDecodeError):
+                content_blocks = None
+            if content_blocks is None:
+                flash("Rich article blocks were invalid. The existing article was not changed.", "warning")
+                return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES), 400
+        if not content and content_blocks:
+            content = blocks_plain_text(content_blocks)
         if not title or not content:
             flash("Title and story body are required.", "warning")
             news.category = selected_category
@@ -2493,6 +2534,7 @@ def edit_news(news_id):
 
         news.title = title
         news.content = content
+        news.content_blocks = content_blocks
         news.category = selected_category
 
         image_file = request.files.get("image")
@@ -2524,6 +2566,25 @@ def edit_news(news_id):
 
     news.category = normalize_news_category(getattr(news, "category", None))
     return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES)
+
+
+@app.route("/admin/news/image-upload", methods=["POST"])
+@login_required
+def upload_news_body_image():
+    if current_user.role != "admin":
+        return jsonify({"success": False, "message": "Access denied."}), 403
+    if not cloudinary_configured():
+        return jsonify({
+            "success": False,
+            "message": "Durable article-image storage is not configured.",
+        }), 503
+    image_file = request.files.get("image")
+    if not image_file or not image_file.filename:
+        return jsonify({"success": False, "message": "Choose an image to upload."}), 400
+    result = store_news_image(image_file, "article")
+    if not result.get("ok") or not is_external_image_url(result.get("filename")):
+        return jsonify({"success": False, "message": "Image upload failed safely."}), 400
+    return jsonify({"success": True, "url": result["filename"]})
 # ================= DELETE NEWS =================
 
 @app.route("/admin/news/delete/<int:news_id>")

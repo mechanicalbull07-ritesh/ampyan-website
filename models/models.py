@@ -208,6 +208,7 @@ class News(db.Model):
 
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
+    content_blocks = db.Column(db.JSON, nullable=True)
 
     category = db.Column(db.String(40), default="auto-news")
 
