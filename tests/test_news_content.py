@@ -1,10 +1,15 @@
 import json
 from html.parser import HTMLParser
+import inspect
 import unittest
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from services.news_content import blocks_plain_text, normalize_content_blocks
+from services.news_content import (
+    blocks_plain_text,
+    content_blocks_limit_error,
+    normalize_content_blocks,
+)
 
 
 class _InitialBlocksParser(HTMLParser):
@@ -31,6 +36,28 @@ class _InitialBlocksParser(HTMLParser):
 
 
 class NewsContentValidationTest(unittest.TestCase):
+    def test_long_unicode_content_is_not_silently_normalized_past_limits(self):
+        hindi = "सुरक्षित खबर 🚗 & special <characters> "
+        valid = {"blocks": [
+            {"type": "paragraph", "content": [{"text": hindi * 100}]},
+            {"type": "heading", "text": "H" * 500},
+        ]}
+        self.assertIsNone(content_blocks_limit_error(valid))
+        normalized = normalize_content_blocks(valid)
+        self.assertEqual(normalized["blocks"][0]["content"][0]["text"], hindi * 100)
+        self.assertEqual(len(normalized["blocks"][1]["text"]), 500)
+
+        too_long = {"blocks": [{
+            "type": "paragraph", "content": [{"text": "x" * 5_001}],
+        }]}
+        self.assertIn("5,000", content_blocks_limit_error(too_long))
+        self.assertIn(
+            "160 blocks",
+            content_blocks_limit_error({"blocks": [
+                {"type": "divider"} for _ in range(161)
+            ]}),
+        )
+
     def test_media_blocks_accept_only_supported_public_urls(self):
         document = normalize_content_blocks({"blocks": [
             {"type": "youtube", "url": "https://youtu.be/dQw4w9WgXcQ"},
@@ -149,6 +176,31 @@ class WebsiteNewsCompatibilityTest(unittest.TestCase):
             self.assertIn('data-add-media-block="instagram"', html)
             self.assertIn("Add YouTube video", html)
             self.assertIn("Add Instagram post/reel", html)
+            self.assertIn('maxlength="200"', html)
+
+    def test_news_story_is_exact_vertical_size_and_has_safe_share_metadata(self):
+        from datetime import datetime
+        from app import build_news_story_image
+        from flask import render_template
+
+        news = SimpleNamespace(
+            id=53,
+            title="लंबी खबर 🚗 " + "Insurance & safety " * 25,
+            content="Legacy article body must not be placed on the story card.",
+            category="tips-and-tricks",
+            image=None,
+            created_at=datetime(2026, 7, 20),
+            reply_count=0,
+            reply_threads=[],
+            content_blocks=None,
+        )
+        with self.app.test_request_context("/news/53", base_url="https://ampyan.com"):
+            image = build_news_story_image(news, cover_image=None)
+            html = render_template("news_detail.html", news=news, rich_content=None)
+        self.assertEqual(image.size, (1080, 1920))
+        self.assertIn('data-story-url="/story/news/53"', html)
+        self.assertIn('data-share-url="https://ampyan.com/news/53"', html)
+        self.assertIn("Share as Story", html)
 
     def test_api_sync_keeps_legacy_body_and_adds_optional_blocks(self):
         from services.app_api_sync import sync_news_to_app
@@ -163,6 +215,45 @@ class WebsiteNewsCompatibilityTest(unittest.TestCase):
         payload = request_mock.call_args.kwargs["json"]
         self.assertEqual(payload["body"], "Legacy body")
         self.assertIn("content_blocks", payload)
+
+    def test_news_create_route_triggers_api_sync_after_save(self):
+        from app import create_news
+
+        source = inspect.getsource(create_news)
+        self.assertIn("db.session.commit()", source)
+        self.assertIn("sync_news_to_app(news)", source)
+        self.assertLess(
+            source.index("db.session.commit()"),
+            source.index("sync_news_to_app(news)"),
+        )
+
+    def test_news_sync_retry_uses_the_same_stable_api_id(self):
+        from services.app_api_sync import sync_news_to_app
+
+        news = SimpleNamespace(
+            id=53, title="Stable retry", content="Legacy body",
+            category="tips-and-tricks", image=None, created_at=None,
+            content_blocks=None,
+        )
+        with self.app.test_request_context("/"):
+            with patch("services.app_api_sync._request", return_value=True) as request_mock:
+                self.assertTrue(sync_news_to_app(news))
+                self.assertTrue(sync_news_to_app(news))
+        self.assertEqual(request_mock.call_count, 2)
+        self.assertEqual(
+            [call.args[:2] for call in request_mock.call_args_list],
+            [("PUT", "/news/articles/100053"), ("PUT", "/news/articles/100053")],
+        )
+
+    def test_news_sync_failure_is_logged_without_raising(self):
+        import requests
+        from services.app_api_sync import _request
+
+        with self.app.test_request_context("/"):
+            with patch("services.app_api_sync.requests.request", side_effect=requests.Timeout("timeout")):
+                with self.assertLogs("app", level="WARNING") as captured:
+                    self.assertFalse(_request("PUT", "/news/articles/100053", json={}))
+        self.assertIn("App API sync skipped path=/news/articles/100053", "\n".join(captured.output))
 
 
 if __name__ == "__main__":

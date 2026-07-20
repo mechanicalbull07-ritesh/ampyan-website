@@ -216,6 +216,76 @@ def normalize_content_blocks(value):
     return {"version": 1, "blocks": blocks} if blocks else None
 
 
+def content_blocks_limit_error(value):
+    """Return a user-facing error before normalization could discard content."""
+    raw_blocks = value if isinstance(value, list) else value.get("blocks") if isinstance(value, dict) else None
+    if not isinstance(raw_blocks, list):
+        return "Rich content must contain a blocks list."
+    if len(raw_blocks) > MAX_BLOCKS:
+        return f"Rich articles support up to {MAX_BLOCKS} blocks; remove or combine {len(raw_blocks) - MAX_BLOCKS} block(s)."
+
+    def inline_error(raw_value, location):
+        runs = raw_value if isinstance(raw_value, list) else [{"text": raw_value}]
+        if len(runs) > MAX_INLINE_RUNS:
+            return f"{location} has more than {MAX_INLINE_RUNS} formatted text runs."
+        for run in runs:
+            if isinstance(run, dict) and len(str(run.get("text") or "")) > 5_000:
+                return f"{location} contains a formatted text segment longer than 5,000 characters. Split it into paragraphs."
+        return None
+
+    for index, raw in enumerate(raw_blocks, start=1):
+        if not isinstance(raw, dict):
+            continue
+        block_type = str(raw.get("type") or "").strip().lower()
+        location = f"Block {index}"
+        if block_type in {"paragraph", "quote", "highlight"}:
+            error = inline_error(raw.get("content", raw.get("text", "")), location)
+            if error:
+                return error
+            label = raw.get("title") or raw.get("cite") or ""
+            if block_type in {"quote", "highlight"} and len(str(label)) > 300:
+                return f"{location} label/citation must be 300 characters or fewer."
+        elif block_type == "heading" and len(str(raw.get("text") or "")) > 500:
+            return f"{location} heading must be 500 characters or fewer."
+        elif block_type == "subheading" and len(str(raw.get("text") or "")) > 1_000:
+            return f"{location} subheading must be 1,000 characters or fewer."
+        elif block_type in {"bullet_list", "numbered_list"}:
+            items = raw.get("items") if isinstance(raw.get("items"), list) else []
+            if len(items) > MAX_LIST_ITEMS:
+                return f"{location} supports up to {MAX_LIST_ITEMS} list items."
+            for item_index, item in enumerate(items, start=1):
+                error = inline_error(item, f"{location}, list item {item_index}")
+                if error:
+                    return error
+        elif block_type in {"image", "gallery"}:
+            images = [raw] if block_type == "image" else raw.get("images") if isinstance(raw.get("images"), list) else []
+            if block_type == "gallery" and len(images) > MAX_GALLERY_IMAGES:
+                return f"{location} supports up to {MAX_GALLERY_IMAGES} gallery images."
+            for image in images:
+                if not isinstance(image, dict):
+                    continue
+                if len(str(image.get("caption") or "")) > 1_000:
+                    return f"{location} image caption must be 1,000 characters or fewer."
+                if len(str(image.get("alt_text") or "")) > 500:
+                    return f"{location} image alt text must be 500 characters or fewer."
+                if len(str(image.get("url") or "")) > MAX_URL:
+                    return f"{location} image URL must be {MAX_URL:,} characters or fewer."
+        elif block_type == "table":
+            headers = raw.get("headers") if isinstance(raw.get("headers"), list) else []
+            rows = raw.get("rows") if isinstance(raw.get("rows"), list) else []
+            if len(headers) > MAX_TABLE_COLUMNS:
+                return f"{location} supports up to {MAX_TABLE_COLUMNS} table columns."
+            if len(rows) > MAX_TABLE_ROWS:
+                return f"{location} supports up to {MAX_TABLE_ROWS} table rows."
+            if any(len(str(cell or "")) > 500 for cell in headers):
+                return f"{location} table headers must be 500 characters or fewer per cell."
+            if any(len(str(cell or "")) > 2_000 for row in rows if isinstance(row, list) for cell in row):
+                return f"{location} table cells must be 2,000 characters or fewer."
+        elif block_type in {"youtube", "instagram"} and len(str(raw.get("url") or "")) > MAX_URL:
+            return f"{location} media URL must be {MAX_URL:,} characters or fewer."
+    return None
+
+
 def blocks_plain_text(value):
     document = normalize_content_blocks(value)
     if not document:

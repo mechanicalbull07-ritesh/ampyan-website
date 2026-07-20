@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import hashlib
+import requests
 
 logging.basicConfig(
     level=os.environ.get("LOG_LEVEL", "INFO"),
@@ -65,7 +66,7 @@ print("Admin routes loaded")
 from services.email_service import send_email
 print("Email service loaded")
 from services.app_api_sync import delete_news_from_app, sync_news_to_app
-from services.news_content import blocks_plain_text, normalize_content_blocks
+from services.news_content import blocks_plain_text, content_blocks_limit_error, normalize_content_blocks
 
 # ================= OTHER IMPORTS =================
 from flask import session
@@ -724,6 +725,88 @@ def story_response(title, subtitle, body, footer="Read full on AMPYAN", source_u
     image.save(output, format="PNG", optimize=True)
     output.seek(0)
     return send_file(output, mimetype="image/png", as_attachment=False, download_name="ampyan-story.png")
+
+def _validated_news_story_cover(news):
+    value = (getattr(news, "image", None) or "").strip()
+    try:
+        if is_external_image_url(value):
+            parsed = urlparse(value)
+            if parsed.scheme != "https" or (parsed.hostname or "").lower() not in {
+                "res.cloudinary.com", "ampyan.com", "www.ampyan.com",
+            }:
+                return None
+            response = requests.get(value, timeout=5, stream=True)
+            response.raise_for_status()
+            payload = bytearray()
+            for chunk in response.iter_content(64 * 1024):
+                payload.extend(chunk)
+                if len(payload) > MAX_NEWS_IMAGE_UPLOAD_BYTES:
+                    return None
+            source = BytesIO(payload)
+        else:
+            filename = os.path.basename(value) if value else DEFAULT_NEWS_IMAGE_FILENAME
+            path = os.path.join(app.static_folder, "news_images", filename)
+            if not os.path.isfile(path):
+                return None
+            source = path
+        with Image.open(source) as image:
+            if image.width * image.height > MAX_NEWS_IMAGE_PIXELS:
+                return None
+            return image.convert("RGB")
+    except (OSError, requests.RequestException, ValueError):
+        return None
+
+def build_news_story_image(news, cover_image=None):
+    width, height = 1080, 1920
+    canvas = Image.new("RGB", (width, height), (7, 10, 18))
+    draw = ImageDraw.Draw(canvas)
+    cover_box = (60, 60, 1020, 900)
+    cover = cover_image.convert("RGB") if cover_image is not None else None
+    if cover is not None:
+        fitted = ImageOps.fit(cover, (960, 840), method=Image.Resampling.LANCZOS)
+        canvas.paste(fitted, cover_box[:2])
+    else:
+        for y in range(cover_box[1], cover_box[3]):
+            blend = (y - cover_box[1]) / (cover_box[3] - cover_box[1])
+            color = (int(25 + 40 * blend), int(38 + 8 * blend), int(58 + 20 * blend))
+            draw.line((cover_box[0], y, cover_box[2], y), fill=color)
+        draw.text((390, 390), "AMPYAN", font=story_font(62, bold=True), fill=(255, 255, 255))
+    overlay = Image.new("RGBA", (960, 840), (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    for y in range(840):
+        alpha = int(22 + 190 * (y / 840) ** 2)
+        overlay_draw.line((0, y, 960, y), fill=(0, 0, 0, alpha))
+    canvas.paste(overlay, cover_box[:2], overlay)
+    draw.rounded_rectangle(cover_box, radius=34, outline=(78, 85, 102), width=3)
+
+    draw.text((100, 104), "AMPYAN", font=story_font(48, bold=True), fill=(255, 255, 255))
+    draw.text((100, 164), "AUTOMOTIVE NEWS", font=story_font(25, bold=True), fill=(255, 178, 116))
+
+    category = news_category_label(effective_news_category(news))
+    published = news.created_at.strftime("%d %B %Y") if news.created_at else "AMPYAN News"
+    draw.rounded_rectangle((88, 928, 992, 1004), radius=28, fill=(28, 34, 48))
+    draw.text((120, 949), f"{category}  •  {published}", font=story_font(27, bold=True), fill=(255, 208, 180))
+
+    draw_wrapped_text(
+        draw, news.title or "AMPYAN Automotive Update", (88, 1052),
+        story_font(70, bold=True), (255, 255, 255), 904, 5, line_spacing=15,
+    )
+    canonical_url = f"https://ampyan.com/news/{news.id}"
+    draw.rounded_rectangle((88, 1580, 992, 1810), radius=34, fill=(27, 32, 46), outline=(255, 89, 44), width=3)
+    draw.text((126, 1624), "Read full news", font=story_font(43, bold=True), fill=(255, 255, 255))
+    draw_wrapped_text(draw, canonical_url, (126, 1694), story_font(28), (190, 203, 225), 820, 2, line_spacing=8)
+    draw.text((88, 1844), "ampyan.com", font=story_font(28, bold=True), fill=(255, 178, 116))
+    return canvas
+
+def news_story_response(news):
+    image = build_news_story_image(news, _validated_news_story_cover(news))
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    output.seek(0)
+    return send_file(
+        output, mimetype="image/png", as_attachment=False,
+        download_name=f"ampyan-news-{news.id}-story.png",
+    )
 
 @app.context_processor
 def inject_image_helpers():
@@ -2301,15 +2384,7 @@ def news_detail(news_id):
 @app.route("/story/news/<int:news_id>")
 def news_story(news_id):
     news = News.query.get_or_404(news_id)
-    return story_response(
-        title=news.title or "AMPYAN Automotive Update",
-        subtitle=news.created_at.strftime("%d %B %Y") if news.created_at else "AMPYAN News",
-        body=news.content or "Read the latest AMPYAN automotive update.",
-        footer="Read full news on AMPYAN",
-        source_url=url_for("news_detail", news_id=news.id, _external=True),
-        accent=(255, 89, 44),
-        kind="AMPYAN News",
-    )
+    return news_story_response(news)
 
 
 @app.route("/story/post/<int:post_id>")
@@ -2429,10 +2504,29 @@ def create_news():
         content = (request.form.get("content") or "").strip()
         selected_category = resolve_news_category(request.form.get("category"), context="create")
         raw_content_blocks = (request.form.get("content_blocks") or "").strip()
+        if len(title) > 200:
+            flash("Headline must be 200 characters or fewer.", "warning")
+            return render_template(
+                "create_news.html", news_categories=NEWS_CATEGORIES,
+                selected_category=selected_category, form_title=title,
+                form_content=content, form_content_blocks=raw_content_blocks,
+            ), 400
         content_blocks = None
         if raw_content_blocks:
             try:
-                content_blocks = normalize_content_blocks(json.loads(raw_content_blocks))
+                parsed_content_blocks = json.loads(raw_content_blocks)
+                limit_error = content_blocks_limit_error(parsed_content_blocks)
+                if limit_error:
+                    flash(limit_error, "warning")
+                    return render_template(
+                        "create_news.html",
+                        news_categories=NEWS_CATEGORIES,
+                        selected_category=selected_category,
+                        form_title=title,
+                        form_content=content,
+                        form_content_blocks=raw_content_blocks,
+                    ), 400
+                content_blocks = normalize_content_blocks(parsed_content_blocks)
             except (TypeError, ValueError, json.JSONDecodeError):
                 content_blocks = None
             if content_blocks is None:
@@ -2493,7 +2587,6 @@ def create_news():
     )
 
 
-import requests
 # ================= EDIT NEWS =================
 
 @app.route("/admin/news/edit/<int:news_id>", methods=["GET","POST"])
@@ -2516,10 +2609,18 @@ def edit_news(news_id):
         title = (request.form.get("title") or "").strip()
         content = (request.form.get("content") or "").strip()
         raw_content_blocks = (request.form.get("content_blocks") or "").strip()
+        if len(title) > 200:
+            flash("Headline must be 200 characters or fewer. The existing article was not changed.", "warning")
+            return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES), 400
         content_blocks = None
         if raw_content_blocks:
             try:
-                content_blocks = normalize_content_blocks(json.loads(raw_content_blocks))
+                parsed_content_blocks = json.loads(raw_content_blocks)
+                limit_error = content_blocks_limit_error(parsed_content_blocks)
+                if limit_error:
+                    flash(limit_error, "warning")
+                    return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES), 400
+                content_blocks = normalize_content_blocks(parsed_content_blocks)
             except (TypeError, ValueError, json.JSONDecodeError):
                 content_blocks = None
             if content_blocks is None:

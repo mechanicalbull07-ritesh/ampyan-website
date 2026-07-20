@@ -491,6 +491,44 @@ sendAI();
 });
 
 document.addEventListener("click",async function(event){
+const storyButton=event.target.closest(".story-share-btn");
+if(storyButton){
+const storyUrl=storyButton.dataset.storyUrl;
+const shareUrl=storyButton.dataset.shareUrl || window.location.href;
+const shareTitle=storyButton.dataset.shareTitle || document.title;
+const shareText=shareTitle+"\n"+shareUrl;
+const label=storyButton.querySelector("span");
+const originalText=label ? label.textContent : "Share as Story";
+try{
+if(label) label.textContent="Preparing…";
+const response=await fetch(storyUrl,{credentials:"same-origin"});
+if(!response.ok) throw new Error("Story image unavailable");
+const blob=await response.blob();
+const file=new File([blob],storyButton.dataset.storyFilename || "ampyan-news-story.png",{type:"image/png"});
+if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+await navigator.share({title:shareTitle,text:shareText,url:shareUrl,files:[file]});
+}else{
+const download=document.createElement("a");
+const objectUrl=URL.createObjectURL(blob);
+download.href=objectUrl;
+download.download=file.name;
+document.body.appendChild(download);
+download.click();
+download.remove();
+URL.revokeObjectURL(objectUrl);
+try{await navigator.clipboard.writeText(shareText);}catch(copyError){}
+if(label) label.textContent="Saved + link copied";
+setTimeout(function(){if(label) label.textContent=originalText;},1800);
+return;
+}
+}catch(error){
+window.open(storyUrl,"_blank","noopener");
+try{await navigator.clipboard.writeText(shareText);}catch(copyError){}
+}finally{
+if(label && label.textContent==="Preparing…") label.textContent=originalText;
+}
+return;
+}
 const copyButton=event.target.closest(".copy-share-btn");
 if(copyButton){
 const copyUrl=copyButton.dataset.shareUrl || window.location.href;

@@ -5,7 +5,7 @@
 <p class="news-editor-help">Write or paste the legacy story body, convert it into editable blocks, then add formatting, data, images and validated media links. The legacy body remains available to older apps.</p>
 {% with messages = get_flashed_messages(with_categories=true) %}{% for category, message in messages %}<div class="auth-flash {{ category }}">{{ message }}</div>{% endfor %}{% endwith %}
 <form method="POST" enctype="multipart/form-data">
-<label>Headline<input type="text" name="title" value="{{ form_title|default('') }}" class="auth-input" required></label>
+<label>Headline<input type="text" name="title" value="{{ form_title|default('') }}" class="auth-input" maxlength="200" required><small>Maximum 200 characters.</small></label>
 <label>Category<select name="category" class="auth-input" required>{% for key, label in news_categories %}<option value="{{ key }}" {% if selected_category == key %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
 <label>Cover image<input type="file" name="image" accept="image/png,image/jpeg,image/webp" class="auth-input"></label>
 <label>Legacy article body<textarea name="content" class="auth-input" style="min-height:240px" placeholder="Paste or write the complete article. Blank lines are preserved.">{{ form_content|default('') }}</textarea></label>
