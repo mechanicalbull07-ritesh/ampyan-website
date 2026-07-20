@@ -31,6 +31,20 @@ class _InitialBlocksParser(HTMLParser):
 
 
 class NewsContentValidationTest(unittest.TestCase):
+    def test_media_blocks_accept_only_supported_public_urls(self):
+        document = normalize_content_blocks({"blocks": [
+            {"type": "youtube", "url": "https://youtu.be/dQw4w9WgXcQ"},
+            {"type": "instagram", "url": "https://www.instagram.com/p/ABC_123/"},
+            {"type": "youtube", "url": "javascript:alert(1)"},
+            {"type": "youtube", "url": "data:text/html,<script>alert(1)</script>"},
+            {"type": "youtube", "url": '<iframe src="https://youtube.com/embed/dQw4w9WgXcQ">'},
+            {"type": "instagram", "url": "https://evil.example/reel/ABC_123/"},
+            {"type": "instagram", "url": "<script>alert(1)</script>"},
+        ]})
+        self.assertEqual([item["type"] for item in document["blocks"]], ["youtube", "instagram"])
+        self.assertEqual(document["blocks"][0]["video_id"], "dQw4w9WgXcQ")
+        self.assertEqual(document["blocks"][1]["url"], "https://www.instagram.com/p/ABC_123/")
+
     def test_partial_failure_keeps_valid_blocks(self):
         document = normalize_content_blocks({"blocks": [
             {"type": "paragraph", "content": [{"text": "Safe", "bold": True}]},
@@ -120,6 +134,21 @@ class WebsiteNewsCompatibilityTest(unittest.TestCase):
         self.assertEqual(parser.hidden_value, "")
         self.assertEqual(json.loads("".join(parser.payload)), blocks)
         self.assertNotIn('name="content_blocks" value="{', html)
+
+    def test_create_and_edit_templates_expose_media_shortcuts(self):
+        news = SimpleNamespace(
+            id=4, title="Edit safely", content="Legacy remains", category="auto-news",
+            content_blocks=None,
+        )
+        with self.app.test_request_context("/admin/news/create"):
+            from flask import render_template
+            create_html = render_template("create_news.html")
+            edit_html = render_template("edit_news.html", news=news)
+        for html in (create_html, edit_html):
+            self.assertIn('data-add-media-block="youtube"', html)
+            self.assertIn('data-add-media-block="instagram"', html)
+            self.assertIn("Add YouTube video", html)
+            self.assertIn("Add Instagram post/reel", html)
 
     def test_api_sync_keeps_legacy_body_and_adds_optional_blocks(self):
         from services.app_api_sync import sync_news_to_app

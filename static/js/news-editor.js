@@ -48,7 +48,7 @@ function readInline(element){
   return runs.map(function(run){run.text=run.text||"";Object.keys(run).forEach(function(key){if(run[key]===undefined)delete run[key];});return run;}).filter(function(run){return run.text.length;});
 }
 function editable(label,value,name){return '<label>'+label+'<div class="news-contenteditable" contenteditable="true" data-field="'+name+'" data-placeholder="Write here…">'+inlineHtml(value)+'</div></label>';}
-function field(label,value,name,type){if(type==="textarea")return '<label>'+label+'<textarea data-field="'+name+'" rows="5">'+escapeHtml(value)+'</textarea></label>';return '<label>'+label+'<input data-field="'+name+'" type="text" value="'+escapeHtml(value)+'"></label>';}
+function field(label,value,name,type,placeholder){var hint=placeholder?' placeholder="'+escapeHtml(placeholder)+'"':'';if(type==="textarea")return '<label>'+label+'<textarea data-field="'+name+'" rows="5"'+hint+'>'+escapeHtml(value)+'</textarea></label>';return '<label>'+label+'<input data-field="'+name+'" type="text" value="'+escapeHtml(value)+'"'+hint+'></label>';}
 function lines(items){return (items||[]).map(function(item){return Array.isArray(item)?item.map(function(run){return run.text||"";}).join(""):String(item||"");}).join("\n");}
 function editorBody(block){
   if(block.type==="paragraph")return '<div class="news-editor-toolbar"><button type="button" data-format="bold"><b>Bold</b></button><button type="button" data-format="italic"><i>Italic</i></button><button type="button" data-format="link">Link</button></div>'+editable("Paragraph",block.content,"content");
@@ -61,8 +61,8 @@ function editorBody(block){
   if(block.type==="highlight")return field("Label",block.title,"title")+editable("Highlighted text",block.content,"content");
   if(block.type==="key_data")return field("One card per line: Label | Value",(block.items||[]).map(function(item){return item.label+" | "+item.value;}).join("\n"),"items","textarea");
   if(block.type==="table")return field("Header cells separated by |",(block.headers||[]).join(" | "),"headers")+field("Rows: cells separated by |, one row per line",(block.rows||[]).map(function(row){return row.join(" | ");}).join("\n"),"rows","textarea");
-  if(block.type==="youtube")return field("YouTube watch, youtu.be or Shorts URL",block.url,"url");
-  if(block.type==="instagram")return field("Instagram post or reel URL",block.url,"url");
+  if(block.type==="youtube")return field("YouTube video URL",block.url,"url",null,"Example: https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+  if(block.type==="instagram")return field("Instagram post or reel URL",block.url,"url",null,"Example: https://www.instagram.com/reel/ABC_123/");
   return '<p>This divider adds visual separation.</p>';
 }
 function render(){
@@ -132,6 +132,7 @@ function previewArticle(){capture();preview.innerHTML="";var article=document.cr
 });preview.appendChild(article);preview.hidden=false;preview.scrollIntoView({behavior:"smooth",block:"start"});
 }
 root.addEventListener("click",function(event){
+  var mediaAdd=event.target.closest("[data-add-media-block]");if(mediaAdd){capture();blocks.push(blank(mediaAdd.dataset.addMediaBlock));render();setStatus(mediaAdd.dataset.addMediaBlock==="youtube"?"YouTube video block added. Paste a public video URL.":"Instagram block added. Paste a public post or reel URL.");return;}
   var add=event.target.closest("[data-add-block]");if(add){capture();blocks.push(blank(root.querySelector("[data-block-type]").value));render();return;}
   if(event.target.closest("[data-convert-paste]")){convertPaste();return;}
   if(event.target.closest("[data-preview]")){previewArticle();return;}
