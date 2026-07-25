@@ -1085,8 +1085,16 @@ grid-template-columns:repeat(3,minmax(0,1fr));
 
 @media(max-width:900px){
 .ampyan-home{
-grid-template-columns:1fr;
+grid-template-columns:minmax(0,1fr);
 gap:14px;
+width:100%;
+max-width:100%;
+}
+
+.ampyan-left-sidebar,
+.ampyan-home-main,
+.ampyan-right-sidebar{
+min-width:0;
 }
 
 .ampyan-left-sidebar{
@@ -1104,6 +1112,14 @@ grid-template-columns:1fr;
 .ampyan-news-grid,
 .ampyan-right-sidebar{
 grid-template-columns:1fr 1fr;
+}
+}
+
+@media(min-width:721px) and (max-width:1100px){
+.nav-center{
+max-width:100%;
+min-width:0;
+flex-wrap:wrap;
 }
 }
 
@@ -1340,3 +1356,437 @@ font-size:16px;
 }
 }
 /* AMPYAN HOME PAGE REDESIGN END */
+
+/* AMPYAN HOME FEATURE DISCOVERY */
+.nav-priority-links{
+display:flex;
+align-items:center;
+gap:4px;
+}
+
+.nav-priority-links a{
+padding:8px 9px;
+border-radius:8px;
+color:var(--text-soft);
+font-size:13px;
+font-weight:700;
+white-space:nowrap;
+transition:background .2s ease,color .2s ease;
+}
+
+.nav-priority-links a:hover,
+.nav-priority-links a:focus-visible{
+background:rgba(255,123,41,.14);
+color:#fff;
+}
+
+.ampyan-discovery{
+padding:18px;
+border:1px solid rgba(255,123,41,.22);
+border-radius:18px;
+background:
+radial-gradient(circle at 10% 0,rgba(255,123,41,.13),transparent 34%),
+linear-gradient(180deg,rgba(15,26,43,.9),rgba(8,17,30,.86));
+box-shadow:0 18px 44px rgba(0,0,0,.24),inset 0 1px 0 rgba(255,255,255,.06);
+backdrop-filter:blur(18px);
+}
+
+.ampyan-discovery-head{
+margin-bottom:15px;
+}
+
+.ampyan-discovery-head h1{
+margin:0;
+color:#fff;
+font-size:clamp(23px,2.2vw,32px);
+line-height:1.12;
+letter-spacing:-.025em;
+}
+
+.ampyan-discovery-head > p:last-child{
+margin:7px 0 0;
+color:var(--text-secondary);
+font-size:14px;
+}
+
+.ampyan-discovery-grid{
+display:grid;
+grid-template-columns:repeat(4,minmax(0,1fr));
+gap:10px;
+}
+
+.ampyan-discovery-card{
+position:relative;
+display:flex;
+flex-direction:column;
+min-width:0;
+min-height:246px;
+padding:15px;
+overflow:hidden;
+border:1px solid rgba(255,123,41,.18);
+border-radius:15px;
+background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,90,54,.035));
+box-shadow:0 12px 28px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.06);
+transition:transform .24s ease,border-color .24s ease,box-shadow .24s ease;
+}
+
+.ampyan-discovery-card::after{
+content:"";
+position:absolute;
+width:100px;
+height:100px;
+right:-45px;
+bottom:-55px;
+border-radius:50%;
+background:rgba(255,123,41,.15);
+filter:blur(18px);
+pointer-events:none;
+}
+
+.ampyan-discovery-card:hover{
+transform:translateY(-5px);
+border-color:rgba(255,145,61,.52);
+box-shadow:0 20px 38px rgba(0,0,0,.3),0 0 24px rgba(255,90,54,.13);
+}
+
+.ampyan-discovery-card:focus-visible,
+.ampyan-feature-card:focus-visible,
+.ampyan-play-button:focus-visible{
+outline:3px solid #ffc857;
+outline-offset:3px;
+}
+
+.ampyan-card-badge{
+align-self:flex-end;
+padding:4px 7px;
+border:1px solid rgba(255,174,93,.26);
+border-radius:999px;
+background:rgba(255,123,41,.13);
+color:#ffd7af;
+font-size:8px;
+font-weight:900;
+letter-spacing:.055em;
+line-height:1;
+text-transform:uppercase;
+white-space:nowrap;
+}
+
+.ampyan-discovery-card > i{
+display:grid;
+place-items:center;
+width:46px;
+height:46px;
+margin:11px 0 13px;
+border:1px solid rgba(255,157,73,.3);
+border-radius:13px;
+background:linear-gradient(145deg,rgba(255,90,54,.24),rgba(255,200,87,.1));
+color:#ffad5c;
+font-size:21px;
+box-shadow:0 8px 22px rgba(255,90,54,.12);
+}
+
+.ampyan-discovery-card h2{
+margin:0;
+color:#fff;
+font-size:16px;
+line-height:1.2;
+letter-spacing:-.01em;
+}
+
+.ampyan-discovery-card p{
+margin:8px 0 14px;
+color:var(--text-secondary);
+font-size:12px;
+line-height:1.45;
+}
+
+.ampyan-card-cta{
+display:flex;
+align-items:center;
+justify-content:space-between;
+gap:8px;
+min-height:34px;
+margin-top:auto;
+padding:8px 10px;
+border-radius:9px;
+background:linear-gradient(135deg,#ff512f,#ff8d2e);
+color:#fff;
+font-size:11px;
+font-weight:850;
+box-shadow:0 8px 18px rgba(255,90,54,.22);
+}
+
+.ampyan-card-cta i{
+font-size:10px;
+transition:transform .2s ease;
+}
+
+.ampyan-discovery-card:hover .ampyan-card-cta i{
+transform:translateX(3px);
+}
+
+.ampyan-feature-panel{
+padding:1px 1px 5px;
+gap:8px;
+}
+
+.ampyan-feature-card{
+min-width:max-content;
+min-height:40px;
+padding:8px 11px;
+border-color:rgba(255,123,41,.13);
+border-radius:999px;
+}
+
+.ampyan-feature-card i{
+width:25px;
+height:25px;
+border-radius:50%;
+font-size:11px;
+}
+
+.ampyan-feature-card strong{
+padding:0;
+font-size:11px;
+white-space:nowrap;
+}
+
+.ampyan-feature-card:hover{
+transform:translateY(-2px);
+border-color:rgba(255,123,41,.42);
+background:rgba(255,123,41,.09);
+}
+
+.ampyan-app-download{
+display:grid;
+grid-template-columns:96px minmax(0,1fr) 150px;
+align-items:center;
+gap:18px;
+padding:16px 18px;
+overflow:hidden;
+border:1px solid rgba(255,123,41,.2);
+border-radius:18px;
+background:
+radial-gradient(circle at 84% 30%,rgba(255,90,54,.14),transparent 30%),
+linear-gradient(125deg,rgba(15,26,43,.92),rgba(10,18,31,.84));
+box-shadow:0 16px 38px rgba(0,0,0,.22);
+}
+
+.ampyan-phone{
+position:relative;
+display:flex;
+flex-direction:column;
+align-items:center;
+justify-content:center;
+height:118px;
+padding:15px 8px 9px;
+border:3px solid rgba(255,255,255,.22);
+border-radius:20px;
+background:linear-gradient(160deg,#19263a,#080e18);
+box-shadow:0 12px 26px rgba(0,0,0,.35),0 0 22px rgba(255,90,54,.11);
+}
+
+.ampyan-phone > span{
+position:absolute;
+top:5px;
+width:28px;
+height:4px;
+border-radius:99px;
+background:rgba(255,255,255,.2);
+}
+
+.ampyan-phone img{
+width:45px;
+height:45px;
+object-fit:contain;
+border-radius:11px;
+}
+
+.ampyan-phone strong{
+margin-top:6px;
+color:#fff;
+font-size:11px;
+letter-spacing:.1em;
+}
+
+.ampyan-app-copy h2{
+margin:0;
+color:#fff;
+font-size:20px;
+line-height:1.2;
+}
+
+.ampyan-app-chips{
+display:flex;
+flex-wrap:wrap;
+gap:6px;
+margin-top:11px;
+}
+
+.ampyan-app-chips span{
+padding:5px 8px;
+border:1px solid rgba(255,255,255,.09);
+border-radius:999px;
+background:rgba(255,255,255,.05);
+color:var(--text-soft);
+font-size:10px;
+}
+
+.ampyan-app-action{
+display:flex;
+flex-direction:column;
+align-items:center;
+gap:7px;
+}
+
+.ampyan-app-action > i{
+color:#a4c639;
+font-size:25px;
+}
+
+.ampyan-play-button{
+width:138px;
+height:41px;
+overflow:hidden;
+border-radius:7px;
+box-shadow:0 10px 22px rgba(0,0,0,.28);
+}
+
+.ampyan-play-button img{
+display:block;
+width:100%;
+height:100%;
+object-fit:cover;
+}
+
+.ampyan-app-action > span{
+color:var(--text-secondary);
+font-size:9px;
+}
+
+.ampyan-trust-strip{
+display:flex;
+align-items:center;
+justify-content:center;
+flex-wrap:wrap;
+gap:8px;
+padding:13px;
+border:1px solid rgba(255,255,255,.08);
+border-radius:14px;
+background:rgba(12,21,35,.72);
+}
+
+.ampyan-trust-strip span{
+display:flex;
+align-items:center;
+gap:6px;
+padding:6px 8px;
+color:var(--text-secondary);
+font-size:10px;
+font-weight:700;
+}
+
+.ampyan-trust-strip i{
+color:#ff9844;
+}
+
+@media(max-width:1350px){
+.nav-priority-links{
+display:none;
+}
+
+.ampyan-discovery-grid{
+grid-template-columns:repeat(2,minmax(0,1fr));
+}
+
+.ampyan-discovery-card{
+min-height:220px;
+}
+}
+
+@media(max-width:900px){
+.ampyan-discovery-grid{
+grid-template-columns:repeat(2,minmax(0,1fr));
+}
+}
+
+@media(max-width:620px){
+.ampyan-home,
+.ampyan-home-main,
+.ampyan-discovery,
+.ampyan-discovery-grid,
+.ampyan-discovery-card,
+.ampyan-app-download,
+.ampyan-trust-strip{
+width:100%;
+max-width:100%;
+min-width:0;
+box-sizing:border-box;
+}
+
+.ampyan-home{
+overflow:visible;
+}
+
+.ampyan-home-main,
+.ampyan-discovery,
+.ampyan-app-download,
+.ampyan-trust-strip{
+overflow:hidden;
+}
+
+.ampyan-feature-toggle{
+position:static;
+top:auto;
+}
+
+.ampyan-discovery{
+padding:14px;
+border-radius:16px;
+}
+
+.ampyan-discovery-grid{
+grid-template-columns:1fr;
+}
+
+.ampyan-discovery-card{
+min-height:230px;
+width:100%;
+}
+
+.ampyan-app-download{
+grid-template-columns:76px minmax(0,1fr);
+gap:13px;
+padding:14px;
+}
+
+.ampyan-phone{
+height:105px;
+}
+
+.ampyan-app-copy h2{
+font-size:17px;
+}
+
+.ampyan-app-action{
+grid-column:1 / -1;
+flex-direction:row;
+justify-content:center;
+}
+
+.ampyan-app-action > span{
+font-size:10px;
+}
+
+.ampyan-trust-strip{
+justify-content:flex-start;
+}
+}
+
+@media(prefers-reduced-motion:reduce){
+.ampyan-discovery-card,
+.ampyan-card-cta i,
+.ampyan-feature-card{
+transition:none;
+}
+}

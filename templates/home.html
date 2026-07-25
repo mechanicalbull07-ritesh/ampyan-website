@@ -39,74 +39,86 @@
 </aside>
 
 <main class="ampyan-home-main">
-<section class="ampyan-portal-hero">
-<div>
-<p class="ampyan-eyebrow"><span>AI</span> AMPYAN Automotive Ecosystem</p>
-<h1>Your Smart Automotive Assistant</h1>
-<p>Diagnose car problems, track car health and service reminders, find nearby garages, read auto news, and connect with the car community — all in one place.</p>
-<div class="ampyan-hero-actions">
-<a href="/tools/ai-diagnosis" class="ampyan-action-primary"><i class="fa-solid fa-stethoscope"></i> Start AI Diagnosis</a>
-<a href="/my-car-health" class="ampyan-action-secondary"><i class="fa-solid fa-plus"></i> Add My Car</a>
+<section class="ampyan-discovery" aria-labelledby="ampyan-discovery-title">
+<div class="ampyan-discovery-head">
+<p class="ampyan-eyebrow"><span>Explore</span> AMPYAN Automotive Ecosystem</p>
+<h1 id="ampyan-discovery-title">How can AMPYAN help you today?</h1>
+<p>Everything you need to diagnose, maintain and make smarter car decisions.</p>
 </div>
-</div>
-<div class="ampyan-hero-meter" aria-label="AMPYAN quick tools">
-<span>Owner cockpit</span>
-<strong>No AI calls on page load</strong>
-<a href="/tools/maintenance-cost"><i class="fa-solid fa-wrench"></i> Repair estimate</a>
-<a href="/community"><i class="fa-solid fa-comments"></i> Ask community</a>
-<a href="/news"><i class="fa-solid fa-bolt"></i> Latest updates</a>
+<div class="ampyan-discovery-grid">
+<a href="/tools/ai-diagnosis" class="ampyan-discovery-card">
+<span class="ampyan-card-badge">Most used</span>
+<i class="fa-solid fa-car-burst" aria-hidden="true"></i>
+<h2>AI Car Diagnosis</h2>
+<p>Describe symptoms and get possible causes with AI assistance.</p>
+<span class="ampyan-card-cta">Start Diagnosis <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+</a>
+<a href="/tools/car-suggestion" class="ampyan-discovery-card">
+<span class="ampyan-card-badge">Smart pick</span>
+<i class="fa-solid fa-car-side" aria-hidden="true"></i>
+<h2>Find Best Car For You</h2>
+<p>Compare and discover the best vehicle based on your budget and usage.</p>
+<span class="ampyan-card-cta">Find My Car <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+</a>
+<a href="/tools" class="ampyan-discovery-card">
+<span class="ampyan-card-badge">Free tools</span>
+<i class="fa-solid fa-calculator" aria-hidden="true"></i>
+<h2>Car Calculators</h2>
+<p>Fuel cost, EMI, depreciation, maintenance and ownership cost tools.</p>
+<span class="ampyan-card-cta">Open Calculators <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+</a>
+<a href="/garages" class="ampyan-discovery-card">
+<span class="ampyan-card-badge">Nearby help</span>
+<i class="fa-solid fa-warehouse" aria-hidden="true"></i>
+<h2>Garage Support</h2>
+<p>Find nearby garages and trusted automotive workshops.</p>
+<span class="ampyan-card-cta">Find Garages <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+</a>
 </div>
 </section>
 
-<section class="ampyan-feature-panel" aria-label="AMPYAN feature cards">
-<a href="/tools/ai-diagnosis" class="ampyan-feature-card feature-ai">
-<span class="ampyan-badge">AI</span>
-<i class="fa-solid fa-car-burst"></i>
-<strong>AI Car Diagnosis</strong>
-<small>Symptoms to likely causes</small>
+<section class="ampyan-feature-panel" aria-label="Quick AMPYAN features">
+<a href="/tools/ai-diagnosis" class="ampyan-feature-card">
+<i class="fa-solid fa-car-burst"></i><strong>AI Diagnosis</strong>
 </a>
-<a href="/my-car-health" class="ampyan-feature-card feature-garage">
-<span class="ampyan-badge">Popular</span>
-<i class="fa-solid fa-heart-pulse"></i>
-<strong>My Car Health</strong>
-<small>Service reminders and vehicle health</small>
+<a href="/community" class="ampyan-feature-card">
+<i class="fa-solid fa-people-group"></i><strong>Community</strong>
 </a>
-<a href="/my-car-health" class="ampyan-feature-card feature-service">
-<span class="ampyan-badge">New</span>
-<i class="fa-solid fa-calendar-check"></i>
-<strong>Service Reminders</strong>
-<small>Never miss service checks</small>
+<a href="/my-car-health" class="ampyan-feature-card">
+<i class="fa-solid fa-calendar-check"></i><strong>Service Reminder</strong>
 </a>
-<a href="/community" class="ampyan-feature-card feature-community">
-<span class="ampyan-badge">Live</span>
-<i class="fa-solid fa-people-group"></i>
-<strong>Community</strong>
-<small>Ask owners and experts</small>
+<a href="/my-car-health" class="ampyan-feature-card">
+<i class="fa-solid fa-car"></i><strong>Add My Car</strong>
 </a>
-<a href="/news" class="ampyan-feature-card feature-news">
-<span class="ampyan-badge">Fresh</span>
-<i class="fa-solid fa-newspaper"></i>
-<strong>Auto News</strong>
-<small>Updates and ownership tips</small>
+<a href="/tools/maintenance-cost" class="ampyan-feature-card">
+<i class="fa-solid fa-indian-rupee-sign"></i><strong>Repair Estimate</strong>
 </a>
-<a href="/videos" class="ampyan-feature-card feature-dashcam">
-<span class="ampyan-badge">Beta</span>
-<i class="fa-solid fa-video"></i>
-<strong>Dashcam</strong>
-<small>Safety tools in progress</small>
+<a href="/news" class="ampyan-feature-card">
+<i class="fa-solid fa-newspaper"></i><strong>News &amp; Tips</strong>
 </a>
-<a href="/tools/maintenance-cost" class="ampyan-feature-card feature-cost">
-<span class="ampyan-badge">Tool</span>
-<i class="fa-solid fa-indian-rupee-sign"></i>
-<strong>Repair Cost Estimate</strong>
-<small>Know cost ranges early</small>
+</section>
+
+<section class="ampyan-app-download" aria-labelledby="ampyan-app-title">
+<div class="ampyan-phone" aria-hidden="true">
+<span></span>
+<img src="{{ url_for('static', filename='images/applogo.png') }}" alt="" loading="lazy">
+<strong>AMPYAN</strong>
+</div>
+<div class="ampyan-app-copy">
+<p class="ampyan-eyebrow">AMPYAN App</p>
+<h2 id="ampyan-app-title">Your automotive companion everywhere.</h2>
+<div class="ampyan-app-chips" aria-label="App features">
+<span>AI Diagnosis</span><span>Car Health</span><span>Service Reminder</span>
+<span>Expenses</span><span>News &amp; Tips</span>
+</div>
+</div>
+<div class="ampyan-app-action">
+<i class="fa-brands fa-android" aria-hidden="true"></i>
+<a href="https://play.google.com/store/apps/details?id=com.ampyan.app" class="ampyan-play-button" target="_blank" rel="noopener noreferrer" aria-label="Download AMPYAN from Google Play">
+<img src="{{ url_for('static', filename='images/google-play-badge.png') }}" alt="Get it on Google Play" loading="lazy">
 </a>
-<a href="/garages" class="ampyan-feature-card feature-help">
-<span class="ampyan-badge">SOS</span>
-<i class="fa-solid fa-warehouse"></i>
-<strong>Garages</strong>
-<small>Nearby garages and mechanic registration</small>
-</a>
+<span>Android beta access</span>
+</div>
 </section>
 
 <section class="ampyan-section">
@@ -186,6 +198,14 @@
 {% endfor %}
 </ul>
 </div>
+</section>
+
+<section class="ampyan-trust-strip" aria-label="Why users trust AMPYAN">
+<span><i class="fa-solid fa-users"></i> Trusted by thousands of users</span>
+<span><i class="fa-solid fa-wand-magic-sparkles"></i> AI Powered</span>
+<span><i class="fa-solid fa-warehouse"></i> Verified Garages</span>
+<span><i class="fa-solid fa-shield-halved"></i> Secure Platform</span>
+<span><i class="fa-solid fa-book-open"></i> Automotive Knowledge Base</span>
 </section>
 
 </main>
