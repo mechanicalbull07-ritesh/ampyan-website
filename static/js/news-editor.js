@@ -105,7 +105,7 @@ function convertPaste(){
 }
 async function uploadFiles(files,block,gallery){
   if(!files.length)return;setStatus("Uploading article image…");var uploaded=[];
-  for(var i=0;i<files.length;i++){var body=new FormData();body.append("image",files[i]);var response=await fetch(root.dataset.uploadUrl,{method:"POST",body:body,credentials:"same-origin"});var data=await response.json().catch(function(){return {};});if(!response.ok||!data.success){setStatus(data.message||"Image upload failed safely.");return;}uploaded.push({url:data.url,caption:"",alt_text:""});}
+  for(var i=0;i<files.length;i++){var body=new FormData();body.append("image",files[i]);var token=document.querySelector('meta[name="csrf-token"]').content;var response=await fetch(root.dataset.uploadUrl,{method:"POST",headers:{"X-CSRFToken":token},body:body,credentials:"same-origin"});var data=await response.json().catch(function(){return {};});if(!response.ok||!data.success){setStatus(data.message||"Image upload failed safely.");return;}uploaded.push({url:data.url,caption:"",alt_text:""});}
   if(gallery){block.images=(block.images||[]).concat(uploaded);}else{block.url=uploaded[0].url;}render();setStatus(uploaded.length+" image"+(uploaded.length===1?"":"s")+" uploaded.");
 }
 function appendInline(parent,runs){(Array.isArray(runs)?runs:[]).forEach(function(run){var leaf=document.createTextNode(run.text||"");var node=leaf;

@@ -181,6 +181,7 @@
 <div class="login-reminder ui-card">
 {% if results %}
 <form method="POST" action="{{ url_for('diagnosis_story') }}" target="_blank" class="story-download-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="hidden" name="issue" value="{{ results[0].issue }}">
 <input type="hidden" name="problem" value="{{ problem|default('Vehicle problem') }}">
 <input type="hidden" name="car_label" value="{% if car %}{{ car.brand }} {{ car.model }}{% if car.year %} ({{ car.year }}){% endif %}{% else %}Vehicle{% endif %}">
@@ -203,7 +204,8 @@ function sendFeedback(type) {
     fetch('/submit_feedback', {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').content
         },
         body: JSON.stringify({ feedback: type })
     })

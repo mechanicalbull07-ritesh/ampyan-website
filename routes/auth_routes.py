@@ -278,7 +278,7 @@ def api_logout():
     return jsonify({"status": "success", "authenticated": False})
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
 def logout():
     logout_user()
     flash("You have been logged out.")

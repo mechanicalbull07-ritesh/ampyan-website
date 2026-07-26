@@ -815,14 +815,14 @@ def mechanic_dashboard():
         return redirect(url_for("main.register_garage"))
 
     metrics = refresh_mechanic_reputation(profile)
-    db.session.commit()
-
-    return render_template(
+    response = render_template(
         "mechanic_dashboard.html",
         mechanic=profile,
         review_count=metrics["review_count"],
         average_rating=metrics["average_rating"]
     )
+    db.session.rollback()
+    return response
 
 
 @main_bp.route("/garages/register", methods=["GET", "POST"])

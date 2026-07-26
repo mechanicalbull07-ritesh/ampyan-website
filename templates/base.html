@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
 <head>
 <button id="topBtn" onclick="topFunction()">↑</button>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <meta name="description" content="AMPYAN is an AI powered automotive ecosystem helping car owners diagnose vehicle problems, track maintenance, improve safety, and save money.">
 <meta name="keywords" content="AMPYAN, AI car diagnosis, automotive AI, car maintenance, vehicle assistant, dashcam AI">
-<meta name="robots" content="index, follow">
+<meta name="robots" content="{{ 'noindex, nofollow' if noindex|default(false) else 'index, follow' }}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
 {% set social_title = meta_title|default("AMPYAN", true) %}
 {% set social_description = meta_description|default("AI Powered Automotive Ecosystem", true) %}
@@ -88,6 +89,7 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <link rel="stylesheet" href="/static/css/news.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/garage.css') }}">
+{% if request.path.startswith("/blogs") %}<link rel="stylesheet" href="{{ url_for('static', filename='css/blogs.css') }}">{% endif %}
 
 <!-- ICONS -->
 
@@ -130,14 +132,6 @@ AMPYAN
 </form>
 <!-- AMPYAN HOME PAGE REDESIGN END -->
 
-<div class="nav-priority-links" aria-label="Primary pages">
-<a href="/">Home</a>
-<a href="/news">News</a>
-<a href="/news">Tips &amp; Tricks</a>
-<a href="/tools">Calculators</a>
-<a href="/garages">Garages</a>
-</div>
-
 <!-- HOME -->
 
 <div class="nav-dropdown">
@@ -164,6 +158,16 @@ AMPYAN
 
 </div>
 
+</div>
+
+<div class="nav-priority-links" aria-label="Primary pages">
+<a href="/news">News</a>
+{% if config.get("COMMUNITY_BLOG_ENABLED", "false")|string|lower in ["true", "1", "yes", "on"] %}
+<a href="{{ url_for('website_blogs.index') }}">Blog</a>
+{% endif %}
+<a href="/news">Tips &amp; Tricks</a>
+<a href="/tools">Calculators</a>
+<a href="/garages">Garages</a>
 </div>
 
 
@@ -254,7 +258,7 @@ AMPYAN
 
 <!-- THEME -->
 
-<button onclick="toggleTheme()" class="theme-toggle">
+<button onclick="toggleTheme()" class="theme-toggle" type="button" aria-label="Toggle colour theme">
 <i id="themeIcon" class="fa-solid fa-moon"></i>
 </button>
 
@@ -322,9 +326,12 @@ AMPYAN
 
 <div class="dropdown-divider"></div>
 
-<a href="{{ url_for('auth.logout') }}">
+<form method="POST" action="{{ url_for('auth.logout') }}" class="nav-logout-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="nav-logout-button">
 <i class="fa-solid fa-right-from-bracket"></i> Logout
-</a>
+</button>
+</form>
 
 </div>
 
@@ -347,6 +354,16 @@ Login
 <!-- MAIN CONTENT -->
 
 <main class="main-container">
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<section class="site-flash-region" aria-label="Notifications">
+{% for category, message in messages %}
+<div class="auth-flash" role="{{ 'alert' if category in ['error', 'danger'] else 'status' }}" tabindex="-1" data-flash-focus>{{ message }}</div>
+{% endfor %}
+</section>
+<script>document.addEventListener("DOMContentLoaded",function(){var notice=document.querySelector("[data-flash-focus]");if(notice){notice.focus();}});</script>
+{% endif %}
+{% endwith %}
 {% block content %}{% endblock %}
 </main>
 
@@ -362,11 +379,11 @@ Login
 
 <div class="brand-social">
 
-<a href="https://youtube.com/@speed16R" target="_blank" class="social-icon youtube">
+<a href="https://youtube.com/@speed16R" target="_blank" rel="noopener noreferrer" class="social-icon youtube" aria-label="AMPYAN on YouTube">
 <i class="fab fa-youtube"></i>
 </a>
 
-<a href="https://instagram.com/channelspeed16" target="_blank" class="social-icon instagram">
+<a href="https://instagram.com/channelspeed16" target="_blank" rel="noopener noreferrer" class="social-icon instagram" aria-label="AMPYAN on Instagram">
 <i class="fab fa-instagram"></i>
 </a>
 
@@ -477,7 +494,7 @@ const loading=messages ? messages.lastElementChild : null;
 try{
 const response=await fetch("/ask-ai",{
 method:"POST",
-headers:{"Content-Type":"application/json"},
+headers:{"Content-Type":"application/json","X-CSRFToken":document.querySelector('meta[name="csrf-token"]').content},
 body:JSON.stringify({message:message})
 });
 const data=await response.json();
@@ -873,11 +890,7 @@ utm_campaign: params.get("utm_campaign") || ""
 function track(eventType, details) {
 try {
 const payload = JSON.stringify(Object.assign({}, base, details || {}, {event_type: eventType}));
-if(navigator.sendBeacon) {
-navigator.sendBeacon("/api/track-event", new Blob([payload], {type: "application/json"}));
-return;
-}
-fetch("/api/track-event", {method: "POST", headers: {"Content-Type": "application/json"}, body: payload, keepalive: true}).catch(function(){});
+fetch("/api/track-event", {method: "POST", headers: {"Content-Type": "application/json", "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').content}, body: payload, keepalive: true}).catch(function(){});
 } catch(error) {}
 }
 window.AMPYANAnalytics = {track: track};

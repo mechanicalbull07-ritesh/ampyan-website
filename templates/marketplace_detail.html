@@ -42,6 +42,7 @@
 {% if current_user.is_authenticated and current_user.id != listing.user_id %}
 <div class="comment-form">
 <form method="POST" action="/marketplace/{{ listing.id }}/message">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <textarea name="message" class="profile-input" placeholder="Write a message to {{ listing.user.username if listing.user else 'owner' }}..." required></textarea>
 <button type="submit" class="auth-button"><i class="fa-solid fa-paper-plane"></i> Send Inbox Message</button>
 </form>

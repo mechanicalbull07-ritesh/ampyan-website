@@ -1216,7 +1216,7 @@ def remote_add_comment(remote_post_id):
     return redirect(url_for("community.remote_post_detail", remote_post_id=remote_post_id))
 
 
-@community_bp.route("/upvote/<int:post_id>")
+@community_bp.route("/upvote/<int:post_id>", methods=["POST"])
 @login_required
 def upvote(post_id):
     existing_vote = Vote.query.filter_by(user_id=current_user.id, post_id=post_id).first()

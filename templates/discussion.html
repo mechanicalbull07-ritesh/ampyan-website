@@ -28,6 +28,7 @@
     <h3 style="margin-top:40px;">Add Reply</h3>
 
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input type="text" name="username" placeholder="Your Name" required>
         <textarea name="comment" placeholder="Write your reply..." required></textarea>
         <button type="submit">Post Reply</button>

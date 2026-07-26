@@ -10,6 +10,7 @@
 
 <div class="calculator-layout">
 <form method="POST" class="calculator-card service-estimator-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 {% if error %}<div class="calc-error">{{ error }}</div>{% endif %}
 
 <div class="ui-grid ui-grid-2">

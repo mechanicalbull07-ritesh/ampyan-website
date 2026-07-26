@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="auth-wrapper">
+<div class="auth-card">
+<h1>Confirm your email</h1>
+<p>Use the button below to finish verifying your AMPYAN account.</p>
+<form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="auth-btn">Verify email</button>
+</form>
+</div>
+</section>
+{% endblock %}

@@ -5,6 +5,7 @@
     <h2 style="color:white;">Start New Discussion</h2>
 
     <form method="POST">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
         <input name="title" placeholder="Discussion Title"
                style="width:100%; padding:10px; margin-bottom:15px;" required>
 

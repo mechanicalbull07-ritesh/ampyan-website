@@ -62,6 +62,7 @@
 
 {% if mechanic.is_verified and current_user.is_authenticated and current_user.role != "mechanic" %}
 <form method="POST" action="/garages/{{ mechanic.id }}/review" class="mechanic-review-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <h3 class="section-heading">Rate This Garage</h3>
 <select name="rating" class="profile-input" required>
 <option value="">Choose rating</option>

@@ -16,6 +16,7 @@ MAX_LIST_ITEMS = 80
 MAX_GALLERY_IMAGES = 12
 MAX_TABLE_COLUMNS = 12
 MAX_TABLE_ROWS = 80
+MAX_KEY_DATA_ITEMS = 24
 MAX_TEXT = 20_000
 MAX_URL = 2_000
 
@@ -94,7 +95,7 @@ def _inline(value):
     for raw in raw_runs[:MAX_INLINE_RUNS]:
         if not isinstance(raw, dict):
             continue
-        text = str(raw.get("text") or "")[:5_000]
+        text = str(raw.get("text") or "")
         if not text.strip():
             continue
         run = {"text": text}
@@ -169,7 +170,7 @@ def normalize_block(raw):
         return result
     if block_type == "key_data":
         items = []
-        for item in (raw.get("items") if isinstance(raw.get("items"), list) else [])[:24]:
+        for item in (raw.get("items") if isinstance(raw.get("items"), list) else [])[:MAX_KEY_DATA_ITEMS]:
             if not isinstance(item, dict):
                 continue
             label, value = _text(item.get("label"), 300), _text(item.get("value"), 1_000)
@@ -228,9 +229,6 @@ def content_blocks_limit_error(value):
         runs = raw_value if isinstance(raw_value, list) else [{"text": raw_value}]
         if len(runs) > MAX_INLINE_RUNS:
             return f"{location} has more than {MAX_INLINE_RUNS} formatted text runs."
-        for run in runs:
-            if isinstance(run, dict) and len(str(run.get("text") or "")) > 5_000:
-                return f"{location} contains a formatted text segment longer than 5,000 characters. Split it into paragraphs."
         return None
 
     for index, raw in enumerate(raw_blocks, start=1):
@@ -257,6 +255,17 @@ def content_blocks_limit_error(value):
                 error = inline_error(item, f"{location}, list item {item_index}")
                 if error:
                     return error
+        elif block_type == "key_data":
+            items = raw.get("items") if isinstance(raw.get("items"), list) else []
+            if len(items) > MAX_KEY_DATA_ITEMS:
+                return f"{location} supports up to {MAX_KEY_DATA_ITEMS} key-data items."
+            for item_index, item in enumerate(items, start=1):
+                if not isinstance(item, dict):
+                    continue
+                if len(str(item.get("label") or "")) > 300:
+                    return f"{location}, key-data item {item_index} label must be 300 characters or fewer."
+                if len(str(item.get("value") or "")) > 1_000:
+                    return f"{location}, key-data item {item_index} value must be 1,000 characters or fewer."
         elif block_type in {"image", "gallery"}:
             images = [raw] if block_type == "image" else raw.get("images") if isinstance(raw.get("images"), list) else []
             if block_type == "gallery" and len(images) > MAX_GALLERY_IMAGES:
@@ -281,6 +290,8 @@ def content_blocks_limit_error(value):
                 return f"{location} table headers must be 500 characters or fewer per cell."
             if any(len(str(cell or "")) > 2_000 for row in rows if isinstance(row, list) for cell in row):
                 return f"{location} table cells must be 2,000 characters or fewer."
+            if any(isinstance(row, list) and len(row) > len(headers) for row in rows):
+                return f"{location} table rows cannot contain more cells than the {len(headers)} header column(s)."
         elif block_type in {"youtube", "instagram"} and len(str(raw.get("url") or "")) > MAX_URL:
             return f"{location} media URL must be {MAX_URL:,} characters or fewer."
     return None

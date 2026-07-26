@@ -8,6 +8,7 @@
 <p class="create-sub">Add your name, location and contact option through your AMPYAN account.</p>
 
 <form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <label class="create-label">Listing type</label>
 <select name="listing_type">
 <option value="sell">I want to sell my car</option>

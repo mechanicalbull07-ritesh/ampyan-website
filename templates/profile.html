@@ -65,6 +65,7 @@
 <h2 id="edit-profile" class="section-heading">Personal Information</h2>
 
 <form action="/update-profile" method="POST" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <h3 class="profile-section">Location</h3>
 
 <div class="profile-grid">
@@ -238,7 +239,10 @@
 
 <div class="ui-button-row">
 <a href="/edit-car/{{ car.id }}" class="ui-button-secondary">Edit Car</a>
-<a href="/delete-car/{{ car.id }}" class="ui-button-danger" onclick="return confirm('Delete this car?')">Delete Car</a>
+<form method="POST" action="/delete-car/{{ car.id }}" class="inline-form" onsubmit="return confirm('Delete this car?')">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="ui-button-danger">Delete Car</button>
+</form>
 </div>
 </div>
 {% endfor %}
