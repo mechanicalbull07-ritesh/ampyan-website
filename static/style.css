@@ -1795,47 +1795,60 @@ transition:none;
 .navbar{
 width:calc(100% - 20px);
 max-width:1800px;
-padding:9px 12px;
-gap:6px;
+min-height:56px;
+padding:8px 10px;
+gap:8px;
 flex-wrap:nowrap;
 align-items:center;
+}
+
+.navbar-brand{
+padding-left:2px;
+font-size:clamp(16px,1.3vw,22px);
+letter-spacing:.07em;
 }
 
 .nav-center{
 order:initial;
 width:auto;
 min-width:0;
-gap:3px;
+gap:2px;
 flex:1 1 auto;
 flex-wrap:nowrap;
-justify-content:center;
+justify-content:flex-start;
 }
 
 .nav-center a,
 .nav-link,
 .nav-priority-links a{
-font-size:13px;
+font-size:12.5px;
 font-weight:600;
 line-height:1.2;
 white-space:nowrap;
-gap:5px;
-padding:7px 5px;
+gap:2px;
+padding:7px 2px;
 }
 
 .nav-priority-links{
+display:flex;
 min-width:0;
-gap:3px;
+gap:2px;
+flex-shrink:1;
+}
+
+.nav-dropdown{
+flex-shrink:0;
 }
 
 .navbar-search{
-width:clamp(150px,14vw,220px);
-min-width:150px;
+width:clamp(80px,calc(100vw - 1120px),220px);
+min-width:0;
 max-width:220px;
-flex:0 1 220px;
+flex:0 1 clamp(80px,calc(100vw - 1120px),220px);
 height:38px;
 min-height:38px;
-padding:6px 9px;
-gap:7px;
+padding:6px 7px;
+gap:5px;
 }
 
 .navbar-search input{
@@ -1845,36 +1858,50 @@ font-size:13px;
 
 .nav-btn,
 .highlight-garage{
+height:38px;
 min-height:38px;
-padding:8px 10px;
-font-size:13px;
+padding:7px 6px;
+font-size:12.5px;
 line-height:1.2;
 white-space:nowrap;
+}
+
+.nav-right{
+min-width:0;
+gap:6px;
+flex-shrink:0;
 }
 
 .nav-notification,
 .theme-toggle{
 width:38px;
 height:38px;
+min-width:38px;
+}
+
+.nav-profile-wrapper{
+min-width:0;
 }
 
 .nav-profile{
+height:38px;
 min-height:38px;
 padding:4px 7px 4px 4px;
-gap:7px;
+gap:5px;
 min-width:0;
-max-width:190px;
+max-width:120px;
 }
 
 .profile-badge{
-width:36px;
-height:36px;
+width:34px;
+height:34px;
+flex:0 0 34px;
 }
 
 .user-button{
 min-width:0;
-max-width:110px;
-font-size:13px;
+max-width:70px;
+font-size:12.5px;
 overflow:hidden;
 text-overflow:ellipsis;
 white-space:nowrap;

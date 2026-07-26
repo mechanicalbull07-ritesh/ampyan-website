@@ -636,3 +636,23 @@ max-width:58px;
 padding:9px 11px;
 }
 }
+.nav-logout-form {
+    margin: 0;
+}
+
+.nav-logout-button {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    font: inherit;
+    text-align: left;
+}
+
+.nav-dropdown-content .nav-logout-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+}

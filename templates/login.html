@@ -23,6 +23,7 @@
         </div>
 
         <form method="POST" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="input-group">
                 <input name="username" placeholder="Username or email" required>
             </div>

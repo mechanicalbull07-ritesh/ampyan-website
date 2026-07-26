@@ -144,7 +144,7 @@ def add_car():
 
 # ================= SET DEFAULT CAR =================
 
-@garage_bp.route("/set-default-car/<int:car_id>")
+@garage_bp.route("/set-default-car/<int:car_id>", methods=["POST"])
 @login_required
 def set_default_car(car_id):
 
@@ -166,7 +166,7 @@ def set_default_car(car_id):
 
 # ================= DELETE CAR =================
 
-@garage_bp.route("/delete-car/<int:car_id>")
+@garage_bp.route("/delete-car/<int:car_id>", methods=["POST"])
 @login_required
 def delete_car(car_id):
 

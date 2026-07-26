@@ -68,10 +68,16 @@
 
 <div class="ui-button-row">
 {% if not car.is_default %}
-<a href="/set-default-car/{{ car.id }}" class="ui-button-secondary">Set Default</a>
+<form method="POST" action="/set-default-car/{{ car.id }}" class="inline-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="ui-button-secondary">Set Default</button>
+</form>
 {% endif %}
 <a href="/edit-car/{{ car.id }}" class="ui-button-secondary">Edit</a>
-<a href="/delete-car/{{ car.id }}" class="ui-button-danger" onclick="return confirm('Delete this car?')">Delete</a>
+<form method="POST" action="/delete-car/{{ car.id }}" class="inline-form" onsubmit="return confirm('Delete this car?')">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="ui-button-danger">Delete</button>
+</form>
 </div>
 </li>
 {% endfor %}

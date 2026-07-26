@@ -12,6 +12,10 @@ services:
         value: "true"
       - key: ADMIN_ANALYTICS_CACHE_SECONDS
         value: "60"
+      - key: COMMUNITY_BLOG_ENABLED
+        value: "false"
+      - key: BLOG_WEBSITE_SERVICE_TOKEN
+        sync: false
       - key: SECRET_KEY
         sync: false
       - key: GA4_MEASUREMENT_ID

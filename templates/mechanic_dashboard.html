@@ -50,7 +50,7 @@
 <h2 class="section-heading">Recent Reviews</h2>
 {% if mechanic.reviews %}
 <div class="ui-grid">
-{% for review in mechanic.reviews|sort(attribute='id', reverse=True)[:5] %}
+{% for review in (mechanic.reviews|sort(attribute='id', reverse=True))[:5] %}
 <div class="simple-list-card">
 <h4>{{ review.author.username }}</h4>
 <p class="section-copy">{{ review.rating }}/5 • {{ review.created_at.strftime('%d %b %Y') }}</p>

@@ -6,6 +6,7 @@
 <h1 class="section-heading">Edit Video</h1>
 
 <form method="POST" class="video-add-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="video-form-grid">
 <div>
 <label class="form-label" for="video-title">Video Title</label>

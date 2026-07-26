@@ -21,6 +21,7 @@ Default Car:
 </p>
 
 <form method="POST" action="/tools/ai-diagnosis" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
 <select name="car_id" class="auth-input" required>
 
@@ -158,6 +159,7 @@ Diagnose Now
 <h3>🔍 Follow-up Questions</h3>
 
 <form method="POST" action="/tools/ai-diagnosis-followup">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
 {% for q in questions %}
 

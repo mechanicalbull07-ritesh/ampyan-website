@@ -36,7 +36,7 @@ class _InitialBlocksParser(HTMLParser):
 
 
 class NewsContentValidationTest(unittest.TestCase):
-    def test_long_unicode_content_is_not_silently_normalized_past_limits(self):
+    def test_long_unicode_content_is_not_silently_normalized(self):
         hindi = "सुरक्षित खबर 🚗 & special <characters> "
         valid = {"blocks": [
             {"type": "paragraph", "content": [{"text": hindi * 100}]},
@@ -47,15 +47,36 @@ class NewsContentValidationTest(unittest.TestCase):
         self.assertEqual(normalized["blocks"][0]["content"][0]["text"], hindi * 100)
         self.assertEqual(len(normalized["blocks"][1]["text"]), 500)
 
-        too_long = {"blocks": [{
-            "type": "paragraph", "content": [{"text": "x" * 5_001}],
+        long_paragraph = {"blocks": [{
+            "type": "paragraph", "content": [{"text": hindi * 1_000}],
         }]}
-        self.assertIn("5,000", content_blocks_limit_error(too_long))
+        self.assertIsNone(content_blocks_limit_error(long_paragraph))
+        self.assertEqual(
+            normalize_content_blocks(long_paragraph)["blocks"][0]["content"][0]["text"],
+            hindi * 1_000,
+        )
         self.assertIn(
             "160 blocks",
             content_blocks_limit_error({"blocks": [
                 {"type": "divider"} for _ in range(161)
             ]}),
+        )
+
+    def test_every_structural_slice_has_a_clear_validation_error(self):
+        self.assertIn(
+            "24 key-data items",
+            content_blocks_limit_error({"blocks": [{
+                "type": "key_data",
+                "items": [{"label": str(index), "value": "safe"} for index in range(25)],
+            }]}),
+        )
+        self.assertIn(
+            "more cells",
+            content_blocks_limit_error({"blocks": [{
+                "type": "table",
+                "headers": ["Only column"],
+                "rows": [["kept", "would previously be lost"]],
+            }]}),
         )
 
     def test_media_blocks_accept_only_supported_public_urls(self):

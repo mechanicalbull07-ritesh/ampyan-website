@@ -9,6 +9,7 @@
 <h2 class="auth-title">Edit Your Car</h2>
 
 <form method="POST" class="auth-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
 <label class="form-label">Car Brand</label> <input type="text" name="brand" value="{{ car.brand }}" class="auth-input"/>
 

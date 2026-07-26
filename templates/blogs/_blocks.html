@@ -1,0 +1,31 @@
+{% macro render_blocks(blocks, safe_url) %}
+<div class="blog-content">
+{% for block in blocks if block is mapping %}
+{% set data = block.get("data", {}) %}
+{% set kind = block.get("type", "") %}
+{% if kind == "paragraph" %}
+<p>{{ data.get("text", "") }}</p>
+{% elif kind == "heading" %}
+<h2>{{ data.get("text", "") }}</h2>
+{% elif kind == "image" %}
+{% set image_url = safe_url(data.get("url")) %}
+{% if image_url %}<figure><img src="{{ image_url }}" alt="{{ data.get('alt_text') or data.get('caption') or 'Blog image' }}" loading="lazy">{% if data.get("caption") %}<figcaption>{{ data.get("caption") }}</figcaption>{% endif %}</figure>{% endif %}
+{% elif kind == "gallery" %}
+<div class="blog-gallery">{% for image in data.get("items", data.get("images", [])) if image is mapping %}{% set image_url = safe_url(image.get("url")) %}{% if image_url %}<img src="{{ image_url }}" alt="{{ image.get('alt_text') or image.get('caption') or 'Gallery image' }}" loading="lazy">{% endif %}{% endfor %}</div>
+{% elif kind == "quote" %}
+<blockquote><p>{{ data.get("text", "") }}</p>{% if data.get("cite") %}<cite>{{ data.get("cite") }}</cite>{% endif %}</blockquote>
+{% elif kind in ["bullet_list", "numbered_list"] %}
+{% if kind == "bullet_list" %}<ul>{% else %}<ol>{% endif %}{% for item in data.get("items", []) %}<li>{{ item.get("text", "") if item is mapping else item }}</li>{% endfor %}{% if kind == "bullet_list" %}</ul>{% else %}</ol>{% endif %}
+{% elif kind == "table" %}
+<div class="blog-table-wrap"><table><caption>{{ data.get("caption") or "Blog data" }}</caption><thead><tr>{% for header in data.get("headers", []) %}<th scope="col">{{ header }}</th>{% endfor %}</tr></thead><tbody>{% for row in data.get("rows", []) %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+{% elif kind == "callout" %}
+<aside class="blog-callout"><strong>{{ data.get("title", "Note") }}</strong><p>{{ data.get("text", "") }}</p></aside>
+{% elif kind == "divider" %}
+<hr>
+{% elif kind in ["youtube", "instagram", "link_preview"] %}
+{% set target = safe_url(data.get("url")) %}
+{% if target %}<p class="blog-embed-link"><a href="{{ target }}" target="_blank" rel="noopener noreferrer">{{ data.get("title") or ("Open " ~ kind|replace("_", " ")|title) }}</a></p>{% endif %}
+{% endif %}
+{% endfor %}
+</div>
+{% endmacro %}

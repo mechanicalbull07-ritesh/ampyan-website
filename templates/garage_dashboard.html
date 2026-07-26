@@ -210,7 +210,10 @@
 
 <div class="button-group">
 <a href="/edit-car/{{ car.id }}" class="auth-button">Edit Car</a>
-<a href="/delete-car/{{ car.id }}" class="ui-button-secondary">Delete Car</a>
+<form method="POST" action="/delete-car/{{ car.id }}" class="inline-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="ui-button-secondary">Delete Car</button>
+</form>
 <a href="/add-car" class="ui-button-secondary">Add Another Car</a>
 </div>
 
@@ -224,8 +227,14 @@
 </div>
 
 <script>
-function switchCar(carId){
-window.location.href="/set-default-car/"+carId;
+async function switchCar(carId){
+const token=document.querySelector('meta[name="csrf-token"]').content;
+const response=await fetch("/set-default-car/"+encodeURIComponent(carId),{
+method:"POST",
+headers:{"X-CSRFToken":token},
+credentials:"same-origin"
+});
+if(response.ok) window.location.href="/garage";
 }
 </script>
 

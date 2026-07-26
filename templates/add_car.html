@@ -9,6 +9,7 @@
 <h2 class="auth-title">Add Your Car</h2>
 
 <form action="/add-car" method="POST" class="auth-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
 <label class="form-label">Car Brand</label>
 <select name="brand" id="carBrandSelect" required class="auth-input">

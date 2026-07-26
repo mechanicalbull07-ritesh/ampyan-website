@@ -46,6 +46,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.exceptions import HTTPException
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_wtf.csrf import CSRFError, CSRFProtect
 from werkzeug.utils import secure_filename
 print("Security modules loaded")
 
@@ -61,6 +62,7 @@ print("AI routes loaded")
 
 from routes.admin_routes import admin_bp
 print("Admin routes loaded")
+from routes.blog_routes import blog_bp
 
 # ================= SERVICES =================
 from services.email_service import send_email
@@ -187,6 +189,7 @@ def ai_diagnose(problem, car):
     return results
 
 app = Flask(__name__)
+csrf = CSRFProtect()
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 IS_PRODUCTION = os.environ.get("ENV", "").lower() == "production" or os.environ.get("RENDER", "").lower() == "true"
 
@@ -198,6 +201,7 @@ app.register_blueprint(main_bp)
 app.register_blueprint(garage_bp)
 app.register_blueprint(tools_bp)
 app.register_blueprint(user_bp)
+app.register_blueprint(blog_bp)
 
 print("Motrnoix AMPYAN server booting...")
 logger.info(
@@ -211,6 +215,10 @@ def create_app():
 
 # ================= FILE SIZE LIMIT =================
 app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+# Flask 3.1 otherwise applies a hidden 500,000-byte aggregate limit to
+# non-file multipart fields. News forms intentionally share the explicit
+# request ceiling so long-form text is not rejected before route validation.
+app.config["MAX_FORM_MEMORY_SIZE"] = app.config["MAX_CONTENT_LENGTH"]
 
 # ================= ALLOWED IMAGE TYPES =================
 
@@ -837,8 +845,6 @@ app.config['MAIL_DEFAULT_SENDER'] = ("Motrnoix AMPYAN", os.environ.get("MAIL_FRO
 
 mail = Mail(app)
 
-# csrf = CSRFProtect(app)
-
 # ===============================
 # DATABASE CONFIG (LOCAL + PROD)
 # ===============================
@@ -870,6 +876,39 @@ app.config["SECRET_KEY"] = app.secret_key
 app.config["PREFERRED_URL_SCHEME"] = "https" if IS_PRODUCTION else "http"
 app.config["DEBUG"] = False
 app.config["PROPAGATE_EXCEPTIONS"] = False
+app.config["COMMUNITY_BLOG_ENABLED"] = os.environ.get("COMMUNITY_BLOG_ENABLED", "false")
+app.config["BLOG_WEBSITE_SERVICE_TOKEN"] = os.environ.get("BLOG_WEBSITE_SERVICE_TOKEN", "")
+app.config["AMPYAN_API_BASE_URL"] = os.environ.get("AMPYAN_API_BASE_URL")
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION
+app.config["REMEMBER_COOKIE_HTTPONLY"] = True
+app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
+app.config["REMEMBER_COOKIE_SECURE"] = IS_PRODUCTION
+csrf.init_app(app)
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(_error):
+    message = (
+        "Your session form token is missing or expired. "
+        "Refresh the page and try again."
+    )
+    if request.is_json or request.accept_mimetypes.best == "application/json":
+        return jsonify({
+            "success": False,
+            "error": {
+                "code": "CSRF_VALIDATION_FAILED",
+                "message": message,
+            },
+        }), 400
+    return render_template(
+        "error.html",
+        title="Form session expired",
+        message=message,
+        action_url="/",
+        action_label="Return home and try again",
+    ), 400
 
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
@@ -2576,7 +2615,12 @@ def create_news():
             app.logger.info("news_saved_with_image")
         else:
             app.logger.info("news_saved_without_image")
-        sync_news_to_app(news)
+        if not sync_news_to_app(news):
+            flash(
+                "News was saved on the website, but app sync failed. "
+                "Retry the update after the API is available.",
+                "warning",
+            )
 
         return redirect("/news")
 
@@ -2660,7 +2704,12 @@ def edit_news(news_id):
             news.category,
             news.id,
         )
-        sync_news_to_app(news)
+        if not sync_news_to_app(news):
+            flash(
+                "News was updated on the website, but app sync failed. "
+                "Retry the update after the API is available.",
+                "warning",
+            )
         app.logger.info("news_update_completed")
 
         return redirect("/news")
@@ -2688,7 +2737,7 @@ def upload_news_body_image():
     return jsonify({"success": True, "url": result["filename"]})
 # ================= DELETE NEWS =================
 
-@app.route("/admin/news/delete/<int:news_id>")
+@app.route("/admin/news/delete/<int:news_id>", methods=["POST"])
 @login_required
 def delete_news(news_id):
 
@@ -2866,7 +2915,7 @@ def delete_comment(comment_id):
 
 # ================= EMAIL VERIFICATION =================
 
-@app.route("/verify-email/<token>")
+@app.route("/verify-email/<token>", methods=["GET", "POST"])
 def verify_email(token):
 
     user = User.query.filter_by(verification_token=token).first()
@@ -2876,6 +2925,9 @@ def verify_email(token):
 
     if user.verification_token_expiry < datetime.utcnow():
         return "Verification link expired."
+
+    if request.method == "GET":
+        return render_template("verify_email.html", token=token)
 
     user.email_verified = True
     user.verification_token = None

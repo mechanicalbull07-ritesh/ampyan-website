@@ -9,6 +9,7 @@
         <p class="create-sub">Share your thoughts with the community</p>
 
         <form method="POST" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
             <!-- Title -->
             <input type="text"
