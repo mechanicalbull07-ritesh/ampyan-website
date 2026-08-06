@@ -390,6 +390,7 @@ def run():
                     button = page.get_by_role("button", name=button_name, exact=True)
                 before = db_scalar("SELECT count(*) FROM blog_comments")
                 locator.fill(value)
+                submitted_value = locator.input_value()
                 form = locator.locator("xpath=ancestor::form")
                 with page.expect_navigation(wait_until="domcontentloaded") as navigation:
                     form.evaluate("form => HTMLFormElement.prototype.submit.call(form)")
@@ -398,14 +399,26 @@ def run():
                 stored = db_scalar(
                     "SELECT body FROM blog_comments ORDER BY id DESC LIMIT 1"
                 ) if after == before + 1 else None
-                expected = value.strip()
-                no_truncation = stored == expected if stored is not None else after == before
+                expected = submitted_value.strip()
+                normalized_stored = (
+                    stored.replace("\r\n", "\n").replace("\r", "\n")
+                    if stored is not None else None
+                )
+                normalized_expected = expected.replace("\r\n", "\n").replace("\r", "\n")
+                no_truncation = (
+                    normalized_stored == normalized_expected
+                    if stored is not None else after == before
+                )
                 outcomes[(field, payload_class)] = {
                     "http_result": response.status,
                     "ui_result": "persisted" if after == before + 1 else "validation rejection",
                     "validation_message": " | ".join(page.locator('[role=alert]').all_inner_texts()),
                     "database_result": "one row" if after == before + 1 else "no mutation",
-                    "reload_result": "exact text reloaded" if stored == expected else "no accepted value",
+                    "reload_result": (
+                        "exact text reloaded"
+                        if normalized_stored == normalized_expected
+                        else "no accepted value"
+                    ),
                     "preview_result": "NOT APPLICABLE — community text has no preview",
                     "published_render_result": "escaped plain text or rejected",
                     "javascript_execution_result": "none",
@@ -468,20 +481,34 @@ def run():
             page.goto(BASE + "/blogs/moderation", wait_until="domcontentloaded")
             form = page.locator(f'form[action="/blogs/{blog_id}/moderate"]')
             form.locator('[name="action"]').select_option("reject")
-            form.locator('[name="reason"]').fill(value)
+            reason_control = form.locator('[name="reason"]')
+            reason_control.fill(value)
+            submitted_value = reason_control.input_value()
+            before_actions = db_scalar(
+                "SELECT count(*) FROM blog_moderation_actions WHERE blog_id=%s",
+                (blog_id,),
+            )
             with page.expect_navigation(wait_until="domcontentloaded") as navigation:
                 form.evaluate("node => HTMLFormElement.prototype.submit.call(node)")
             response = navigation.value
             status = db_scalar("SELECT status FROM blogs WHERE id=%s", (blog_id,))
-            stored = db_scalar(
-                "SELECT reason FROM blog_moderation_actions WHERE blog_id=%s ORDER BY id DESC LIMIT 1",
+            after_actions = db_scalar(
+                "SELECT count(*) FROM blog_moderation_actions WHERE blog_id=%s",
                 (blog_id,),
             )
-            expected = value.strip()
+            stored = (
+                db_scalar(
+                    "SELECT reason FROM blog_moderation_actions WHERE blog_id=%s ORDER BY id DESC LIMIT 1",
+                    (blog_id,),
+                )
+                if after_actions == before_actions + 1 else None
+            )
+            expected = submitted_value.strip()
             accepted = status == "rejected"
             safe = (
-                stored == expected if accepted
-                else status == "pending_review" and stored is None
+                stored == expected and after_actions == before_actions + 1
+                if accepted
+                else status == "pending_review" and after_actions == before_actions
             )
             outcomes[("Rejection reason", payload_class)] = {
                 "http_result": response.status,
@@ -499,6 +526,12 @@ def run():
         # Media file chooser matrix.
         context.clear_cookies()
         login(page, "author1")
+        # Use a freshly created draft so it remains inside the API's bounded
+        # /me result window after the matrix has created many earlier drafts.
+        # The original retained fixture (ID 2) can legitimately fall outside
+        # that window and make the Website edit route return 404.
+        submit_editor(page, title="Payload media fixture")
+        media_blog_id = db_scalar("SELECT max(id) FROM blogs")
         media_cases = {}
         valid = io.BytesIO()
         Image.new("RGB", (8, 8), (30, 100, 200)).save(valid, format="PNG")
@@ -510,8 +543,14 @@ def run():
             "Special-character filename": ("हिंदी 🚗 & test.png", "image/png", valid.getvalue()),
         }
         for payload_class, spec in media_specs.items():
-            page.goto(BASE + "/blogs/2/edit", wait_until="domcontentloaded")
-            before = db_scalar("SELECT count(*) FROM blog_content_blocks WHERE blog_id=2")
+            page.goto(
+                f"{BASE}/blogs/{media_blog_id}/edit",
+                wait_until="domcontentloaded",
+            )
+            before = db_scalar(
+                "SELECT count(*) FROM blog_content_blocks WHERE blog_id=%s",
+                (media_blog_id,),
+            )
             if spec:
                 name, mime, content = spec
                 page.get_by_label("Blog image").set_input_files({
@@ -522,7 +561,10 @@ def run():
                 "() => document.querySelector('[data-media-status]').textContent !== 'Uploading…'"
             )
             status = page.locator("[data-media-status]").inner_text()
-            after = db_scalar("SELECT count(*) FROM blog_content_blocks WHERE blog_id=2")
+            after = db_scalar(
+                "SELECT count(*) FROM blog_content_blocks WHERE blog_id=%s",
+                (media_blog_id,),
+            )
             media_cases[payload_class] = {
                 "http_result": "browser fetch completed",
                 "ui_result": status,

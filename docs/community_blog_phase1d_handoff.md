@@ -476,6 +476,7 @@ not executed in this run.
   packages removed, ports 5510/5520/55432 closed.
 - Phase 1D complete: **NO**
 - Ready for controlled production migration preparation: **NO**
+
 - Production migration: **NOT RUN**
 - Production deployment: **NOT PERFORMED**
 - Community Blog enabled in production: **NO**
@@ -596,3 +597,70 @@ push remained untouched.
 - Cleanup: **PASSED**
 - Phase 1D complete: **NO**
 - Ready for controlled production migration preparation: **NO**
+
+## Remaining approval gates completed — 2026-08-06
+
+The corrected browser payload-boundary matrix completed against a fresh,
+disposable localhost Website/API/PostgreSQL environment with deterministic
+fake media. No screenshots, manual visual reviews, or performance evidence
+were regenerated.
+
+Retained payload evidence:
+
+- `docs/evidence/community_blog_phase1d_payload_matrix.json`
+- `docs/evidence/community_blog_phase1d_payload_matrix.md`
+- Total field × payload records: **1,410**
+- Executed browser cases: **468**
+- Passed executed cases: **468**
+- Failed/missing cases: **0**
+- NOT APPLICABLE records: **942**
+- Payload matrix: **PASSED**
+
+The completed execution exposed evidence-harness defects only. The harness was
+narrowly corrected to use a newly created media draft that remains inside the
+bounded `/me` result window, compare persisted values with the actual browser
+control value after native `maxlength`/single-line normalization, compare
+multiline values after equivalent LF/CRLF normalization, and verify moderator
+action-row deltas for rejected empty reasons. Database inspection confirmed
+the application enforced its boundaries without unsafe execution or silent
+application-side payload corruption. No payload-related application code fix
+or performance rerun was required.
+
+Final regression:
+
+- Website: **47 passed, 176 subtests passed** — **PASSED**.
+- Full API with a fresh disposable SQLite database: **306 passed, 13 skipped,
+  24 subtests passed** — **PASSED**.
+- Focused Blog integration/API/media: **10 passed** — **PASSED**.
+- Static integrity: **86 Website Python files**, **97 API Python files**, all
+  **70 Jinja templates**, both Render YAML files, and both worktree
+  `git diff --check` checks passed.
+- Security-focused regression: **28 Website CSRF/Blog/client tests** and **12
+  API auth/disabled/media/feature-flag guard tests** passed. Retained-evidence
+  scans found no disposable service token/secret and no executable payload
+  text in the Markdown summary — **PASSED**.
+
+Cleanup:
+
+- Website, API, and disposable PostgreSQL processes stopped.
+- Ports **5510**, **5520**, and **55432** verified closed.
+- Only disposable `/tmp` databases, PostgreSQL clusters, Python browser
+  package, launchers, logs, PID/path files, and smoke-check files were removed.
+- All retained evidence under `docs/evidence/` was preserved.
+- Cleanup: **PASSED**.
+
+Final decision:
+
+- Payload matrix: **PASSED**
+- Website regression: **PASSED**
+- API regression: **PASSED**
+- Focused Blog tests: **PASSED**
+- Security scans: **PASSED**
+- Cleanup: **PASSED**
+- Production migration: **NOT RUN**
+- Production deployment: **NOT PERFORMED**
+- Git commit/push: **NOT PERFORMED**
+- Phase 1D complete: **YES**
+- Ready for controlled production migration preparation: **YES**
+
+Phase 1E was not started. Community Blog was not enabled in production.
