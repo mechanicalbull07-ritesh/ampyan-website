@@ -1,7 +1,16 @@
 {% extends "base.html" %}
 {% block content %}
 <section class="blog-shell">
-<header class="blog-hero"><p class="page-kicker">AMPYAN Community</p><h1>Community Blog</h1><p>Automotive stories, ownership lessons and practical advice from the AMPYAN community.</p>{% if current_user.is_authenticated %}<a class="auth-button" href="{{ url_for('website_blogs.write') }}">Write a Blog</a>{% endif %}</header>
+<header class="blog-hero"><p class="page-kicker">AMPYAN Community</p><h1>Community Blog</h1><p>Automotive stories, ownership lessons and practical advice from the AMPYAN community.</p>{% if current_user.is_authenticated %}
+<div class="ui-button-row">
+<a class="auth-button" href="{{ url_for('website_blogs.write') }}">Write a Blog</a>
+<a class="ui-button-secondary" href="{{ url_for('website_blogs.my_blogs') }}">My Blogs</a>
+<a class="ui-button-secondary" href="{{ url_for('website_blogs.analytics') }}">Analytics</a>
+{% if current_user.role == "admin" or current_user.email|lower in ADMIN_EMAILS %}
+<a class="ui-button-secondary" href="{{ url_for('website_blogs.moderation') }}">Blog Moderation</a>
+{% endif %}
+</div>
+{% endif %}</header>
 <form method="GET" class="blog-filters">
 <label>Search<input type="search" name="query" value="{{ filters.get('query','') }}" maxlength="200"></label>
 <label>Category<select name="category"><option value="">All</option>{% for item in categories %}<option value="{{ item.slug }}" {% if filters.get('category') == item.slug %}selected{% endif %}>{{ item.name }}</option>{% endfor %}</select></label>
