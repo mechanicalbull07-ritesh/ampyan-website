@@ -126,6 +126,17 @@ class BlogApiClient:
             headers.update(extra)
         return headers
 
+    @staticmethod
+    def _version_headers(version):
+        try:
+            return {"If-Match": str(int(version))}
+        except (TypeError, ValueError) as exc:
+            raise BlogApiError(
+                "BLOG_VALIDATION_FAILED",
+                "A valid Blog version is required. Refresh and try again.",
+                400,
+            ) from exc
+
     def request(
         self,
         method,
@@ -211,17 +222,17 @@ class BlogApiClient:
     def update_draft(self, blog_id, payload, user_id, version):
         return self.request(
             "PATCH", f"blogs/{int(blog_id)}", user_id=user_id, json=payload,
-            headers={"If-Match": str(int(version))},
+            headers=self._version_headers(version),
         )[0]
 
-    def delete_draft(self, blog_id, user_id):
-        return self.request("DELETE", f"blogs/{int(blog_id)}", user_id=user_id)[0]
+    def delete_draft(self, blog_id, user_id, version):
+        return self.request("DELETE", f"blogs/{int(blog_id)}", user_id=user_id, headers=self._version_headers(version))[0]
 
-    def submit_blog(self, blog_id, user_id):
-        return self.request("POST", f"blogs/{int(blog_id)}/submit", user_id=user_id)[0]
+    def submit_blog(self, blog_id, user_id, version):
+        return self.request("POST", f"blogs/{int(blog_id)}/submit", user_id=user_id, headers=self._version_headers(version))[0]
 
-    def withdraw_blog(self, blog_id, user_id):
-        return self.request("POST", f"blogs/{int(blog_id)}/withdraw", user_id=user_id)[0]
+    def withdraw_blog(self, blog_id, user_id, version):
+        return self.request("POST", f"blogs/{int(blog_id)}/withdraw", user_id=user_id, headers=self._version_headers(version))[0]
 
     def list_my_blogs(self, user_id):
         return self.request("GET", "blogs/me", user_id=user_id)[0]
@@ -295,8 +306,14 @@ class BlogApiClient:
             params={"status": status} if status else None,
         )[0]
 
+    def list_reports(self, user_id, status=None):
+        return self.request("GET", "blogs/reports", user_id=user_id, params={"status": status} if status else None)[0]
+
+    def resolve_report(self, report_id, payload, user_id):
+        return self.request("POST", f"blogs/reports/{int(report_id)}/resolve", user_id=user_id, json=payload)[0]
+
     def moderate_blog(self, blog_id, payload, user_id, version):
         return self.request(
             "POST", f"blogs/{int(blog_id)}/moderate", user_id=user_id, json=payload,
-            headers={"If-Match": str(int(version))},
+            headers=self._version_headers(version),
         )[0]

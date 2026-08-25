@@ -302,7 +302,7 @@ def edit(blog_id):
 
 def _action(method_name, blog_id, success):
     try:
-        getattr(client(), method_name)(blog_id, actor_id())
+        getattr(client(), method_name)(blog_id, actor_id(), request.form.get("version"))
         flash(success, "success")
     except BlogApiError as exc:
         flash(exc.message, "error")
@@ -466,6 +466,31 @@ def moderation():
     except BlogApiError as exc:
         return _handle_error(exc, private=True)
     return render_template("blogs/moderation.html", blogs=blogs, noindex=True)
+
+
+@blog_bp.get("/moderation/reports")
+@login_required
+def moderation_reports():
+    try:
+        reports = _items(client().list_reports(actor_id(), request.args.get("status")))
+    except BlogApiError as exc:
+        return _handle_error(exc, private=True)
+    return render_template("blogs/reports.html", reports=reports, noindex=True)
+
+
+@blog_bp.post("/moderation/reports/<int:report_id>/resolve")
+@login_required
+def resolve_report(report_id):
+    action = (request.form.get("action") or "").strip()
+    if action not in {"resolve", "dismiss"}:
+        flash("Choose a valid report action.", "error")
+    else:
+        try:
+            client().resolve_report(report_id, {"action": action, "reason": (request.form.get("reason") or "").strip()}, actor_id())
+            flash("Report updated.", "success")
+        except BlogApiError as exc:
+            flash(exc.message, "error")
+    return redirect(url_for("website_blogs.moderation_reports"))
 
 
 @blog_bp.post("/<int:blog_id>/moderate")

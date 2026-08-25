@@ -294,6 +294,58 @@ class BlogWebsiteTest(unittest.TestCase):
             7, {"reason": "spam", "details": details}, 4
         )
 
+    def test_rejection_reason_is_escaped_and_state_forms_carry_version(self):
+        actor = SimpleNamespace(is_authenticated=True, id=4)
+        rejected = sample_blog()
+        rejected.update({
+            "status": "rejected", "version": 7,
+            "rejection": {"reason": "Needs <script>alert(1)</script> evidence"},
+        })
+        api = Mock()
+        api.list_my_blogs.return_value = {"items": [rejected]}
+        with patch.dict(self.app.config, {
+            "COMMUNITY_BLOG_ENABLED": "true", "LOGIN_DISABLED": True,
+        }), patch("routes.blog_routes.current_user", actor), patch(
+            "routes.blog_routes.client", return_value=api
+        ):
+            response = self.client.get("/blogs/me")
+        self.assertIn(b"Needs &lt;script&gt;alert(1)&lt;/script&gt; evidence", response.data)
+        self.assertIn(b'name="version" value="7"', response.data)
+        self.assertNotIn(b'action="/blogs/7/delete"', response.data)
+
+    def test_submit_forwards_browser_rendered_version_not_identity(self):
+        actor = SimpleNamespace(is_authenticated=True, id=4)
+        api = Mock()
+        with patch.dict(self.app.config, {
+            "COMMUNITY_BLOG_ENABLED": "true", "LOGIN_DISABLED": True,
+        }), patch("routes.blog_routes.current_user", actor), patch(
+            "routes.blog_routes.client", return_value=api
+        ):
+            response = self.client.post("/blogs/7/submit", data={
+                "version": "12", "user_id": "999", "author_id": "999",
+            })
+        self.assertEqual(response.status_code, 302)
+        api.submit_blog.assert_called_once_with(7, 4, "12")
+
+    def test_report_moderation_page_does_not_render_reporter_identity(self):
+        actor = SimpleNamespace(is_authenticated=True, id=4)
+        api = Mock()
+        api.list_reports.return_value = {"items": [{
+            "id": 2, "status": "open", "reason": "spam", "details": "Review",
+            "created_at": "2026-08-25T00:00:00Z", "reporter_id": 99,
+            "blog": {"id": 7, "title": "Reported Blog"},
+        }]}
+        with patch.dict(self.app.config, {
+            "COMMUNITY_BLOG_ENABLED": "true", "LOGIN_DISABLED": True,
+        }), patch("routes.blog_routes.current_user", actor), patch(
+            "routes.blog_routes.client", return_value=api
+        ):
+            response = self.client.get("/blogs/moderation/reports")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Reported Blog", response.data)
+        self.assertNotIn(b"99", response.data)
+        self.assertNotIn(b"reporter", response.data.lower())
+
 
 if __name__ == "__main__":
     unittest.main()

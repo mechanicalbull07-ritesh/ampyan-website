@@ -17,6 +17,7 @@
 {% if blog and blog.status in ["draft", "rejected"] %}
 <form method="POST" action="{{ url_for('website_blogs.submit', blog_id=blog.id) }}" class="blog-submit-review-form" data-busy-form>
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="version" value="{{ blog.version }}">
 <button type="submit" class="auth-button">Submit for Review</button>
 </form>
 {% elif blog and blog.status == "pending_review" %}

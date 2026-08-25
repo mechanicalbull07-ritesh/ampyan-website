@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="blog-shell">
+<header><p class="page-kicker">Moderator workspace</p><h1>Blog reports</h1></header>
+{% for report in reports %}
+<article class="blog-dashboard-row">
+<div><span class="blog-status">{{ report.status|title }}</span><h2>{{ report.blog.title if report.blog else "Unavailable Blog" }}</h2><p><strong>{{ report.reason|replace("_", " ")|title }}</strong></p>{% if report.details %}<p>{{ report.details }}</p>{% endif %}<p class="blog-meta">Reported {{ report.created_at }}</p></div>
+<form method="POST" action="{{ url_for('website_blogs.resolve_report', report_id=report.id) }}" data-busy-form><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><label>Action<select name="action"><option value="resolve">Resolve</option><option value="dismiss">Dismiss</option></select></label><label>Moderator note<textarea name="reason" maxlength="2000"></textarea></label><button type="submit">Update report</button></form>
+</article>
+{% else %}<div class="empty-state">No open Blog reports.</div>{% endfor %}
+</section>
+{% endblock %}

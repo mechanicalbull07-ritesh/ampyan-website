@@ -116,6 +116,34 @@ class BlogApiClientTest(unittest.TestCase):
         self.assertEqual(call["files"]["image"][0], "image.webp")
         self.assertEqual(call["files"]["image"][2], "image/webp")
 
+    def test_state_mutations_forward_required_versions(self):
+        self.success({"id": 4})
+        operations = (
+            (self.client.delete_draft, (4, 8, 11), "DELETE", "blogs/4"),
+            (self.client.submit_blog, (4, 8, 12), "POST", "blogs/4/submit"),
+            (self.client.withdraw_blog, (4, 8, 13), "POST", "blogs/4/withdraw"),
+        )
+        for method, args, expected_method, path in operations:
+            with self.subTest(path=path):
+                self.http.reset_mock()
+                self.success({"id": 4})
+                method(*args)
+                call = self.http.request.call_args
+                self.assertEqual(call.args[:2], (expected_method, f"https://api.example.test/api/v1/{path}"))
+                self.assertEqual(call.kwargs["headers"]["If-Match"], str(args[2]))
+
+    def test_report_management_remains_server_authenticated(self):
+        self.success({"items": []})
+        self.client.list_reports(9, "open")
+        call = self.http.request.call_args.kwargs
+        self.assertEqual(call["params"], {"status": "open"})
+        self.assertEqual(call["headers"]["X-AMPYAN-BLOG-USER-ID"], "9")
+        self.success({"id": 3, "status": "resolved"})
+        self.client.resolve_report(3, {"action": "resolve", "reason": "safe"}, 9)
+        call = self.http.request.call_args.kwargs
+        self.assertEqual(call["json"]["action"], "resolve")
+        self.assertNotIn("reporter_id", call["json"])
+
     def test_failure_injection_is_local_only_and_production_fails_closed(self):
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".json", dir="/tmp", delete=False
