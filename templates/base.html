@@ -17,7 +17,7 @@
 {% set social_url = meta_url|default(request.url, true) %}
 {% set social_image = meta_image|default(url_for('static', filename='images/logo.png', _external=True), true) %}
 {% set social_type = meta_type|default("website", true) %}
-{% set browser_title = (social_title ~ " - AMPYAN") if meta_title is defined else "AMPYAN - AI Powered Automotive Assistant" %}
+{% set resolved_browser_title = browser_title|default((social_title ~ " - AMPYAN") if meta_title is defined else "AMPYAN - AI Powered Automotive Assistant", true) %}
 <link rel="canonical" href="{{ social_url }}">
 <meta property="og:site_name" content="AMPYAN">
 <meta property="og:title" content="{{ social_title }}">
@@ -26,9 +26,7 @@
 <meta property="og:url" content="{{ social_url }}">
 <meta property="og:image" content="{{ social_image }}">
 <meta property="og:image:secure_url" content="{{ social_image }}">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:card" content="{{ twitter_card|default('summary_large_image' if meta_image|default(none, true) else 'summary', true) }}">
 <meta name="twitter:title" content="{{ social_title }}">
 <meta name="twitter:description" content="{{ social_description }}">
 <meta name="twitter:image" content="{{ social_image }}">
@@ -46,8 +44,9 @@
   ]
 }
 </script>
+{% block structured_data %}{% endblock %}
 
-<title>{{ browser_title }}</title>
+<title>{{ resolved_browser_title }}</title>
 
 {% if analytics_enabled and ga4_measurement_id %}
 <script async src="https://www.googletagmanager.com/gtag/js?id={{ ga4_measurement_id|urlencode }}"></script>

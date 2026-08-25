@@ -1,9 +1,14 @@
 {% extends "base.html" %}
 {% from "blogs/_blocks.html" import render_blocks %}
+{% block structured_data %}
+<script type="application/ld+json" data-seo-schema="blog-posting">{{ blog_posting_jsonld|tojson }}</script>
+<script type="application/ld+json" data-seo-schema="breadcrumbs">{{ breadcrumb_jsonld|tojson }}</script>
+{% endblock %}
 {% block content %}
 <article class="blog-shell blog-detail">
-<header><p class="page-kicker">{{ blog.category.name if blog.category else "Community Blog" }}</p><h1>{{ blog.title }}</h1>{% if blog.subtitle %}<p class="blog-subtitle">{{ blog.subtitle }}</p>{% endif %}<p class="blog-meta">By {{ blog.author.display_name }} · {{ blog.reading_time_minutes }} min · {{ blog.published_at }}</p>{% set cover_url = safe_public_url(blog.cover_image_url) %}{% if cover_url %}<img class="blog-cover" src="{{ cover_url }}" alt="{{ blog.title }}" loading="eager">{% endif %}</header>
-<div class="blog-tags">{% for tag in blog.tags %}<span>{{ tag.name }}</span>{% endfor %}</div>
+<nav class="blog-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><a href="{{ url_for('website_blogs.index') }}">Blogs</a></li><li aria-current="page">{{ blog.title }}</li></ol></nav>
+<header><p class="page-kicker">{% if blog.category %}<a href="{{ url_for('website_blogs.index', category=blog.category.slug) }}">{{ blog.category.name }}</a>{% else %}Community Blog{% endif %}</p><h1>{{ blog.title }}</h1>{% if blog.subtitle %}<p class="blog-subtitle">{{ blog.subtitle }}</p>{% endif %}<p class="blog-meta">By {{ blog.author.display_name }} · {{ blog.reading_time_minutes }} min · {{ blog.published_at }}</p>{% set cover_url = safe_public_url(blog.cover_image_url) %}{% if cover_url %}<img class="blog-cover" src="{{ cover_url }}" alt="{{ blog.title }}" loading="eager">{% endif %}</header>
+<div class="blog-tags">{% for tag in blog.tags %}<a href="{{ url_for('website_blogs.index', tag=tag.slug) }}">{{ tag.name }}</a>{% endfor %}</div>
 {{ render_blocks(blog.content_blocks or [], safe_public_url, youtube_embed_url, instagram_embed) }}
 <section class="blog-actions" aria-label="Blog actions">
 {% if current_user.is_authenticated %}

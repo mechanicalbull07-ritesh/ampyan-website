@@ -79,12 +79,65 @@ def article_meta_description(blog):
     return None
 
 
+def seo_article_title(value, limit=60):
+    title = re.sub(r"\s+", " ", str(value or "")).strip() or "Community Blog"
+    suffix = " | AMPYAN"
+    if len(title + suffix) <= limit:
+        return title + suffix
+    available = limit - len(suffix) - 1
+    shortened = title[:available].rsplit(" ", 1)[0].rstrip(" ,.;:-")
+    if not shortened:
+        shortened = title[:available].rstrip()
+    return shortened + "…" + suffix
+
+
 def blog_canonical_url(slug=None):
     base = current_app.config.get("BLOG_CANONICAL_ORIGIN", BLOG_CANONICAL_ORIGIN)
     base = str(base or BLOG_CANONICAL_ORIGIN).rstrip("/")
     if slug is None:
         return f"{base}/blogs"
     return f"{base}/blogs/{quote(str(slug), safe='-._~')}"
+
+
+def article_structured_data(blog, canonical_url, description, image_url):
+    posting = {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+        "headline": str(blog.get("title") or ""),
+        "description": description,
+        "author": {
+            "@type": "Person",
+            "name": str((blog.get("author") or {}).get("display_name") or "AMPYAN Member"),
+        },
+        "publisher": {
+            "@type": "Organization",
+            "name": "AMPYAN",
+            "logo": {
+                "@type": "ImageObject",
+                "url": f"{BLOG_CANONICAL_ORIGIN}/static/images/logo.png",
+            },
+        },
+        "mainEntityOfPage": {"@type": "WebPage", "@id": canonical_url},
+    }
+    if image_url:
+        posting["image"] = image_url
+    if blog.get("published_at"):
+        posting["datePublished"] = blog["published_at"]
+    if blog.get("updated_at"):
+        posting["dateModified"] = blog["updated_at"]
+    return posting
+
+
+def breadcrumb_structured_data(blog, canonical_url):
+    return {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {"@type": "ListItem", "position": 1, "name": "Home", "item": f"{BLOG_CANONICAL_ORIGIN}/"},
+            {"@type": "ListItem", "position": 2, "name": "Blogs", "item": blog_canonical_url()},
+            {"@type": "ListItem", "position": 3, "name": str(blog.get("title") or "Article"), "item": canonical_url},
+        ],
+    }
 
 
 def published_sitemap_blogs(max_pages=100):
@@ -291,6 +344,11 @@ def index():
         categories, tags = _taxonomy(api)
     except BlogApiError as exc:
         return _handle_error(exc)
+    next_url = None
+    if meta.get("next_cursor"):
+        next_params = {key: value for key, value in params.items() if key != "cursor"}
+        next_params["cursor"] = meta["next_cursor"]
+        next_url = url_for("website_blogs.index", **next_params)
     return render_template(
         "blogs/index.html",
         blogs=_items(data),
@@ -298,6 +356,7 @@ def index():
         categories=categories,
         tags=tags,
         filters=params,
+        next_url=next_url,
         safe_public_url=safe_public_url,
         meta_title="Community Blog",
         meta_description=BLOG_META_DESCRIPTION,
@@ -632,6 +691,10 @@ def detail(slug):
         related = _items(api.list_related_blogs(blog["id"], actor_id()))
     except BlogApiError:
         related = []
+    canonical_url = blog_canonical_url(blog.get("slug"))
+    description = article_meta_description(blog) or BLOG_META_DESCRIPTION
+    cover_image = safe_public_url(blog.get("cover_image_url")) or None
+    seo_title = seo_article_title(blog.get("title"))
     return render_template(
         "blogs/detail.html",
         blog=blog,
@@ -641,9 +704,15 @@ def detail(slug):
         safe_public_url=safe_public_url,
         youtube_embed_url=youtube_embed_url,
         instagram_embed=instagram_embed,
-        meta_title=blog.get("title"),
-        meta_description=article_meta_description(blog),
-        meta_image=safe_public_url(blog.get("cover_image_url")) or None,
+        meta_title=seo_title,
+        browser_title=seo_title,
+        meta_description=description,
+        meta_image=cover_image,
         meta_type="article",
-        meta_url=blog_canonical_url(blog.get("slug")),
+        meta_url=canonical_url,
+        twitter_card="summary_large_image" if cover_image else "summary",
+        blog_posting_jsonld=article_structured_data(
+            blog, canonical_url, description, cover_image
+        ),
+        breadcrumb_jsonld=breadcrumb_structured_data(blog, canonical_url),
     )

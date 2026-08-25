@@ -6,7 +6,7 @@
 {% if kind == "paragraph" %}
 <p>{{ data.get("text", "") }}</p>
 {% elif kind == "heading" %}
-<h2>{{ data.get("text", "") }}</h2>
+{% if data.get("level") == 3 %}<h3>{{ data.get("text", "") }}</h3>{% elif data.get("level") == 4 %}<h4>{{ data.get("text", "") }}</h4>{% else %}<h2>{{ data.get("text", "") }}</h2>{% endif %}
 {% elif kind == "image" %}
 {% set image_url = safe_url(data.get("url")) %}
 {% if image_url %}<figure><img src="{{ image_url }}" alt="{{ data.get('alt_text') or data.get('caption') or 'Blog image' }}" loading="lazy">{% if data.get("caption") %}<figcaption>{{ data.get("caption") }}</figcaption>{% endif %}</figure>{% endif %}

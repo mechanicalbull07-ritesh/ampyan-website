@@ -134,7 +134,11 @@ class BlogWebsiteTest(unittest.TestCase):
         ), patch("routes.blog_routes.client", return_value=api):
             response = self.client.get("/blogs?query=engine&sort=popular")
         self.assertEqual(response.status_code, 200)
-        self.assertIn(b'value="opaque+/=="', response.data)
+        self.assertIn(
+            b'href="/blogs?query=engine&amp;sort=popular&amp;cursor=opaque%2B/%3D%3D"',
+            response.data,
+        )
+        self.assertIn(b'rel="next"', response.data)
         self.assertIn(b'value="engine"', response.data)
         self.assertNotIn(b"javascript:alert", response.data)
 
