@@ -89,7 +89,7 @@ y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
 <link rel="stylesheet" href="/static/css/news.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/garage.css') }}">
-{% if request.path.startswith("/blogs") %}<link rel="stylesheet" href="{{ url_for('static', filename='css/blogs.css') }}">{% endif %}
+{% if request.path.startswith("/blogs") %}<link rel="stylesheet" href="{{ url_for('static', filename='css/blogs.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/blogs-rich-media.css') }}">{% endif %}
 
 <!-- ICONS -->
 

@@ -1,7 +1,8 @@
 import json
 import os
 import secrets
-from urllib.parse import urlparse
+import re
+from urllib.parse import parse_qs, urlparse
 
 from flask import (
     Blueprint, abort, current_app, flash, redirect, render_template,
@@ -18,6 +19,7 @@ REPORT_REASONS = {
     "spam", "abusive", "misinformation", "copyright",
     "unsafe_advice", "duplicate", "other",
 }
+BLOG_IMAGE_MAX_BYTES = 8 * 1024 * 1024
 
 
 def blog_enabled():
@@ -52,6 +54,48 @@ def safe_public_url(value):
         if parsed.scheme == "https" and bool(parsed.netloc)
         else ""
     )
+
+
+YOUTUBE_ID_RE = re.compile(r"^[A-Za-z0-9_-]{11}$")
+INSTAGRAM_CODE_RE = re.compile(r"^[A-Za-z0-9_-]+$")
+
+
+def youtube_embed_url(value):
+    """Return a no-cookie player URL for a supported YouTube URL."""
+    parsed = urlparse(str(value or "").strip())
+    if parsed.scheme != "https" or parsed.username or parsed.password:
+        return ""
+    host = (parsed.hostname or "").lower().rstrip(".")
+    parts = [part for part in parsed.path.split("/") if part]
+    video_id = ""
+    if host == "youtu.be" and parts:
+        video_id = parts[0]
+    elif host in {"youtube.com", "www.youtube.com", "m.youtube.com"}:
+        if parsed.path == "/watch":
+            video_id = parse_qs(parsed.query).get("v", [""])[0]
+        elif len(parts) == 2 and parts[0] in {"shorts", "embed"}:
+            video_id = parts[1]
+    if not YOUTUBE_ID_RE.fullmatch(video_id):
+        return ""
+    return f"https://www.youtube-nocookie.com/embed/{video_id}"
+
+
+def instagram_embed(value):
+    """Return validated canonical and embed URLs for a post or Reel."""
+    parsed = urlparse(str(value or "").strip())
+    if parsed.scheme != "https" or parsed.username or parsed.password:
+        return None
+    host = (parsed.hostname or "").lower().rstrip(".")
+    parts = [part for part in parsed.path.split("/") if part]
+    if (
+        host not in {"instagram.com", "www.instagram.com"}
+        or len(parts) != 2
+        or parts[0] not in {"p", "reel"}
+        or not INSTAGRAM_CODE_RE.fullmatch(parts[1])
+    ):
+        return None
+    canonical = f"https://www.instagram.com/{parts[0]}/{parts[1]}/"
+    return {"url": canonical, "embed_url": f"{canonical}embed/"}
 
 
 def safe_back_url(default_endpoint="website_blogs.index"):
@@ -403,6 +447,11 @@ def media():
     uploaded = request.files.get("image")
     if not uploaded or uploaded.mimetype not in {"image/png", "image/jpeg", "image/webp"}:
         return {"success": False, "message": "Choose a PNG, JPEG or WebP image."}, 400
+    uploaded.stream.seek(0, os.SEEK_END)
+    size = uploaded.stream.tell()
+    uploaded.stream.seek(0)
+    if size > BLOG_IMAGE_MAX_BYTES:
+        return {"success": False, "message": "Image must be 8 MB or smaller."}, 413
     try:
         return {"success": True, "media": client().upload_media(uploaded, actor_id())}
     except BlogApiError as exc:
@@ -465,6 +514,8 @@ def detail(slug):
         related_blogs=related,
         comment_meta=comment_meta,
         safe_public_url=safe_public_url,
+        youtube_embed_url=youtube_embed_url,
+        instagram_embed=instagram_embed,
         meta_title=blog.get("title"),
         meta_description=blog.get("excerpt"),
         meta_image=safe_public_url(blog.get("cover_image_url")) or None,

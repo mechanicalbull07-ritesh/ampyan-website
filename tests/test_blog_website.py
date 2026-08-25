@@ -1,3 +1,4 @@
+import io
 import unittest
 from datetime import datetime
 from types import SimpleNamespace
@@ -34,6 +35,24 @@ def sample_blog():
              "data": {"headers": ["A"], "rows": [["B"]]}},
         ],
     }
+
+
+def rich_media_blog():
+    blog = sample_blog()
+    blog["cover_image_url"] = "https://cdn.example.test/cover.webp"
+    blog["content_blocks"] = [
+        {"type": "image", "data": {
+            "url": "https://cdn.example.test/inline.webp",
+            "caption": "Caption <script>alert(1)</script>",
+        }},
+        {"type": "youtube", "data": {
+            "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        }},
+        {"type": "instagram", "data": {
+            "url": "https://www.instagram.com/reel/ABC_123-/",
+        }},
+    ]
+    return blog
 
 
 class BlogWebsiteTest(unittest.TestCase):
@@ -133,6 +152,89 @@ class BlogWebsiteTest(unittest.TestCase):
         self.assertNotIn(b"<script>alert(1)</script>", response.data)
         self.assertNotIn(b"data:text/html", response.data)
         api.record_view.assert_called_once()
+
+    def test_detail_renders_cover_image_caption_and_provider_players(self):
+        api = Mock()
+        api.get_blog.return_value = rich_media_blog()
+        api.list_comments.return_value = ({"items": []}, {})
+        with patch.dict(
+            self.app.config, {"COMMUNITY_BLOG_ENABLED": "true"}
+        ), patch("routes.blog_routes.client", return_value=api):
+            response = self.client.get("/blogs/safe-story")
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b'class="blog-cover"', response.data)
+        self.assertIn(b"https://cdn.example.test/inline.webp", response.data)
+        self.assertIn(b"Caption &lt;script&gt;alert(1)&lt;/script&gt;", response.data)
+        self.assertIn(b"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ", response.data)
+        self.assertIn(b"https://www.instagram.com/reel/ABC_123-/embed/", response.data)
+        self.assertIn(b"View on Instagram", response.data)
+
+    def test_provider_url_validation_supports_expected_formats_only(self):
+        from routes.blog_routes import instagram_embed, youtube_embed_url
+
+        for url in (
+            "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+            "https://youtu.be/dQw4w9WgXcQ?t=2",
+            "https://youtube.com/shorts/dQw4w9WgXcQ",
+            "https://www.youtube.com/embed/dQw4w9WgXcQ",
+        ):
+            with self.subTest(url=url):
+                self.assertEqual(
+                    youtube_embed_url(url),
+                    "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ",
+                )
+        for url in (
+            "javascript:alert(1)",
+            "https://evil.example/watch?v=dQw4w9WgXcQ",
+            "https://youtube.com/watch?v=%3Ciframe%3E",
+            "https://www.youtube.com.evil.example/watch?v=dQw4w9WgXcQ",
+        ):
+            self.assertEqual(youtube_embed_url(url), "")
+        self.assertEqual(
+            instagram_embed("https://instagram.com/p/POST123/?utm_source=x")["embed_url"],
+            "https://www.instagram.com/p/POST123/embed/",
+        )
+        self.assertEqual(
+            instagram_embed("https://www.instagram.com/reel/REEL_123-/")["embed_url"],
+            "https://www.instagram.com/reel/REEL_123-/embed/",
+        )
+        for url in (
+            "https://evil.example/p/POST123/",
+            "https://instagram.com/stories/POST123/",
+            "https://instagram.com/p/<iframe>/",
+            "javascript:alert(1)",
+        ):
+            self.assertIsNone(instagram_embed(url))
+
+    def test_invalid_provider_blocks_do_not_render_iframes_or_raw_html(self):
+        blog = sample_blog()
+        blog["content_blocks"] = [
+            {"type": "youtube", "data": {"url": "<iframe src=https://evil.test>"}},
+            {"type": "instagram", "data": {"url": "https://evil.test/p/bad"}},
+        ]
+        api = Mock()
+        api.get_blog.return_value = blog
+        api.list_comments.return_value = ({"items": []}, {})
+        with patch.dict(
+            self.app.config, {"COMMUNITY_BLOG_ENABLED": "true"}
+        ), patch("routes.blog_routes.client", return_value=api):
+            response = self.client.get("/blogs/safe-story")
+        self.assertNotIn(b"<iframe", response.data)
+        self.assertNotIn(b"evil.test", response.data)
+
+    def test_media_upload_rejects_oversized_image_before_api(self):
+        actor = SimpleNamespace(is_authenticated=True, id=4)
+        api = Mock()
+        with patch.dict(self.app.config, {
+            "COMMUNITY_BLOG_ENABLED": "true", "LOGIN_DISABLED": True,
+        }), patch("routes.blog_routes.current_user", actor), patch(
+            "routes.blog_routes.client", return_value=api
+        ):
+            response = self.client.post("/blogs/media", data={
+                "image": (io.BytesIO(b"x" * (8 * 1024 * 1024 + 1)), "large.webp"),
+            }, content_type="multipart/form-data")
+        self.assertEqual(response.status_code, 413)
+        api.upload_media.assert_not_called()
 
     def test_hidden_blog_is_safe_404(self):
         api = Mock()

@@ -1,4 +1,4 @@
-{% macro render_blocks(blocks, safe_url) %}
+{% macro render_blocks(blocks, safe_url, youtube_url, instagram_data) %}
 <div class="blog-content">
 {% for block in blocks if block is mapping %}
 {% set data = block.get("data", {}) %}
@@ -22,9 +22,15 @@
 <aside class="blog-callout"><strong>{{ data.get("title", "Note") }}</strong><p>{{ data.get("text", "") }}</p></aside>
 {% elif kind == "divider" %}
 <hr>
-{% elif kind in ["youtube", "instagram", "link_preview"] %}
+{% elif kind == "youtube" %}
+{% set embed_url = youtube_url(data.get("url")) %}
+{% if embed_url %}<div class="blog-video"><iframe src="{{ embed_url }}" title="{{ data.get('title') or 'YouTube video player' }}" loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe></div>{% endif %}
+{% elif kind == "instagram" %}
+{% set instagram = instagram_data(data.get("url")) %}
+{% if instagram %}<div class="blog-instagram"><iframe src="{{ instagram.embed_url }}" title="{{ data.get('title') or 'Instagram post' }}" loading="lazy" allowtransparency="true" allowfullscreen></iframe><p><a href="{{ instagram.url }}" target="_blank" rel="noopener noreferrer">View on Instagram</a></p></div>{% endif %}
+{% elif kind == "link_preview" %}
 {% set target = safe_url(data.get("url")) %}
-{% if target %}<p class="blog-embed-link"><a href="{{ target }}" target="_blank" rel="noopener noreferrer">{{ data.get("title") or ("Open " ~ kind|replace("_", " ")|title) }}</a></p>{% endif %}
+{% if target %}<p class="blog-embed-link"><a href="{{ target }}" target="_blank" rel="noopener noreferrer">{{ data.get("title") or "Open Link Preview" }}</a></p>{% endif %}
 {% endif %}
 {% endfor %}
 </div>
