@@ -62,7 +62,13 @@ print("AI routes loaded")
 
 from routes.admin_routes import admin_bp
 print("Admin routes loaded")
-from routes.blog_routes import blog_bp
+from routes.blog_routes import (
+    BlogApiError,
+    blog_bp,
+    blog_canonical_url,
+    blog_enabled,
+    published_sitemap_blogs,
+)
 
 # ================= SERVICES =================
 from services.email_service import send_email
@@ -3451,6 +3457,7 @@ def handle_not_found(error):
         ),
         action_url=url_for("news_list") if is_news_path else "/",
         action_label="Back to News" if is_news_path else "Back Home",
+        noindex=True,
     ), 404
 
 
@@ -3516,29 +3523,40 @@ def robots_txt():
 
 @app.route("/sitemap.xml")
 def sitemap_xml():
-    sitemap = """<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://ampyan.com/</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/login</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/community</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/diagnosis</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/my-car-health</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/garages</loc>
-  </url>
-</urlset>
-"""
-    return Response(sitemap, mimetype="application/xml")
+    from xml.etree.ElementTree import Element, SubElement, tostring
+
+    namespace = "http://www.sitemaps.org/schemas/sitemap/0.9"
+    urlset = Element("urlset", xmlns=namespace)
+
+    def add_url(location, last_modified=None):
+        node = SubElement(urlset, "url")
+        SubElement(node, "loc").text = location
+        if last_modified:
+            SubElement(node, "lastmod").text = str(last_modified)
+
+    for location in (
+        "https://ampyan.com/",
+        "https://ampyan.com/login",
+        "https://ampyan.com/community",
+        "https://ampyan.com/diagnosis",
+        "https://ampyan.com/my-car-health",
+        "https://ampyan.com/garages",
+    ):
+        add_url(location)
+
+    if blog_enabled():
+        add_url(blog_canonical_url())
+        try:
+            for blog in published_sitemap_blogs():
+                add_url(
+                    blog_canonical_url(blog["slug"]),
+                    blog.get("updated_at") or blog.get("published_at"),
+                )
+        except BlogApiError:
+            app.logger.warning("Blog API unavailable while generating sitemap")
+
+    xml = tostring(urlset, encoding="utf-8", xml_declaration=True)
+    return Response(xml, mimetype="application/xml")
 
 
 @app.route("/diagnosis")

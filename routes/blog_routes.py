@@ -2,7 +2,8 @@ import json
 import os
 import secrets
 import re
-from urllib.parse import parse_qs, urlparse
+from html.parser import HTMLParser
+from urllib.parse import parse_qs, quote, urlparse
 
 from flask import (
     Blueprint, abort, current_app, flash, redirect, render_template,
@@ -20,6 +21,94 @@ REPORT_REASONS = {
     "unsafe_advice", "duplicate", "other",
 }
 BLOG_IMAGE_MAX_BYTES = 8 * 1024 * 1024
+BLOG_META_DESCRIPTION = (
+    "Read automotive ownership stories, practical car advice and community "
+    "experiences from AMPYAN drivers and enthusiasts."
+)
+BLOG_CANONICAL_ORIGIN = "https://ampyan.com"
+BLOG_LIST_VARIANT_PARAMS = {"query", "category", "tag", "author", "sort", "cursor"}
+
+
+class _TextExtractor(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.parts = []
+
+    def handle_data(self, data):
+        self.parts.append(data)
+
+
+def normalize_meta_description(value, limit=160):
+    """Return plain, whitespace-normalized metadata without breaking HTML."""
+    parser = _TextExtractor()
+    try:
+        parser.feed(str(value or ""))
+        parser.close()
+        text = " ".join(parser.parts)
+    except (TypeError, ValueError):
+        text = str(value or "")
+    text = re.sub(r"\s+", " ", text).strip()
+    if len(text) <= limit:
+        return text
+    shortened = text[: limit - 1].rsplit(" ", 1)[0].rstrip(" ,.;:-")
+    if not shortened:
+        shortened = text[: limit - 1].rstrip()
+    return shortened + "…"
+
+
+def article_meta_description(blog):
+    for candidate in (blog.get("excerpt"), blog.get("subtitle")):
+        description = normalize_meta_description(candidate)
+        if description:
+            return description
+    for block in blog.get("content_blocks") or []:
+        if not isinstance(block, dict):
+            continue
+        data = block.get("data")
+        if not isinstance(data, dict):
+            continue
+        candidates = [data.get("text")]
+        if block.get("type") in {"bullet_list", "numbered_list"}:
+            candidates.extend(data.get("items") or [])
+        for candidate in candidates:
+            if isinstance(candidate, dict):
+                candidate = candidate.get("text")
+            description = normalize_meta_description(candidate)
+            if description:
+                return description
+    return None
+
+
+def blog_canonical_url(slug=None):
+    base = current_app.config.get("BLOG_CANONICAL_ORIGIN", BLOG_CANONICAL_ORIGIN)
+    base = str(base or BLOG_CANONICAL_ORIGIN).rstrip("/")
+    if slug is None:
+        return f"{base}/blogs"
+    return f"{base}/blogs/{quote(str(slug), safe='-._~')}"
+
+
+def published_sitemap_blogs(max_pages=100):
+    """Read all public Blog pages; the API remains the publication authority."""
+    if not blog_enabled():
+        return []
+    api = client()
+    params = {"sort": "latest", "limit": "50"}
+    entries = []
+    seen_cursors = set()
+    for _ in range(max_pages):
+        data, meta = api.list_blogs(params)
+        for item in _items(data):
+            if not isinstance(item, dict) or not item.get("slug"):
+                continue
+            if item.get("status") not in {None, "published"}:
+                continue
+            entries.append(item)
+        cursor = (meta or {}).get("next_cursor")
+        if not cursor or cursor in seen_cursors:
+            break
+        seen_cursors.add(cursor)
+        params["cursor"] = cursor
+    return entries
 
 
 def blog_enabled():
@@ -211,8 +300,19 @@ def index():
         filters=params,
         safe_public_url=safe_public_url,
         meta_title="Community Blog",
-        meta_description="Automotive stories and practical advice from the AMPYAN community.",
+        meta_description=BLOG_META_DESCRIPTION,
+        meta_url=blog_canonical_url(),
+        robots_content=(
+            "noindex, follow"
+            if BLOG_LIST_VARIANT_PARAMS.intersection(request.args)
+            else "index, follow"
+        ),
     )
+
+
+@blog_bp.get("/")
+def index_slash():
+    return redirect(url_for("website_blogs.index"), code=308)
 
 
 @blog_bp.get("/me")
@@ -542,8 +642,8 @@ def detail(slug):
         youtube_embed_url=youtube_embed_url,
         instagram_embed=instagram_embed,
         meta_title=blog.get("title"),
-        meta_description=blog.get("excerpt"),
+        meta_description=article_meta_description(blog),
         meta_image=safe_public_url(blog.get("cover_image_url")) or None,
         meta_type="article",
-        meta_url=request.base_url,
+        meta_url=blog_canonical_url(blog.get("slug")),
     )

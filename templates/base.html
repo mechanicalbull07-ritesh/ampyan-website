@@ -6,12 +6,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="csrf-token" content="{{ csrf_token() }}">
-<meta name="description" content="AMPYAN is an AI powered automotive ecosystem helping car owners diagnose vehicle problems, track maintenance, improve safety, and save money.">
+{% set site_description = "AMPYAN is an AI powered automotive ecosystem helping car owners diagnose vehicle problems, track maintenance, improve safety, and save money." %}
+{% set page_description = meta_description|default(site_description, true) %}
+<meta name="description" content="{{ page_description }}">
 <meta name="keywords" content="AMPYAN, AI car diagnosis, automotive AI, car maintenance, vehicle assistant, dashcam AI">
-<meta name="robots" content="{{ 'noindex, nofollow' if noindex|default(false) else 'index, follow' }}">
+<meta name="robots" content="{{ robots_content|default('noindex, nofollow' if noindex|default(false) else 'index, follow', true) }}">
 {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
 {% set social_title = meta_title|default("AMPYAN", true) %}
-{% set social_description = meta_description|default("AI Powered Automotive Ecosystem", true) %}
+{% set social_description = meta_description|default(site_description, true) %}
 {% set social_url = meta_url|default(request.url, true) %}
 {% set social_image = meta_image|default(url_for('static', filename='images/logo.png', _external=True), true) %}
 {% set social_type = meta_type|default("website", true) %}
