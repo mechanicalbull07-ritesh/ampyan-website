@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
@@ -68,6 +69,38 @@ class BlogWebsiteTest(unittest.TestCase):
                 self.assertEqual(response.status_code, 200)
                 self.assertIn(b"Community Blog", response.data)
                 self.assertIn(b'href="/blogs"', self.client.get("/").data)
+
+    def test_public_nav_has_one_blog_link_for_anonymous_and_authenticated_users(self):
+        with patch.dict(
+            self.app.config, {"COMMUNITY_BLOG_ENABLED": "true"}
+        ):
+            anonymous = self.client.get("/")
+            self.assertEqual(anonymous.status_code, 200)
+            self.assertEqual(anonymous.data.count(b'href="/blogs"'), 1)
+
+            actor = SimpleNamespace(
+                is_authenticated=True,
+                is_active=True,
+                is_anonymous=False,
+                id=4,
+                username="author",
+                role="user",
+                email="author@example.com",
+                profile_photo=None,
+                ai_last_reset=datetime.utcnow(),
+                ai_uses_today=0,
+                city=None,
+                mobile=None,
+            )
+            with self.client.session_transaction() as session:
+                session["_user_id"] = "4"
+                session["_fresh"] = True
+            with patch.object(
+                self.app.login_manager, "_user_callback", return_value=actor
+            ):
+                authenticated = self.client.get("/")
+            self.assertEqual(authenticated.status_code, 200)
+            self.assertEqual(authenticated.data.count(b'href="/blogs"'), 1)
 
     def test_listing_preserves_opaque_cursor_and_blocks_unsafe_cover(self):
         api = Mock()

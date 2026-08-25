@@ -162,9 +162,6 @@ AMPYAN
 
 <div class="nav-priority-links" aria-label="Primary pages">
 <a href="/news">News</a>
-{% if config.get("COMMUNITY_BLOG_ENABLED", "false")|string|lower in ["true", "1", "yes", "on"] %}
-<a href="{{ url_for('website_blogs.index') }}">Blog</a>
-{% endif %}
 <a href="/news">Tips &amp; Tricks</a>
 <a href="/tools">Calculators</a>
 <a href="/garages">Garages</a>
@@ -189,6 +186,12 @@ AMPYAN
 </div>
 
 </div>
+
+{% if config.get("COMMUNITY_BLOG_ENABLED", "false")|string|lower in ["true", "1", "yes", "on"] %}
+<a href="{{ url_for('website_blogs.index') }}" class="nav-link">
+<i class="fa-solid fa-newspaper"></i> Blog
+</a>
+{% endif %}
 
 
 <!-- TOOLS -->
