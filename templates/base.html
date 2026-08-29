@@ -328,11 +328,21 @@ Ask anything about buying, service, engine, EV or scams.
 
 <p>© 2026 AMPYAN Automotive Intelligence Platform</p>
 
+{% if request.path == "/" %}
+<nav class="footer-groups" aria-label="Footer navigation">
+<div><strong>AMPYAN</strong><a href="/about">About</a><a href="/contact">Contact</a><a href="/vision">Vision</a><a href="/platform">Platform</a></div>
+<div><strong>Explore</strong><a href="/community">Community</a><a href="/garages">Garages</a><a href="/marketplace">Marketplace</a><a href="/news">News</a><a href="/videos">Videos</a></div>
+<div><strong>Tools</strong><a href="/tools/fuel-cost">Fuel Cost</a><a href="/tools/emi-calculator">EMI</a><a href="/tools/depreciation-calculator">Depreciation</a><a href="/tools/maintenance-cost">Repair Estimate</a><a href="/tools/car-suggestion">Car Suggestion</a></div>
+<div><strong>Support</strong><a href="/help">Help &amp; Feedback</a><a href="/contact">Contact Support</a></div>
+<div><strong>Legal</strong><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a><a href="/disclaimer">Disclaimer</a></div>
+</nav>
+{% else %}
 <div class="footer-links">
 
 <a href="/privacy">Privacy Policy</a> <a href="/terms">Terms of Service</a> <a href="/disclaimer">Disclaimer</a> <a href="/contact">Contact / Support</a> <a href="/help">Help / Report Issue</a>
 
 </div>
+{% endif %}
 
 </div>
 
