@@ -3567,6 +3567,8 @@ def diagnosis_alias():
 @app.route("/mygarage")
 @app.route("/my-car-health")
 def mygarage_alias():
+    if not current_user.is_authenticated:
+        return render_template("my_car_public.html")
     return redirect("/garage-dashboard", code=301)
 
 

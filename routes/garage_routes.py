@@ -53,8 +53,10 @@ def garage():
 
 @garage_bp.route("/my-car-health")
 @garage_bp.route("/garage-dashboard")
-@login_required
 def garage_dashboard():
+
+    if not current_user.is_authenticated:
+        return render_template("my_car_public.html")
 
     cars = Car.query.filter_by(owner_id=current_user.id).all()
 

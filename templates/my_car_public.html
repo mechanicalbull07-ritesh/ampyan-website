@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="public-gate">
+  <section class="public-gate-card" aria-labelledby="my-car-title">
+    <div class="public-gate-icon"><i class="fa-solid fa-car-side" aria-hidden="true"></i></div>
+    <p class="public-eyebrow">My Car</p>
+    <h1 id="my-car-title">Your Car, All in One Place</h1>
+    <p>Track health, service history, expenses and maintenance. Sign in only when you are ready to save your vehicle information.</p>
+    <div class="public-benefits" aria-label="My Car benefits"><span><i class="fa-solid fa-heart-pulse"></i> Vehicle health</span><span><i class="fa-solid fa-clock-rotate-left"></i> Service history</span><span><i class="fa-solid fa-indian-rupee-sign"></i> Ownership expenses</span></div>
+    <div class="public-hero-actions"><a class="public-button primary" href="{{ url_for('auth.login', next='/my-car-health') }}">Sign In to Save Your Car</a><a class="public-button secondary" href="/">Back to Home</a></div>
+  </section>
+</div>
+{% endblock %}

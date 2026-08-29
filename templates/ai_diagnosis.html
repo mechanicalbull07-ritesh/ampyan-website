@@ -14,15 +14,18 @@
 <div class="diagnose-card">
 
 {% if default_car %}
-
 <p class="default-car">
 Default Car:
 <strong>{{ default_car.brand }} {{ default_car.model }}</strong>
 </p>
+{% else %}
+<p class="default-car">No account or saved car needed. Describe the symptom to begin.</p>
+{% endif %}
 
 <form method="POST" action="/tools/ai-diagnosis" enctype="multipart/form-data">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
+{% if cars %}
 <select name="car_id" class="auth-input" required>
 
 {% for car in cars %}
@@ -33,12 +36,14 @@ Default Car:
 {% endfor %}
 
 </select>
+{% endif %}
 
 <input
 type="text"
 name="problem"
 placeholder="Describe your car problem or dashboard warning light..."
 class="auth-input"
+required
 >
 
 <select name="dashboard_light_hint" class="auth-input">
@@ -85,13 +90,6 @@ Diagnose Now
 </div>
 
 </div>
-
-{% else %}
-
-<p>Add your car first</p>
-<a href="/add-car" class="auth-button">Add Car</a>
-
-{% endif %}
 
 </div>
 
@@ -148,6 +146,14 @@ Diagnose Now
 <h3>Mechanic Advice</h3>
 <p>{{ diagnosis_result.advice }}</p>
 </div>
+
+{% if not current_user.is_authenticated %}
+<div class="result-block save-diagnosis-prompt">
+<h3>Want to keep this result?</h3>
+<p>Sign in only if you want to save this diagnosis to My Car.</p>
+<a class="auth-button" href="{{ url_for('auth.login', next='/tools/ai-diagnosis') }}">Save this diagnosis to My Car</a>
+</div>
+{% endif %}
 
 
 <!-- 🔥 QUESTIONS WITH YES/NO + FORM -->
