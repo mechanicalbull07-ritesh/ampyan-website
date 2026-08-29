@@ -122,143 +122,23 @@ AMPYAN
 <!-- AMPYAN HOME PAGE REDESIGN END -->
 
 
-<!-- CENTER MENU -->
-
-<div class="nav-center">
-
-<!-- AMPYAN HOME PAGE REDESIGN START -->
-<form class="navbar-search" action="/community" method="GET" role="search">
-<i class="fa-solid fa-magnifying-glass"></i>
-<input type="search" name="q" placeholder="Search car problems, news, community..." aria-label="Search AMPYAN">
-</form>
-<!-- AMPYAN HOME PAGE REDESIGN END -->
-
-<!-- HOME -->
-
-<div class="nav-dropdown">
-
-<span class="nav-link">
-<i class="fa-solid fa-house"></i> Home
-<i class="fa-solid fa-chevron-down"></i>
-</span>
-
-<div class="nav-dropdown-content">
-
-<a href="/">Home</a>
-<a href="/about">About AMPYAN</a>
-<a href="/vision">Vision</a>
-<a href="/platform">Platform</a>
-<a href="/contact">Contact</a>
-<a href="/help">Help / Report Issue</a>
-
-<div class="dropdown-divider"></div>
-
-<a href="/privacy">Privacy Policy</a>
-<a href="/terms">Terms of Service</a>
-<a href="/disclaimer">Disclaimer</a>
-
-</div>
-
-</div>
-
-<div class="nav-priority-links" aria-label="Primary pages">
-<a href="/news">News</a>
-<a href="/news">Tips &amp; Tricks</a>
-<a href="/tools">Calculators</a>
-<a href="/garages">Garages</a>
-</div>
-
-
-<!-- COMMUNITY -->
-
-<div class="nav-dropdown">
-
-<span class="nav-link">
-<i class="fa-solid fa-users"></i> Community
-<i class="fa-solid fa-chevron-down"></i>
-</span>
-
-<div class="nav-dropdown-content">
-
-<a href="/community">AMPYAN Community</a>
-<a href="/leaderboard">Leaderboard</a>
-<a href="/speed16">Badges</a>
-
-</div>
-
-</div>
-
+<!-- PRIMARY MENU -->
+<div class="nav-center" id="primaryNavigation">
+<a href="/" class="nav-link">Home</a>
+<a href="/tools/ai-diagnosis" class="nav-link">Diagnose</a>
+<a href="/my-car-health" class="nav-link">My Car</a>
+<a href="/tools" class="nav-link">Tools</a>
 {% if config.get("COMMUNITY_BLOG_ENABLED", "false")|string|lower in ["true", "1", "yes", "on"] %}
-<a href="{{ url_for('website_blogs.index') }}" class="nav-link">
-<i class="fa-solid fa-newspaper"></i> Blog
-</a>
+<a href="{{ url_for('website_blogs.index') }}" class="nav-link">Learn</a>
+{% else %}
+<a href="/news" class="nav-link">Learn</a>
 {% endif %}
-
-
-<!-- TOOLS -->
-
-<div class="nav-dropdown">
-
-<span class="nav-link">
-<i class="fa-solid fa-wrench"></i> Tools
-<i class="fa-solid fa-chevron-down"></i>
-</span>
-
-<div class="nav-dropdown-content">
-
-<a href="/tools/ai-diagnosis">Vehicle Check</a>
-<a href="/tools/fuel-cost">Fuel Cost Calculator</a>
-<a href="/tools/emi-calculator">EMI Calculator</a>
-<a href="/tools/depreciation-calculator">Depreciation Calculator</a>
-<a href="/tools/maintenance-cost">Maintenance Cost Estimator</a>
-<a href="/tools/car-suggestion">Car Suggestion Tool</a>
-
-</div>
-
-</div>
-
-
-<!-- EXPLORE -->
-
-<div class="nav-dropdown">
-
-<span class="nav-link">
-<i class="fa-solid fa-compass"></i> Explore
-<i class="fa-solid fa-chevron-down"></i>
-</span>
-
-<div class="nav-dropdown-content">
-
-<a href="/news">News</a>
-<a href="/videos">Videos</a>
-<a href="/garages">Garages</a>
-<a href="/marketplace?type=buy">Car Buy</a>
-<a href="/marketplace?type=sell">Car Sell</a>
-<a href="/marketplace/inbox">Marketplace Inbox</a>
-<a href="/help">Help / Report</a>
-
-</div>
-
-</div>
-
 </div>
 
 
 <!-- RIGHT SIDE -->
 
 <div class="nav-right">
-
-<!-- MY CAR HEALTH -->
-
-<a href="/my-car-health" class="nav-link highlight-garage">
-<i class="fa-solid fa-heart-pulse"></i> My Car Health
-</a>
-
-<!-- NOTIFICATION -->
-
-<div class="nav-notification">
-<i class="fa-solid fa-bell"></i>
-</div>
 
 <!-- THEME -->
 
@@ -344,7 +224,7 @@ AMPYAN
 {% else %}
 
 <a href="{{ url_for('auth.login') }}" class="nav-btn">
-Login
+Sign In
 </a>
 
 {% endif %}
@@ -448,11 +328,19 @@ Ask anything about buying, service, engine, EV or scams.
 
 <p>© 2026 AMPYAN Automotive Intelligence Platform</p>
 
+{% if request.path == "/" %}
+<nav class="footer-groups" aria-label="Footer navigation">
+<div><strong>AMPYAN</strong><a href="/about">About</a><a href="/contact">Contact</a><a href="/vision">Vision</a><a href="/platform">Platform</a></div>
+<div><strong>Explore</strong><a href="/community">Community</a><a href="/garages">Garages</a><a href="/marketplace">Marketplace</a><a href="/news">News</a><a href="/videos">Videos</a></div>
+<div><strong>Tools</strong><a href="/tools/fuel-cost">Fuel Cost</a><a href="/tools/emi-calculator">EMI</a><a href="/tools/depreciation-calculator">Depreciation</a><a href="/tools/maintenance-cost">Repair Estimate</a><a href="/tools/car-suggestion">Car Suggestion</a></div>
+<div><strong>Support</strong><a href="/help">Help &amp; Feedback</a><a href="/contact">Contact Support</a></div>
+<div><strong>Legal</strong><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a><a href="/disclaimer">Disclaimer</a></div>
+</nav>
+{% else %}
 <div class="footer-links">
-
 <a href="/privacy">Privacy Policy</a> <a href="/terms">Terms of Service</a> <a href="/disclaimer">Disclaimer</a> <a href="/contact">Contact / Support</a> <a href="/help">Help / Report Issue</a>
-
 </div>
+{% endif %}
 
 </div>
 

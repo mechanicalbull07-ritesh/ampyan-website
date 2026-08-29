@@ -9,6 +9,107 @@ margin:auto;
 text-align:center;
 }
 
+/* Approved homepage release layout: organize existing components without changing behavior. */
+.ampyan-home.ampyan-home-wide{
+grid-template-columns:minmax(0,1fr) minmax(240px,280px);
+max-width:1500px;
+margin-inline:auto;
+}
+
+.ampyan-maintenance-grid{
+grid-template-columns:repeat(3,minmax(0,1fr));
+}
+
+.ampyan-maintenance-grid .ampyan-section{
+box-shadow:none;
+}
+
+.footer-groups{
+display:grid;
+grid-template-columns:repeat(5,minmax(0,1fr));
+gap:28px;
+width:min(1180px,100%);
+margin:28px auto 0;
+text-align:left;
+}
+
+.footer-groups div{
+display:flex;
+flex-direction:column;
+gap:9px;
+}
+
+.footer-groups strong{
+color:var(--text);
+font-size:13px;
+letter-spacing:.06em;
+text-transform:uppercase;
+}
+
+.footer-groups a{
+color:var(--text-secondary);
+font-size:13px;
+text-decoration:none;
+}
+
+.footer-groups a:hover{
+color:var(--accent);
+}
+
+.ampyan-news-placeholder{
+height:112px;
+display:flex;
+align-items:center;
+justify-content:center;
+gap:10px;
+border-bottom:1px solid var(--border);
+background:linear-gradient(135deg,rgba(255,90,54,.18),rgba(9,18,31,.94));
+color:var(--text-soft);
+font-size:12px;
+font-weight:800;
+letter-spacing:.06em;
+text-transform:uppercase;
+}
+
+.ampyan-news-placeholder i{
+color:var(--accent);
+font-size:24px;
+}
+
+@media(max-width:1180px){
+.ampyan-home.ampyan-home-wide{
+grid-template-columns:minmax(0,1fr);
+}
+
+.ampyan-home-wide .ampyan-right-sidebar{
+grid-column:auto;
+grid-template-columns:repeat(3,minmax(0,1fr));
+}
+}
+
+@media(max-width:900px){
+.ampyan-maintenance-grid{
+grid-template-columns:1fr;
+}
+
+.footer-groups{
+grid-template-columns:repeat(2,minmax(0,1fr));
+}
+}
+
+@media(max-width:720px){
+.navbar .theme-toggle{
+display:grid;
+}
+}
+
+@media(max-width:620px){
+.ampyan-home-wide .ampyan-right-sidebar,
+.footer-groups{
+grid-template-columns:1fr;
+}
+}
+
 .tools-title{
 font-size:36px;
 font-weight:600;
@@ -1905,5 +2006,53 @@ font-size:12.5px;
 overflow:hidden;
 text-overflow:ellipsis;
 white-space:nowrap;
+}
+}
+
+/* Final cascade overrides for approved homepage navbar and Speed 16 spacing. */
+.brand-strip{
+padding:28px 20px 24px;
+}
+
+.brand-social,
+.brand-founder{
+margin-top:12px;
+}
+
+@media(min-width:1200px){
+.navbar{
+width:calc(100% - 32px);
+max-width:1240px;
+padding:10px 18px;
+gap:20px;
+}
+
+.navbar-brand{
+padding-left:4px;
+}
+
+.nav-center{
+gap:8px;
+justify-content:center;
+}
+
+.nav-center a,
+.nav-link{
+gap:5px;
+padding:9px 12px;
+}
+
+.nav-btn{
+padding:8px 14px;
+}
+
+.nav-right{
+gap:10px;
+}
+}
+
+@media(min-width:901px){
+.ampyan-split-grid.ampyan-maintenance-grid{
+grid-template-columns:repeat(3,minmax(0,1fr));
 }
 }
