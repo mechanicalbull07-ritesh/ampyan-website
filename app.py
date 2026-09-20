@@ -1604,16 +1604,16 @@ def record_website_event(event_type, label="", target_url="", severity="info", p
     try:
         if not database_ready_for_queries():
             return
-        visitor_id = request.cookies.get("ampyan_visitor_id") or getattr(g, "set_visitor_cookie", None)
+        from services.analytics_service import safe_path, safe_referrer
         event = WebsiteEvent(
             event_type=sanitize_event_text(event_type, 40),
             label=sanitize_event_text(label, 160),
-            path=(path or request.path or "")[:500],
+            path=safe_path(path or request.path),
             target_url=normalize_event_url(target_url),
-            visitor_id=visitor_id,
+            visitor_id=None,
             user_id=current_user.id if current_user.is_authenticated else None,
             ip_address=client_ip()[:50],
-            referrer=(request.referrer or "")[:500],
+            referrer=safe_referrer(request.referrer),
             user_agent=(request.headers.get("User-Agent", "") or "")[:500],
             device_type=detect_device_type(request.headers.get("User-Agent", "")),
             is_authenticated=current_user.is_authenticated,
@@ -1671,7 +1671,7 @@ def security_guard():
     content_length = request.content_length or 0
     if content_length > app.config["MAX_CONTENT_LENGTH"]:
         if request.path == "/api/track-event":
-            return jsonify({"status": "accepted"}), 202
+            return jsonify({"status": "rejected", "reason": "payload_too_large"}), 413
         if request.path == "/admin/news/create":
             flash("Image upload failed because the file is too large. The news form is still available.", "warning")
             return redirect(url_for("create_news"))
@@ -1772,19 +1772,34 @@ def detect_device_type(user_agent):
 
 @app.before_request
 def track_visit():
-    if not analytics_enabled():
+    if not analytics_enabled() or request.cookies.get("ampyan_analytics_consent") != "granted":
         return
 
     try:
 
+        from zoneinfo import ZoneInfo
+        day = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y%m%d")
+        now = int(time.time())
+        raw = request.cookies.get("ampyan_analytics_session", "")
+        parts = raw.split(".")
+        if (len(parts) == 3 and re.fullmatch(r"[0-9a-f]{32}", parts[0])
+                and parts[1] == day and parts[2].isdigit()
+                and 0 <= now - int(parts[2]) <= 1800):
+            session_id = parts[0]
+        else:
+            session_id = secrets.token_hex(16)
+        g.analytics_session_id = session_id
+        g.analytics_session_cookie = f"{session_id}.{day}.{now}"
+        if any(key in request.args for key in ("utm_source", "utm_medium", "utm_campaign")):
+            from services.analytics_service import _attribution
+            attribution = ".".join(_attribution(request.args.get(key, "")) for key in ("utm_source", "utm_medium", "utm_campaign"))
+            if attribution != "..":
+                g.analytics_attribution_cookie = attribution
+                if not request.cookies.get("ampyan_analytics_first_attribution"):
+                    g.analytics_first_attribution_cookie = attribution
+
         if not should_track_page_visit():
             return
-
-        visitor_id = request.cookies.get("ampyan_visitor_id")
-
-        if not visitor_id:
-            visitor_id = secrets.token_urlsafe(24)
-            g.set_visitor_cookie = visitor_id
 
         safe_track_page_visit()
 
@@ -1835,16 +1850,25 @@ def attach_visitor_cookie(response):
         "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
     )
 
-    visitor_id = getattr(g, "set_visitor_cookie", None)
-    if visitor_id:
+    if request.cookies.get("ampyan_analytics_consent") != "granted":
+        for name in ("ampyan_analytics_session", "ampyan_analytics_attribution", "ampyan_analytics_first_attribution", "ampyan_visitor_id"):
+            if request.cookies.get(name):
+                response.delete_cookie(name, samesite="Lax", secure=request.is_secure)
+
+    analytics_session_cookie = getattr(g, "analytics_session_cookie", None)
+    if analytics_session_cookie:
         response.set_cookie(
-            "ampyan_visitor_id",
-            visitor_id,
-            max_age=60 * 60 * 24 * 365,
-            httponly=True,
-            samesite="Lax",
-            secure=request.is_secure,
+            "ampyan_analytics_session", analytics_session_cookie,
+            samesite="Lax", secure=request.is_secure,
         )
+    attribution_cookie = getattr(g, "analytics_attribution_cookie", None)
+    if attribution_cookie:
+        response.set_cookie("ampyan_analytics_attribution", attribution_cookie,
+                            samesite="Lax", secure=request.is_secure)
+    first_attribution_cookie = getattr(g, "analytics_first_attribution_cookie", None)
+    if first_attribution_cookie:
+        response.set_cookie("ampyan_analytics_first_attribution", first_attribution_cookie,
+                            max_age=60 * 60 * 24 * 365, samesite="Lax", secure=request.is_secure)
     return response
 
 @app.before_request
@@ -2836,17 +2860,25 @@ def api_help_report():
 def api_track_event():
     try:
         if (request.content_length or 0) > 32 * 1024:
-            return jsonify({"status": "accepted"}), 202
-        payload = request.get_json(silent=True) or {}
+            return jsonify({"status": "rejected", "reason": "payload_too_large"}), 413
+        payload = request.get_json(silent=True)
         if not isinstance(payload, dict):
+            return jsonify({"status": "rejected", "reason": "invalid_json"}), 400
+        from services.analytics_service import validate_event, InvalidAnalyticsEvent
+        event_type = payload.get("event_type")
+        try:
+            validate_event(event_type, payload)
+        except InvalidAnalyticsEvent as exc:
+            return jsonify({"status": "rejected", "reason": str(exc)}), 422
+        traffic_type = "app" if payload.get("traffic_type") == "app" else "web"
+        if traffic_type == "web" and request.cookies.get("ampyan_analytics_consent") != "granted":
+            return jsonify({"status": "rejected", "reason": "consent_required"}), 403
+        if safe_track_event(event_type, payload, traffic_type=traffic_type):
             return jsonify({"status": "accepted"}), 202
-        event_type = sanitize_event_text(payload.get("event_type") or "click", 60)
-        if event_type in ALLOWED_EVENT_TYPES:
-            traffic_type = "app" if payload.get("traffic_type") == "app" else "web"
-            safe_track_event(event_type, payload, traffic_type=traffic_type)
-        return jsonify({"status": "accepted"}), 202
+        return jsonify({"status": "failed", "reason": "storage_unavailable"}), 503
     except Exception:
-        return jsonify({"status": "accepted"}), 202
+        app.logger.exception("analytics_event_submission_failed")
+        return jsonify({"status": "failed", "reason": "internal_error"}), 500
 # ================= FORGOT PASSWORD =================
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -3515,7 +3547,15 @@ def handle_unexpected_error(error):
 def robots_txt():
     return Response(
         "User-agent: *\n"
-        "Allow: /\n\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "Disallow: /login\n"
+        "Disallow: /register\n"
+        "Disallow: /garage-dashboard\n"
+        "Disallow: /my-car-health\n"
+        "Disallow: /add-car\n"
+        "Disallow: /edit-car/\n\n"
         "Sitemap: https://ampyan.com/sitemap.xml\n",
         mimetype="text/plain",
     )
@@ -3534,15 +3574,13 @@ def sitemap_xml():
         if last_modified:
             SubElement(node, "lastmod").text = str(last_modified)
 
-    for location in (
-        "https://ampyan.com/",
-        "https://ampyan.com/login",
-        "https://ampyan.com/community",
-        "https://ampyan.com/diagnosis",
-        "https://ampyan.com/my-car-health",
-        "https://ampyan.com/garages",
-    ):
-        add_url(location)
+    public_paths = (
+        "/", "/about", "/tools", "/tools/ai-diagnosis", "/tools/fuel-cost",
+        "/tools/emi-calculator", "/tools/depreciation-calculator", "/tools/maintenance-cost",
+        "/community", "/news", "/garages", "/marketplace", "/videos",
+    )
+    for path in public_paths:
+        add_url("https://ampyan.com" + path)
 
     if blog_enabled():
         add_url(blog_canonical_url())

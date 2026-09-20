@@ -48,28 +48,6 @@
 
 <title>{{ resolved_browser_title }}</title>
 
-{% if analytics_enabled and ga4_measurement_id %}
-<script async src="https://www.googletagmanager.com/gtag/js?id={{ ga4_measurement_id|urlencode }}"></script>
-<script>
-try {
-window.dataLayer = window.dataLayer || [];
-function gtag(){dataLayer.push(arguments);}
-gtag("js", new Date());
-gtag("config", {{ ga4_measurement_id|tojson }}, {send_page_view: true});
-} catch (error) {}
-</script>
-{% endif %}
-{% if analytics_enabled and clarity_project_id %}
-<script>
-try {
-(function(c,l,a,r,i,t,y){
-c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-})(window, document, "clarity", "script", {{ clarity_project_id|tojson }});
-} catch (error) {}
-</script>
-{% endif %}
 
 <!-- FONTS -->
 
@@ -341,10 +319,16 @@ Ask anything about buying, service, engine, EV or scams.
 <a href="/privacy">Privacy Policy</a> <a href="/terms">Terms of Service</a> <a href="/disclaimer">Disclaimer</a> <a href="/contact">Contact / Support</a> <a href="/help">Help / Report Issue</a>
 </div>
 {% endif %}
+{% if analytics_enabled %}<button type="button" id="analytics-preferences">Analytics preferences</button>{% endif %}
 
 </div>
 
 </footer>
+{% if analytics_enabled %}<aside id="analytics-consent" hidden role="dialog" aria-label="Analytics preferences" style="position:fixed;bottom:1rem;left:1rem;right:1rem;z-index:9999;background:#fff;color:#111;padding:1rem;border:1px solid #777;max-width:34rem">
+<p>Allow optional analytics to help us improve AMPYAN? You can change this choice later.</p>
+<button type="button" id="analytics-grant">Allow analytics</button>
+<button type="button" id="analytics-deny">Decline analytics</button>
+</aside>{% endif %}
 
 <!-- SCRIPTS -->
 
@@ -755,70 +739,108 @@ observer.observe(sec);
 <script>
 
 /* ================= NON-BLOCKING PRODUCT ANALYTICS ================= */
+{% set pending_analytics_events = session.pop('_analytics_pending', []) %}
+document.querySelectorAll('input[name="analytics_request_token"]').forEach(input => {
+  if(!input.value && window.crypto && crypto.randomUUID) input.value = crypto.randomUUID();
+});
 (function(){
 try {
 const enabled = {{ analytics_enabled|tojson }};
 if(!enabled) return;
-const storageKey = "ampyan_analytics_session_id";
-let sessionId = "";
-try {
-sessionId = localStorage.getItem(storageKey) || "";
-if(!sessionId) {
-sessionId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : "web-" + Date.now() + "-" + Math.random().toString(36).slice(2);
-localStorage.setItem(storageKey, sessionId);
-}
-} catch(error) {
-sessionId = "web-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+const consentKey = "ampyan_analytics_consent";
+const sessionKey = "ampyan_analytics_session";
+const consentBox = document.getElementById("analytics-consent");
+let consent = "unknown";
+try { consent = localStorage.getItem(consentKey) || "unknown"; } catch(error) {}
+if(!["unknown", "granted", "denied"].includes(consent)) consent = "unknown";
+const consentCookie = document.cookie.split("; ").find(x => x.startsWith(consentKey + "="));
+if(consent === "granted" && consentCookie !== consentKey + "=granted") consent = "unknown";
+function newId() { return crypto.randomUUID(); }
+function sessionId() {
+  const now = Date.now();
+  const day = new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata", year:"numeric", month:"2-digit", day:"2-digit"}).format(new Date(now)).replace(/\D/g, "");
+  const raw = document.cookie.split("; ").find(x => x.startsWith(sessionKey + "="));
+  const parts = raw ? raw.slice(sessionKey.length + 1).split(".") : [];
+  const valid = parts.length === 3 && /^[0-9a-f]{32}$/.test(parts[0]) && parts[1] === day && /^\d+$/.test(parts[2])
+    && now - Number(parts[2]) * 1000 >= 0 && now - Number(parts[2]) * 1000 <= 1800000;
+  const id = valid ? parts[0] : newId().replace(/-/g, "");
+  document.cookie = sessionKey + "=" + id + "." + day + "." + Math.floor(now / 1000)
+    + "; Path=/; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : "");
+  try { sessionStorage.setItem(sessionKey, id); } catch(error) {}
+  return id;
 }
 const params = new URLSearchParams(window.location.search);
-const base = {
-session_id: sessionId,
-path: window.location.pathname,
-referrer: document.referrer || "",
-utm_source: params.get("utm_source") || "",
-utm_medium: params.get("utm_medium") || "",
-utm_campaign: params.get("utm_campaign") || ""
-};
+const safePagePath = {{ (request.url_rule.rule if request.url_rule else '/other')|tojson }}.replace(/<[^>]+>/g, ":id");
+function attribution(name) { const value = (params.get(name) || "").toLowerCase(); return /^[a-z0-9_-]{1,60}$/.test(value) && /[a-z]/.test(value) ? value : ""; }
+function safeReferrer() { try { return document.referrer ? new URL(document.referrer).origin + "/" : ""; } catch(error) { return ""; } }
 function track(eventType, details) {
 try {
-const payload = JSON.stringify(Object.assign({}, base, details || {}, {event_type: eventType}));
-fetch("/api/track-event", {method: "POST", headers: {"Content-Type": "application/json", "X-CSRFToken": document.querySelector('meta[name="csrf-token"]').content}, body: payload, keepalive: true}).catch(function(){});
+if(consent !== "granted") return;
+const payload = JSON.stringify(Object.assign({session_id:sessionId(), path:safePagePath,
+  referrer:safeReferrer(), utm_source:attribution("utm_source"), utm_medium:attribution("utm_medium"),
+  utm_campaign:attribution("utm_campaign")}, details || {}, {event_type:eventType}));
+fetch("/api/track-event", {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json", "X-CSRFToken":document.querySelector('meta[name="csrf-token"]').content}, body:payload, keepalive:true})
+  .then(response => { window.AMPYANAnalytics.lastDelivery = response.status === 202 ? "accepted" : response.status < 500 ? "rejected" : "failed"; })
+  .catch(() => { window.AMPYANAnalytics.lastDelivery = "failed"; });
 } catch(error) {}
 }
 window.AMPYANAnalytics = {track: track};
-track("page_view");
-if(window.location.pathname.indexOf("/community") === 0) track("community_opened");
-if(window.location.pathname.indexOf("/news") === 0) track("news_opened");
-let lastClickAt = 0;
-document.addEventListener("click", function(event){
-try {
-const now = Date.now();
-if(now - lastClickAt < 300) return;
-const target = event.target.closest("a, button");
-if(!target || target.closest(".ai-chatbox")) return;
-lastClickAt = now;
-track("click", {
-label: (target.getAttribute("data-analytics-label") || target.innerText || target.getAttribute("aria-label") || target.href || "Click").trim().slice(0, 120),
-target_url: target.getAttribute("href") || target.getAttribute("data-target-url") || ""
-});
-} catch(error) {}
-});
-const sentDepths = {};
-let scrollTimer = null;
-window.addEventListener("scroll", function(){
-try {
-if(scrollTimer) return;
-scrollTimer = setTimeout(function(){
-scrollTimer = null;
-const height = document.documentElement.scrollHeight - window.innerHeight;
-if(height <= 0) return;
-const depth = Math.floor((window.scrollY / height) * 100);
-[25, 50, 75, 100].forEach(function(mark){
-if(depth >= mark && !sentDepths[mark]) { sentDepths[mark] = true; track("scroll_depth", {depth: mark}); }
-});
-}, 400);
-} catch(error) {}
-}, {passive: true});
+function initialize() {
+  if(consent !== "granted") return;
+  {% if ga4_measurement_id %}
+  if(!window.ampyanGaLoaded) {
+    window.ampyanGaLoaded = true;
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function(){dataLayer.push(arguments);};
+    gtag("js", new Date());
+    let safePageReferrer = "";
+    try { if(document.referrer) safePageReferrer = new URL(document.referrer).origin + "/"; } catch(error) {}
+    gtag("config", {{ ga4_measurement_id|tojson }}, {
+      send_page_view:true, page_location:location.origin + safePagePath, page_referrer:safePageReferrer
+    });
+    {% for pending_event in pending_analytics_events %}
+    gtag("event", {{ pending_event.name|tojson }}, {{ pending_event.parameters|tojson }});
+    {% endfor %}
+    {% if request.endpoint == 'garage.garage_dashboard' %}
+    gtag("event", "car_health_viewed", {feature:"car_health"});
+    {% endif %}
+    const ga = document.createElement("script"); ga.async = true;
+    ga.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent({{ ga4_measurement_id|tojson }});
+    document.head.appendChild(ga);
+  }
+  {% endif %}
+  {% if clarity_project_id %}
+  if(!window.ampyanClarityLoaded) {
+    window.ampyanClarityLoaded = true;
+    (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", {{ clarity_project_id|tojson }});
+  }
+  {% endif %}
+  // This is the browser collector's page view; WebsiteVisit and GA4 report separately.
+  track("page_view");
+}
+function showPreferences() { consentBox.hidden = false; }
+function setConsent(value) {
+  consent = value;
+  try { localStorage.setItem(consentKey, value); } catch(error) {}
+  if(value !== "granted") {
+    [sessionKey, "ampyan_analytics_attribution", "ampyan_analytics_first_attribution", "ampyan_visitor_id"].forEach(name => {
+      document.cookie = name + "=; Path=/; Max-Age=0; SameSite=Lax";
+    });
+    try { sessionStorage.removeItem(sessionKey); } catch(error) {}
+  }
+  document.cookie = consentKey + "=" + value + "; Path=/; Max-Age=31536000; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : "");
+  consentBox.hidden = true;
+  // Reload so denied consent also stops previously loaded third-party scripts.
+  location.reload();
+}
+document.getElementById("analytics-preferences").addEventListener("click", showPreferences);
+document.getElementById("analytics-grant").addEventListener("click", () => setConsent("granted"));
+document.getElementById("analytics-deny").addEventListener("click", () => setConsent("denied"));
+if(consent === "unknown") showPreferences();
+if(consent === "granted") initialize();
 } catch(error) {}
 })();
 

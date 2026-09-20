@@ -437,6 +437,8 @@ class WebsiteVisit(db.Model):
     device_type = db.Column(db.String(30))
     session_id = db.Column(db.String(100), index=True)
     source = db.Column(db.String(120), index=True)
+    utm_medium = db.Column(db.String(60))
+    utm_campaign = db.Column(db.String(60))
     country = db.Column(db.String(100), index=True)
     city = db.Column(db.String(120))
     browser = db.Column(db.String(80))
@@ -484,6 +486,8 @@ class AnalyticsEvent(db.Model):
     event_type = db.Column(db.String(60), nullable=False, index=True)
     session_id = db.Column(db.String(100), index=True)
     source = db.Column(db.String(120), index=True)
+    utm_medium = db.Column(db.String(60))
+    utm_campaign = db.Column(db.String(60))
     path = db.Column(db.String(500))
     referrer = db.Column(db.String(500))
     country = db.Column(db.String(100), index=True)
@@ -500,6 +504,14 @@ class AnalyticsEvent(db.Model):
     metadata_json = db.Column(db.Text)
 
     user = db.relationship("User", backref="analytics_events")
+
+
+class AnalyticsDedupeClaim(db.Model):
+    """Short-lived, database-wide idempotency claim for critical actions."""
+    __tablename__ = "analytics_dedupe_claim"
+
+    key = db.Column(db.String(64), primary_key=True)
+    expires_at = db.Column(db.DateTime, nullable=False, index=True)
 
 
 class ApiRequestMetric(db.Model):
