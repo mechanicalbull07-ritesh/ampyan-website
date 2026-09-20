@@ -102,15 +102,46 @@ AMPYAN
 
 <!-- PRIMARY MENU -->
 <div class="nav-center" id="primaryNavigation">
-<a href="/" class="nav-link">Home</a>
-<a href="/tools/ai-diagnosis" class="nav-link">Diagnose</a>
-<a href="/my-car-health" class="nav-link">My Car</a>
-<a href="/tools" class="nav-link">Tools</a>
+<div class="nav-dropdown">
+<a href="/" class="nav-link" aria-haspopup="true">Home <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></a>
+<div class="nav-dropdown-content">
+<a href="/about">About AMPYAN</a>
+<a href="/vision">Vision</a>
+<a href="/platform">Platform</a>
+<a href="/contact">Contact</a>
+<a href="/help">Help / Report Issue</a>
+<div class="dropdown-divider"></div>
+<a href="/privacy">Privacy Policy</a>
+<a href="/terms">Terms of Service</a>
+<a href="/disclaimer">Disclaimer</a>
+</div>
+</div>
 {% if config.get("COMMUNITY_BLOG_ENABLED", "false")|string|lower in ["true", "1", "yes", "on"] %}
-<a href="{{ url_for('website_blogs.index') }}" class="nav-link">Learn</a>
+<a href="{{ url_for('website_blogs.index') }}" class="nav-link">Blog</a>
 {% else %}
-<a href="/news" class="nav-link">Learn</a>
+<span class="nav-link nav-link-disabled" aria-disabled="true" title="Blog is not available yet">Blog</span>
 {% endif %}
+<a href="/news" class="nav-link">News</a>
+<a href="/news?category=tips-and-tricks" class="nav-link">Tips &amp; Tricks</a>
+<a href="/community" class="nav-link">Community</a>
+<div class="nav-dropdown">
+<a href="/tools" class="nav-link" aria-haspopup="true">Tools <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></a>
+<div class="nav-dropdown-content">
+<a href="/tools/ai-diagnosis">Diagnose</a>
+<a href="/tools/fuel-cost">Fuel Cost Calculator</a>
+<a href="/tools/emi-calculator">EMI Calculator</a>
+<a href="/tools/depreciation-calculator">Depreciation Calculator</a>
+<a href="/tools/maintenance-cost">Maintenance Cost Estimator</a>
+<a href="/tools/car-suggestion">Car Suggestion Tool</a>
+</div>
+</div>
+<div class="nav-dropdown">
+<a href="/my-car-health" class="nav-link" aria-haspopup="true">My Car <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></a>
+<div class="nav-dropdown-content">
+<a href="/garage-dashboard">My Car Health</a>
+<a href="/add-car">Add Car</a>
+</div>
+</div>
 </div>
 
 

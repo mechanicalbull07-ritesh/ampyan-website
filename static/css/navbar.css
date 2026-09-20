@@ -52,6 +52,7 @@ gap:6px;
 flex:1;
 flex-wrap:nowrap;
 min-width:0;
+white-space:nowrap;
 }
 
 /* AMPYAN HOME PAGE REDESIGN START */
@@ -126,6 +127,20 @@ transform:translateY(-1px);
 cursor:pointer;
 }
 
+.nav-link-disabled{
+display:inline-flex;
+align-items:center;
+color:var(--text-soft);
+opacity:0.55;
+cursor:default;
+}
+
+.nav-link-disabled:hover{
+background:transparent;
+color:var(--text-soft);
+transform:none;
+}
+
 .nav-link i,
 .nav-center i{
 font-size:13px;
@@ -163,7 +178,9 @@ z-index:10000;
 }
 
 .nav-dropdown:hover .nav-dropdown-content,
-.nav-dropdown:hover .dropdown-menu{
+.nav-dropdown:hover .dropdown-menu,
+.nav-dropdown:focus-within .nav-dropdown-content,
+.nav-dropdown:focus-within .dropdown-menu{
 display:block;
 }
 
@@ -409,7 +426,7 @@ gap:7px;
 
 .nav-center a,
 .nav-link{
-font-size:12px;
+font-size:13px;
 gap:5px;
 padding:8px 7px;
 }
@@ -451,23 +468,6 @@ height:40px;
 
 .navbar-search input{
 display:none;
-}
-}
-
-@media(max-width:1220px){
-.navbar{
-flex-wrap:wrap;
-align-items:center;
-}
-
-.nav-center{
-order:3;
-width:100%;
-justify-content:center;
-}
-
-.nav-right{
-margin-left:auto;
 }
 }
 

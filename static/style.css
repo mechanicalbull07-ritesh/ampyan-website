@@ -2024,7 +2024,7 @@ margin-top:12px;
 width:calc(100% - 32px);
 max-width:1240px;
 padding:10px 18px;
-gap:20px;
+gap:12px;
 }
 
 .navbar-brand{
@@ -2032,14 +2032,15 @@ padding-left:4px;
 }
 
 .nav-center{
-gap:8px;
+gap:4px;
 justify-content:center;
 }
 
 .nav-center a,
 .nav-link{
+font-size:13px;
 gap:5px;
-padding:9px 12px;
+padding:9px 8px;
 }
 
 .nav-btn{
