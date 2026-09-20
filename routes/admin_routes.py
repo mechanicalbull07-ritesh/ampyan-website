@@ -13,6 +13,7 @@ from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
 from services.garage_network_service import refresh_mechanic_reputation
 from services.app_api_sync import delete_garage_from_app, sync_garage_to_app, sync_news_to_app
 from services.analytics_service import safe_live_summary
+from services.traffic_quality import traffic_quality_summary
 from routes.community_routes import (
     _find_remote_post_id_for_website_post,
     _get_or_create_car_community,
@@ -214,6 +215,7 @@ def _empty_admin_analytics_context(section="overview"):
     empty_period = {"views": 0, "unique": 0, "repeated": 0, "new": 0, "logged_in": 0}
     return {
         "analytics_degraded": True,
+        "traffic_quality": {"total": 0, "totals": {"human_like": 0, "likely_bot": 0, "unknown": 0}, "hourly": []},
         "live_analytics": safe_live_summary(),
         "section": section,
         "frequency_filter": request.args.get("frequency", "30d"),
@@ -479,6 +481,7 @@ def _build_admin_analytics_context(section="overview"):
     }
 
     return {
+        "traffic_quality": traffic_quality_summary(),
         "live_analytics": safe_live_summary(),
         "section": section,
         "frequency_filter": frequency_filter,

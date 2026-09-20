@@ -135,6 +135,25 @@
 {% endif %}
 
 {% if section == "traffic" %}
+<div class="ui-card card-spacer">
+<h2>Traffic quality</h2>
+<p class="section-copy">Eligible origin-served public HTML page loads in the last 24 hours. These are page responses, not unique visitors or verified humans. Counts include visits regardless of analytics choice.</p>
+<div class="ui-grid ui-grid-4">
+<div class="stat-card"><span>Total eligible page loads</span><div class="stat-number">{{ traffic_quality.total }}</div></div>
+<div class="stat-card"><span>Human-like</span><div class="stat-number">{{ traffic_quality.totals.human_like }}</div></div>
+<div class="stat-card"><span>Likely bots</span><div class="stat-number">{{ traffic_quality.totals.likely_bot }}</div></div>
+<div class="stat-card"><span>Unknown</span><div class="stat-number">{{ traffic_quality.totals.unknown }}</div></div>
+</div>
+<h3>Hourly eligible page loads (UTC)</h3>
+<div class="admin-bar-list">
+{% for label, count in traffic_quality.hourly %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 8, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+
+<h2>Consented analytics</h2>
+<p class="section-copy">The following website visit and behavioral reports depend on analytics consent. GA4 page views are reported separately in GA4 and are not added to these counts.</p>
 <div class="ui-grid ui-grid-4 card-spacer">
 <div class="stat-card"><span>Today Public</span><div class="stat-number">{{ today_page_views }}</div></div>
 <div class="stat-card"><span>Yesterday</span><div class="stat-number">{{ yesterday_page_views }}</div></div>

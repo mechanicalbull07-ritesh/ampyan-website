@@ -105,6 +105,7 @@ from services.analytics_service import (
     safe_track_page_visit,
     start_worker,
 )
+from services.traffic_quality import count_response as count_traffic_quality_response
 
 print("All imports completed")
 
@@ -1806,6 +1807,11 @@ def track_visit():
     except Exception as e:
 
         pass
+
+
+@app.after_request
+def track_traffic_quality(response):
+    return count_traffic_quality_response(response)
 
 
 @app.after_request

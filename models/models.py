@@ -1,8 +1,22 @@
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy import CheckConstraint
 from flask_login import UserMixin
 from datetime import datetime
 
 db = SQLAlchemy()
+
+
+class TrafficMetric(db.Model):
+    """Anonymous hourly counts of eligible origin-served HTML responses."""
+
+    __tablename__ = "traffic_metric"
+    hour_start_utc = db.Column(db.DateTime, primary_key=True, nullable=False)
+    quality = db.Column(db.String(20), primary_key=True, nullable=False)
+    count = db.Column(db.BigInteger, nullable=False, server_default="0")
+    __table_args__ = (
+        CheckConstraint("quality IN ('human_like', 'likely_bot', 'unknown')", name="ck_traffic_metric_quality"),
+        CheckConstraint("count >= 0", name="ck_traffic_metric_count_nonnegative"),
+    )
 
 
 # ================= USER =================
