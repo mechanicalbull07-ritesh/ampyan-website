@@ -15,6 +15,7 @@
 <div class="ui-card car-match-form-card">
 <h2 class="section-heading">Your Driving Profile</h2>
 <form method="POST" class="car-match-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="ui-grid ui-grid-2">
 <div>
 <label class="form-label">Primary Usage</label>

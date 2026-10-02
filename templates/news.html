@@ -78,7 +78,8 @@
 <button type="button" class="news-icon-button share-btn" data-share-url="{{ url_for('news_detail', news_id=news.id, _external=True) }}" data-share-title="{{ news.title or 'AMPYAN Automotive Update' }}" title="Share"><i class="fa-solid fa-share-nodes" aria-hidden="true"></i><span>Share</span></button>
 {% if current_user.is_authenticated and current_user.role == "admin" %}
 <a href="/admin/news/edit/{{ news.id }}" class="news-admin-link">Edit</a>
-<a href="/admin/news/delete/{{ news.id }}" class="news-admin-link danger" onclick="return confirm('Delete this news?')">Delete</a>
+<form method="post" action="/admin/news/delete/{{ news.id }}" style="display:inline">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><button type="submit" class="ui-button-secondary">Delete</button></form>
 {% endif %}
 </div>
 </article>

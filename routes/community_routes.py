@@ -56,19 +56,13 @@ def _safe_remote_call(path, method="GET", payload=None, timeout=3):
 
 
 def _sync_user_profile(user):
-    profile_url = _author_avatar_url(getattr(user, "profile_photo", None))
-    if profile_url and profile_url.startswith("/"):
-        profile_url = parse.urljoin(request.url_root, profile_url.lstrip("/"))
-    payload = {
-        "name": user.username,
-        "email": user.email,
-        "phone": user.mobile or "",
-        "user_email": user.email,
-        "profile_photo": profile_url,
-        "profile_image": profile_url,
-        "avatar_url": profile_url,
-    }
-    return _safe_remote_call("/profile/sync", method="POST", payload=payload)
+    if not current_user.is_authenticated or user.id != current_user.id:
+        return None
+    from services.canonical_garage_client import sync_profile, GarageError
+    try:
+        return sync_profile(user.username, user.mobile or '')
+    except GarageError:
+        return None
 
 
 def _author_avatar_url(profile_photo):
@@ -1216,7 +1210,7 @@ def remote_add_comment(remote_post_id):
     return redirect(url_for("community.remote_post_detail", remote_post_id=remote_post_id))
 
 
-@community_bp.route("/upvote/<int:post_id>")
+@community_bp.route("/upvote/<int:post_id>", methods=["POST"])
 @login_required
 def upvote(post_id):
     existing_vote = Vote.query.filter_by(user_id=current_user.id, post_id=post_id).first()

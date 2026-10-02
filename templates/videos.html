@@ -9,6 +9,7 @@
 <div class="ui-button-row">
 <a href="{{ url_for('edit_video_reply', reply_id=reply.id) }}" class="ui-button-secondary">Edit</a>
 <form method="POST" action="{{ url_for('delete_video_reply', reply_id=reply.id) }}" class="inline-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="ui-button-danger" onclick="return confirm('Delete this reply?')">Delete</button>
 </form>
 </div>
@@ -17,6 +18,7 @@
 
 {% if current_user.is_authenticated %}
 <form method="POST" action="{{ url_for('add_video_reply', video_id=video.id) }}" class="inline-reply-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="hidden" name="parent_id" value="{{ reply.id }}">
 <textarea name="content" placeholder="Reply to {{ reply.user.username }}..." required class="profile-input"></textarea>
 <button type="submit" class="ui-button-secondary">Reply</button>
@@ -50,6 +52,7 @@
 
 {% if is_admin %}
 <form action="/videos" method="POST" class="video-add-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="video-form-grid">
 <div>
 <label class="form-label" for="video-title">Video Title</label>
@@ -83,6 +86,7 @@ allowfullscreen>
 {% if is_admin %}
 <a href="{{ url_for('edit_video', video_id=video.id) }}" class="ui-button-secondary">Edit</a>
 <form method="POST" action="{{ url_for('delete_video', video_id=video.id) }}" class="inline-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="ui-button-danger" onclick="return confirm('Delete this video?')">Delete</button>
 </form>
 {% endif %}
@@ -98,6 +102,7 @@ allowfullscreen>
 
 {% if current_user.is_authenticated %}
 <form method="POST" action="{{ url_for('add_video_reply', video_id=video.id) }}" class="inline-reply-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <textarea name="content" placeholder="Write your reply..." required class="profile-input"></textarea>
 <button type="submit" class="auth-button">Post Reply</button>
 </form>

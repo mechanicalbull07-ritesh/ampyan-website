@@ -1192,7 +1192,7 @@ def admin_reply_as_persona():
 
 # ================= DELETE USER =================
 
-@admin_bp.route("/admin/delete-user/<int:user_id>")
+@admin_bp.route("/admin/delete-user/<int:user_id>", methods=["POST"])
 @login_required
 def delete_user(user_id):
 
@@ -1223,7 +1223,7 @@ def delete_user(user_id):
 
 # ================= BAN USER =================
 
-@admin_bp.route("/admin/ban-user/<int:user_id>")
+@admin_bp.route("/admin/ban-user/<int:user_id>", methods=["POST"])
 @login_required
 def ban_user(user_id):
 
@@ -1240,7 +1240,7 @@ def ban_user(user_id):
 
 # ================= UNBAN USER =================
 
-@admin_bp.route("/admin/unban-user/<int:user_id>")
+@admin_bp.route("/admin/unban-user/<int:user_id>", methods=["POST"])
 @login_required
 def unban_user(user_id):
 
@@ -1257,7 +1257,7 @@ def unban_user(user_id):
 
 # ================= REMOVE ADMIN =================
 
-@admin_bp.route("/admin/remove-admin/<int:user_id>")
+@admin_bp.route("/admin/remove-admin/<int:user_id>", methods=["POST"])
 @login_required
 def remove_admin(user_id):
 
@@ -1272,7 +1272,7 @@ def remove_admin(user_id):
     return redirect("/admin")
 
 
-@admin_bp.route("/admin/approve-garage/<int:mechanic_id>")
+@admin_bp.route("/admin/approve-garage/<int:mechanic_id>", methods=["POST"])
 @login_required
 def approve_garage(mechanic_id):
 
@@ -1289,7 +1289,7 @@ def approve_garage(mechanic_id):
     return redirect("/admin")
 
 
-@admin_bp.route("/admin/reject-garage/<int:mechanic_id>")
+@admin_bp.route("/admin/reject-garage/<int:mechanic_id>", methods=["POST"])
 @login_required
 def reject_garage(mechanic_id):
 
@@ -1307,7 +1307,7 @@ def reject_garage(mechanic_id):
     return redirect("/admin")
 
 
-@admin_bp.route("/admin/sync-app-content")
+@admin_bp.route("/admin/sync-app-content", methods=["POST"])
 @login_required
 def sync_app_content():
     if not _require_admin():
@@ -1326,7 +1326,7 @@ def sync_app_content():
     return redirect("/admin")
 
 
-@admin_bp.route("/admin/feature-garage/<int:mechanic_id>")
+@admin_bp.route("/admin/feature-garage/<int:mechanic_id>", methods=["POST"])
 @login_required
 def feature_garage(mechanic_id):
 
@@ -1342,7 +1342,7 @@ def feature_garage(mechanic_id):
     return redirect("/admin")
 
 
-@admin_bp.route("/admin/unfeature-garage/<int:mechanic_id>")
+@admin_bp.route("/admin/unfeature-garage/<int:mechanic_id>", methods=["POST"])
 @login_required
 def unfeature_garage(mechanic_id):
 

@@ -1,0 +1,337 @@
+{
+  "amt_gearbox": {
+    "group": "Driveline",
+    "title": "AMT System",
+    "guidance": "Have a workshop inspect gearbox operation and warnings for visible leakage or damage."
+  },
+  "amt_controls": {
+    "group": "Driveline",
+    "title": "AMT Actuator & Controls",
+    "guidance": "Have a workshop inspect shift operation and accessible actuator/control connections for visible leakage or damage."
+  },
+  "torque_converter_at": {
+    "group": "Driveline",
+    "title": "Torque-converter AT",
+    "guidance": "Have a workshop inspect transmission operation and warnings for visible leakage or damage."
+  },
+  "cvt_transmission": {
+    "group": "Driveline",
+    "title": "CVT",
+    "guidance": "Have a workshop inspect CVT operation and warnings for visible leakage or damage."
+  },
+  "dct_transmission": {
+    "group": "Driveline",
+    "title": "DCT",
+    "guidance": "Have a workshop inspect transmission operation and warnings for visible leakage or damage."
+  },
+  "turbo_connections": {
+    "group": "Engine & Fluids",
+    "title": "Turbo / Boost System",
+    "guidance": "Have a workshop inspect applicable intake/boost hoses and connections for visible leakage or damage."
+  },
+  "supercharger_connections": {
+    "group": "Engine & Fluids",
+    "title": "Supercharger / Boost System",
+    "guidance": "Have a workshop inspect applicable intake/boost hoses and connections for visible leakage or damage."
+  },
+  "rear_differential": {
+    "group": "Driveline",
+    "title": "Rear Differential",
+    "guidance": "Have a workshop inspect the verified rear differential for visible leakage or damage."
+  },
+  "front_differential": {
+    "group": "Driveline",
+    "title": "Front Differential",
+    "guidance": "Have a workshop inspect the verified front differential for visible leakage or damage."
+  },
+  "transfer_case": {
+    "group": "Driveline",
+    "title": "Transfer Case",
+    "guidance": "Have a workshop inspect the verified transfer case for visible leakage or damage."
+  },
+  "hybrid_ignition": {
+    "group": "Engine & Fluids",
+    "title": "Ignition & spark plugs",
+    "guidance": "Have a qualified workshop check applicable ignition and spark-plug condition."
+  },
+  "hybrid_friction_brakes": {
+    "group": "Brakes",
+    "title": "Friction brakes",
+    "guidance": "Have friction-brake pads and discs checked for wear or damage."
+  },
+  "hybrid_parking_brake": {
+    "group": "Brakes",
+    "title": "Parking brake",
+    "guidance": "Have applicable parking-brake operation checked."
+  },
+  "hybrid_cabin_filter": {
+    "group": "HVAC",
+    "title": "Cabin filter",
+    "guidance": "Have the fitted cabin filter condition checked."
+  },
+  "mild_isg": {
+    "group": "Hybrid Systems",
+    "title": "ISG / Mild-Hybrid System",
+    "guidance": "Have a qualified workshop check relevant mild-hybrid system warnings and accessible connections."
+  },
+  "mild_battery": {
+    "group": "Hybrid Systems",
+    "title": "Mild-Hybrid Battery",
+    "guidance": "Have the fitted mild-hybrid battery system and relevant warnings checked by qualified service personnel."
+  },
+  "mild_drive_belt": {
+    "group": "Engine & Fluids",
+    "title": "Drive Belt",
+    "guidance": "Have a qualified workshop inspect the verified drive-belt equipment for wear or damage."
+  },
+  "hybrid_at": {
+    "group": "Driveline",
+    "title": "Automatic transmission",
+    "guidance": "Have a qualified workshop inspect the applicable automatic transmission for leakage."
+  },
+  "hev_hv": {
+    "group": "Hybrid Systems",
+    "title": "Hybrid / HV System",
+    "guidance": "Have qualified hybrid service personnel check relevant hybrid-system warnings and accessible high-voltage system condition."
+  },
+  "hev_battery": {
+    "group": "Hybrid Systems",
+    "title": "Hybrid Battery Area",
+    "guidance": "Have qualified hybrid service personnel check relevant battery-system warnings and accessible battery-area condition."
+  },
+  "hev_battery_ventilation": {
+    "group": "Hybrid Systems",
+    "title": "Battery Cooling / Ventilation",
+    "guidance": "Have qualified hybrid service personnel check applicable battery ventilation and intake-filter condition."
+  },
+  "hev_inverter_cooling": {
+    "group": "Hybrid Systems",
+    "title": "Inverter Cooling",
+    "guidance": "Have qualified hybrid service personnel inspect the applicable inverter-cooling circuit for leakage or damage."
+  },
+  "hev_edrive": {
+    "group": "Driveline",
+    "title": "Electric Drive / e-CVT",
+    "guidance": "Have qualified hybrid service personnel check the verified electric-drive/e-CVT condition and applicable lubricant leakage."
+  },
+  "ev_brake_pads": {
+    "group": "Brakes",
+    "title": "Friction brakes",
+    "guidance": "Have the friction-brake pads and discs checked for wear or damage."
+  },
+  "ev_restraints": {
+    "group": "Cabin & Safety",
+    "title": "Seat belts",
+    "guidance": "Check seat belts for wear and correct operation."
+  },
+  "ev_closures": {
+    "group": "Cabin & Safety",
+    "title": "Doors & latches",
+    "guidance": "Check door latches and strikers for correct operation."
+  },
+  "ev_battery_enclosure": {
+    "group": "EV Systems",
+    "title": "Traction battery / underbody",
+    "guidance": "Have qualified EV service personnel check accessible battery-enclosure and underbody areas for visible damage or leakage."
+  },
+  "ev_hv_system": {
+    "group": "EV Systems",
+    "title": "High-voltage system",
+    "guidance": "Have qualified EV service personnel check relevant high-voltage system warnings and accessible cable condition."
+  },
+  "ev_charging_connection": {
+    "group": "EV Systems",
+    "title": "Charging connection",
+    "guidance": "Have the charging inlet, protective covers and visible connection condition checked by qualified EV service personnel."
+  },
+  "ev_thermal": {
+    "group": "EV Systems",
+    "title": "EV thermal management",
+    "guidance": "Have qualified EV service personnel inspect applicable battery/drive-system cooling circuits for leakage or damage."
+  },
+  "ev_drive_transaxle": {
+    "group": "EV Systems",
+    "title": "EV drive unit / transaxle",
+    "guidance": "Have qualified EV service personnel inspect applicable drive-unit/transaxle condition."
+  },
+  "ev_auxiliary_12v": {
+    "group": "Electrical",
+    "title": "Auxiliary 12V battery",
+    "guidance": "Have the auxiliary 12V battery inspected according to its fitted battery type."
+  },
+  "ev_hvac": {
+    "group": "HVAC",
+    "title": "HVAC",
+    "guidance": "Check applicable HVAC operation."
+  },
+  "ev_cabin_filter": {
+    "group": "HVAC",
+    "title": "Cabin filter",
+    "guidance": "Have the fitted cabin filter condition checked."
+  },
+  "ev_parking_brake": {
+    "group": "Brakes",
+    "title": "Parking brake",
+    "guidance": "Have the fitted parking-brake operation checked."
+  },
+  "diesel_fuel_lines": {
+    "group": "Engine & Fluids",
+    "title": "Diesel fuel lines & connections",
+    "guidance": "Have a qualified workshop check the diesel fuel system for leakage or damage."
+  },
+  "diesel_fuel_filter": {
+    "group": "Engine & Fluids",
+    "title": "Fuel filter / water separator",
+    "guidance": "Have the fuel filter and water-separator condition checked where fitted."
+  },
+  "diesel_water_warning": {
+    "group": "Engine & Fluids",
+    "title": "Water-in-fuel warning",
+    "guidance": "If a water-in-fuel warning appears, have the system checked promptly by a qualified workshop."
+  },
+  "diesel_turbo": {
+    "group": "Engine & Fluids",
+    "title": "Turbo intake / boost connections",
+    "guidance": "Have a qualified workshop inspect applicable intake/boost connections for visible leakage or damage."
+  },
+  "diesel_dpf": {
+    "group": "Engine & Fluids",
+    "title": "Diesel particulate filter",
+    "guidance": "Have a qualified workshop check relevant DPF warnings and system condition."
+  },
+  "diesel_scr": {
+    "group": "Engine & Fluids",
+    "title": "SCR / DEF system",
+    "guidance": "Have a qualified workshop check SCR/DEF warnings, level and system condition as applicable."
+  },
+  "diesel_egr": {
+    "group": "Engine & Fluids",
+    "title": "EGR / emissions system",
+    "guidance": "Have a qualified workshop check relevant EGR/emissions warnings and system condition."
+  },
+  "cng_connections": {
+    "group": "CNG System",
+    "title": "CNG pipes, hoses & joints",
+    "guidance": "Have the CNG pipes, hoses and joints checked for leakage or damage by a qualified workshop."
+  },
+  "cng_cylinder": {
+    "group": "CNG System",
+    "title": "CNG cylinder & installation",
+    "guidance": "Have the cylinder and installation checked for visible damage or mounting issues by a qualified workshop."
+  },
+  "cng_certification": {
+    "group": "CNG System",
+    "title": "Cylinder testing record",
+    "guidance": "Confirm the cylinder certification/testing record is current and applicable."
+  },
+  "cng_filling": {
+    "group": "CNG System",
+    "title": "CNG filling connection",
+    "guidance": "Have the filling connection checked for leakage or damage by a qualified workshop."
+  },
+  "cng_cooling": {
+    "group": "CNG System",
+    "title": "CNG coolant hoses",
+    "guidance": "Have a qualified workshop check applicable CNG-system coolant hoses for leakage or damage."
+  },
+  "air_filter": {
+    "group": "Engine & Fluids",
+    "title": "Air Filter",
+    "guidance": "Check filter condition"
+  },
+  "engine_oil": {
+    "group": "Engine & Fluids",
+    "title": "Engine Oil",
+    "guidance": "Check oil level and leakage"
+  },
+  "engine_coolant": {
+    "group": "Engine & Fluids",
+    "title": "Coolant",
+    "guidance": "Check coolant level and leakage"
+  },
+  "cooling_connections": {
+    "group": "Engine & Fluids",
+    "title": "Cooling Hoses",
+    "guidance": "Check hoses and connections for leaks or damage"
+  },
+  "exhaust": {
+    "group": "Engine & Fluids",
+    "title": "Exhaust",
+    "guidance": "Check for unusual noise and leaks"
+  },
+  "fuel_connections": {
+    "group": "Engine & Fluids",
+    "title": "Fuel Lines & Cap",
+    "guidance": "Check fuel lines, connections and cap for leaks or damage"
+  },
+  "brake_fluid": {
+    "group": "Brakes",
+    "title": "Brake Fluid",
+    "guidance": "Check fluid level and leakage"
+  },
+  "brake_hoses": {
+    "group": "Brakes",
+    "title": "Brake Hoses",
+    "guidance": "Check hoses and pipes for leaks or damage"
+  },
+  "parking_brake": {
+    "group": "Brakes",
+    "title": "Parking Brake",
+    "guidance": "Check operation and cable condition"
+  },
+  "tyre_condition": {
+    "group": "Tyres & Wheels",
+    "title": "Tyres",
+    "guidance": "Check pressure, wear and damage"
+  },
+  "wheels": {
+    "group": "Tyres & Wheels",
+    "title": "Wheels",
+    "guidance": "Check wheels for damage"
+  },
+  "steering": {
+    "group": "Steering & Suspension",
+    "title": "Steering",
+    "guidance": "Check steering play and connections"
+  },
+  "suspension": {
+    "group": "Steering & Suspension",
+    "title": "Suspension",
+    "guidance": "Check for leaks, damage and unusual movement"
+  },
+  "battery_12v": {
+    "group": "Electrical",
+    "title": "12V Battery",
+    "guidance": "Check voltage and visible condition"
+  },
+  "lighting": {
+    "group": "Electrical",
+    "title": "Lights",
+    "guidance": "Check lights work correctly"
+  },
+  "wipers": {
+    "group": "Electrical",
+    "title": "Wipers",
+    "guidance": "Check operation and condition"
+  },
+  "horn": {
+    "group": "Electrical",
+    "title": "Horn",
+    "guidance": "Check horn operation"
+  },
+  "ac": {
+    "group": "HVAC",
+    "title": "Air Conditioning",
+    "guidance": "Check cooling and operation"
+  },
+  "manual_clutch": {
+    "group": "Driveline",
+    "title": "Clutch",
+    "guidance": "Check for slipping or dragging"
+  },
+  "manual_gear_oil": {
+    "group": "Driveline",
+    "title": "Gearbox Oil",
+    "guidance": "Check oil level and leakage"
+  }
+}

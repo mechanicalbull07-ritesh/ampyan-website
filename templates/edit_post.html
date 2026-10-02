@@ -8,6 +8,7 @@
 <p class="create-sub">Update the discussion and choose the right car community.</p>
 
 <form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="text" name="title" value="{{ post.title }}" placeholder="Post title" required>
 
 <textarea name="content" rows="6" placeholder="Describe your problem or discussion..." required>{{ post.content }}</textarea>

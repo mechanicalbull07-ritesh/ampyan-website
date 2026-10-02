@@ -164,6 +164,7 @@ Community Member
 <i class="fa-solid fa-pen"></i><span>Edit</span>
 </a>
 <form method="POST" action="{{ post.delete_url }}" class="inline-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <button type="submit" class="community-icon-action danger-action" onclick="return confirm('Delete this post?')" title="Delete">
 <i class="fa-solid fa-trash"></i><span>Delete</span>
 </button>
@@ -186,6 +187,7 @@ Community Member
 <p class="section-copy">Connect with owners of the same car or vehicle type.</p>
 </div>
 <form method="POST" action="{{ url_for('community.create_car_community') }}" class="car-community-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="text" name="name" placeholder="Create: Baleno Owners, XUV700..." required>
 <input type="text" name="description" placeholder="Short purpose (optional)">
 <button type="submit"><i class="fa-solid fa-plus"></i> Create</button>

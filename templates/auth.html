@@ -48,6 +48,8 @@
 
         <!-- AUTH FORM -->
         <form method="POST" autocomplete="off">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="analytics_request_token" value="">
 
             
 

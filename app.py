@@ -79,7 +79,7 @@ from io import BytesIO
 import textwrap
 from authlib.integrations.flask_client import OAuth
 from routes.main_routes import main_bp
-from routes.garage_routes import garage_bp
+from routes.canonical_garage_routes import garage_bp
 from routes.tools_routes import tools_bp
 from routes.user_routes import user_bp
 from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
@@ -748,12 +748,13 @@ app.config['MAIL_DEFAULT_SENDER'] = ("Motrnoix AMPYAN", os.environ.get("MAIL_FRO
 
 mail = Mail(app)
 
-# csrf = CSRFProtect(app)
+from flask_wtf.csrf import CSRFProtect
+csrf = CSRFProtect(app)
 
 # ===============================
 # DATABASE CONFIG (LOCAL + PROD)
 # ===============================
-@app.route("/test-email")
+@app.route("/test-email", methods=["POST"])
 def test_email():
     if IS_PRODUCTION:
         return "Not found", 404
@@ -1389,6 +1390,13 @@ def google_callback():
             db.session.commit()
 
         login_user(user)
+        from services.canonical_garage_client import connect, clear_credentials, GarageError
+        clear_credentials()
+        if isinstance(token, dict) and token.get('id_token'):
+            try:
+                connect(id_token=token['id_token'])
+            except GarageError:
+                flash('Website signed in. Garage sign-in needs attention; no account was linked automatically.')
 
         next_page = session.pop("login_next", None)
         if is_safe_local_redirect(next_page):
@@ -1424,6 +1432,7 @@ SENSITIVE_PATHS = {
 
 RATE_LIMIT_RULES = {
     "/login": (20, 60),
+    "/garage/connect": (20, 60),
     "/register": (12, 60),
     "/forgot-password": (8, 60),
     "/login/google": (20, 60),
@@ -1470,16 +1479,16 @@ def record_website_event(event_type, label="", target_url="", severity="info", p
     try:
         if not database_ready_for_queries():
             return
-        visitor_id = request.cookies.get("ampyan_visitor_id") or getattr(g, "set_visitor_cookie", None)
+        from services.analytics_service import safe_path, safe_referrer
         event = WebsiteEvent(
             event_type=sanitize_event_text(event_type, 40),
             label=sanitize_event_text(label, 160),
-            path=(path or request.path or "")[:500],
+            path=safe_path(path or request.path),
             target_url=normalize_event_url(target_url),
-            visitor_id=visitor_id,
+            visitor_id=None,
             user_id=current_user.id if current_user.is_authenticated else None,
             ip_address=client_ip()[:50],
-            referrer=(request.referrer or "")[:500],
+            referrer=safe_referrer(request.referrer),
             user_agent=(request.headers.get("User-Agent", "") or "")[:500],
             device_type=detect_device_type(request.headers.get("User-Agent", "")),
             is_authenticated=current_user.is_authenticated,
@@ -1537,7 +1546,7 @@ def security_guard():
     content_length = request.content_length or 0
     if content_length > app.config["MAX_CONTENT_LENGTH"]:
         if request.path == "/api/track-event":
-            return jsonify({"status": "accepted"}), 202
+            return jsonify({"status": "rejected", "reason": "payload_too_large"}), 413
         if request.path == "/admin/news/create":
             flash("Image upload failed because the file is too large. The news form is still available.", "warning")
             return redirect(url_for("create_news"))
@@ -1561,6 +1570,12 @@ def security_guard():
 
 @app.before_request
 def restore_whitelisted_admin_role():
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        # Fail closed for stale admin roles without changing account rows on a view.
+        if request.path.startswith('/admin') and current_user.is_authenticated:
+            if current_user.role == 'admin' and (current_user.email or '').strip().lower() not in ADMIN_EMAIL_SET:
+                abort(403)
+        return
     if request.endpoint in {"favicon", "health", "healthz", "ready", "version"} or request.path in {"/favicon.ico", "/health", "/healthz", "/ready", "/version"}:
         return
     if request.path.startswith("/static"):
@@ -1638,19 +1653,34 @@ def detect_device_type(user_agent):
 
 @app.before_request
 def track_visit():
-    if not analytics_enabled():
+    if not analytics_enabled() or request.cookies.get("ampyan_analytics_consent") != "granted":
         return
 
     try:
 
+        from zoneinfo import ZoneInfo
+        day = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y%m%d")
+        now = int(time.time())
+        raw = request.cookies.get("ampyan_analytics_session", "")
+        parts = raw.split(".")
+        if (len(parts) == 3 and re.fullmatch(r"[0-9a-f]{32}", parts[0])
+                and parts[1] == day and parts[2].isdigit()
+                and 0 <= now - int(parts[2]) <= 1800):
+            session_id = parts[0]
+        else:
+            session_id = secrets.token_hex(16)
+        g.analytics_session_id = session_id
+        g.analytics_session_cookie = f"{session_id}.{day}.{now}"
+        if any(key in request.args for key in ("utm_source", "utm_medium", "utm_campaign")):
+            from services.analytics_service import _attribution
+            attribution = ".".join(_attribution(request.args.get(key, "")) for key in ("utm_source", "utm_medium", "utm_campaign"))
+            if attribution != "..":
+                g.analytics_attribution_cookie = attribution
+                if not request.cookies.get("ampyan_analytics_first_attribution"):
+                    g.analytics_first_attribution_cookie = attribution
+
         if not should_track_page_visit():
             return
-
-        visitor_id = request.cookies.get("ampyan_visitor_id")
-
-        if not visitor_id:
-            visitor_id = secrets.token_urlsafe(24)
-            g.set_visitor_cookie = visitor_id
 
         safe_track_page_visit()
 
@@ -1701,20 +1731,31 @@ def attach_visitor_cookie(response):
         "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
     )
 
-    visitor_id = getattr(g, "set_visitor_cookie", None)
-    if visitor_id:
+    if request.cookies.get("ampyan_analytics_consent") != "granted":
+        for name in ("ampyan_analytics_session", "ampyan_analytics_attribution", "ampyan_analytics_first_attribution", "ampyan_visitor_id"):
+            if request.cookies.get(name):
+                response.delete_cookie(name, samesite="Lax", secure=request.is_secure)
+
+    analytics_session_cookie = getattr(g, "analytics_session_cookie", None)
+    if analytics_session_cookie:
         response.set_cookie(
-            "ampyan_visitor_id",
-            visitor_id,
-            max_age=60 * 60 * 24 * 365,
-            httponly=True,
-            samesite="Lax",
-            secure=request.is_secure,
+            "ampyan_analytics_session", analytics_session_cookie,
+            samesite="Lax", secure=request.is_secure,
         )
+    attribution_cookie = getattr(g, "analytics_attribution_cookie", None)
+    if attribution_cookie:
+        response.set_cookie("ampyan_analytics_attribution", attribution_cookie,
+                            samesite="Lax", secure=request.is_secure)
+    first_attribution_cookie = getattr(g, "analytics_first_attribution_cookie", None)
+    if first_attribution_cookie:
+        response.set_cookie("ampyan_analytics_first_attribution", first_attribution_cookie,
+                            max_age=60 * 60 * 24 * 365, samesite="Lax", secure=request.is_secure)
     return response
 
 @app.before_request
 def reset_ai_usage():
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
 
     if request.endpoint in {"favicon", "health", "healthz", "ready", "version"} or request.path in {"/favicon.ico", "/health", "/healthz", "/ready", "/version"}:
         return
@@ -2526,7 +2567,7 @@ def edit_news(news_id):
     return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES)
 # ================= DELETE NEWS =================
 
-@app.route("/admin/news/delete/<int:news_id>")
+@app.route("/admin/news/delete/<int:news_id>", methods=["POST"])
 @login_required
 def delete_news(news_id):
 
@@ -2619,17 +2660,25 @@ def api_help_report():
 def api_track_event():
     try:
         if (request.content_length or 0) > 32 * 1024:
-            return jsonify({"status": "accepted"}), 202
-        payload = request.get_json(silent=True) or {}
+            return jsonify({"status": "rejected", "reason": "payload_too_large"}), 413
+        payload = request.get_json(silent=True)
         if not isinstance(payload, dict):
+            return jsonify({"status": "rejected", "reason": "invalid_json"}), 400
+        from services.analytics_service import validate_event, InvalidAnalyticsEvent
+        event_type = payload.get("event_type")
+        try:
+            validate_event(event_type, payload)
+        except InvalidAnalyticsEvent as exc:
+            return jsonify({"status": "rejected", "reason": str(exc)}), 422
+        traffic_type = "app" if payload.get("traffic_type") == "app" else "web"
+        if traffic_type == "web" and request.cookies.get("ampyan_analytics_consent") != "granted":
+            return jsonify({"status": "rejected", "reason": "consent_required"}), 403
+        if safe_track_event(event_type, payload, traffic_type=traffic_type):
             return jsonify({"status": "accepted"}), 202
-        event_type = sanitize_event_text(payload.get("event_type") or "click", 60)
-        if event_type in ALLOWED_EVENT_TYPES:
-            traffic_type = "app" if payload.get("traffic_type") == "app" else "web"
-            safe_track_event(event_type, payload, traffic_type=traffic_type)
-        return jsonify({"status": "accepted"}), 202
+        return jsonify({"status": "failed", "reason": "storage_unavailable"}), 503
     except Exception:
-        return jsonify({"status": "accepted"}), 202
+        app.logger.exception("analytics_event_submission_failed")
+        return jsonify({"status": "failed", "reason": "internal_error"}), 500
 # ================= FORGOT PASSWORD =================
 
 @app.route("/forgot-password", methods=["GET", "POST"])
@@ -2704,8 +2753,10 @@ def delete_comment(comment_id):
 
 # ================= EMAIL VERIFICATION =================
 
-@app.route("/verify-email/<token>")
+@app.route("/verify-email/<token>", methods=["GET","POST"])
 def verify_email(token):
+    if request.method == "GET":
+        return render_template("confirm_email.html")
 
     user = User.query.filter_by(verification_token=token).first()
 
@@ -3294,7 +3345,15 @@ def handle_unexpected_error(error):
 def robots_txt():
     return Response(
         "User-agent: *\n"
-        "Allow: /\n\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "Disallow: /login\n"
+        "Disallow: /register\n"
+        "Disallow: /garage-dashboard\n"
+        "Disallow: /my-car-health\n"
+        "Disallow: /add-car\n"
+        "Disallow: /edit-car/\n\n"
         "Sitemap: https://ampyan.com/sitemap.xml\n",
         mimetype="text/plain",
     )
@@ -3302,28 +3361,17 @@ def robots_txt():
 
 @app.route("/sitemap.xml")
 def sitemap_xml():
-    sitemap = """<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://ampyan.com/</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/login</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/community</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/diagnosis</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/my-car-health</loc>
-  </url>
-  <url>
-    <loc>https://ampyan.com/garages</loc>
-  </url>
-</urlset>
-"""
+    from xml.sax.saxutils import escape
+    public_paths = [
+        "/", "/about", "/tools", "/tools/ai-diagnosis", "/tools/fuel-cost",
+        "/tools/emi-calculator", "/tools/depreciation-calculator", "/tools/maintenance-cost",
+        "/community", "/news", "/garages", "/marketplace", "/videos",
+    ]
+    # Only public routes are listed. Dynamic pages need an explicit publication
+    # policy before inclusion; this avoids leaking unreviewed user content.
+    sitemap = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    sitemap += "".join(f"<url><loc>{escape('https://ampyan.com' + path)}</loc></url>\n" for path in public_paths)
+    sitemap += "</urlset>\n"
     return Response(sitemap, mimetype="application/xml")
 
 

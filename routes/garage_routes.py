@@ -5,7 +5,7 @@ from flask_login import login_required, current_user
 from models.models import db, Car, DiagnosticLearning
 from services.garage_summary import enrich_car_for_garage
 from services.india_car_catalog import catalog_brands, catalog_image_path, garage_catalog_payload
-from services.analytics_service import safe_track_event
+from services.analytics_service import safe_track_event, action_event_id
 
 garage_bp = Blueprint("garage", __name__)
 
@@ -67,11 +67,13 @@ def garage_dashboard():
         user_id=current_user.id
     ).order_by(DiagnosticLearning.created_at.desc()).limit(5).all()
 
-    return render_template(
+    page = render_template(
         "garage_dashboard.html",
         cars=cars,
         diagnostics=diagnostics
     )
+    safe_track_event("car_health_viewed", {"feature": "car_health"})
+    return page
 
 
 # ================= ADD CAR =================
@@ -131,7 +133,11 @@ def add_car():
 
         db.session.add(car)
         db.session.commit()
-        safe_track_event("garage_added", {"surface": "website"})
+        vehicle_payload = {"feature": "vehicle"}
+        event_id = action_event_id(request.form.get("analytics_request_token"))
+        if event_id:
+            vehicle_payload["event_id"] = event_id
+        safe_track_event("vehicle_added", vehicle_payload)
 
         return redirect("/garage")
 
@@ -223,6 +229,7 @@ def edit_car(car_id):
             car.next_service_km = car.last_service_km + SERVICE_INTERVAL
 
         db.session.commit()
+        safe_track_event("vehicle_updated", {"feature": "vehicle"})
 
         return redirect("/garage")
 

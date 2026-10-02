@@ -3,12 +3,15 @@ from flask_login import current_user
 from models.models import Car, AIFeedback, db
 from services.car_recommendation_service import recommend_cars, build_user_profile_summary
 from services.dashboard_light_intake import dashboard_light_context
-from services.analytics_service import safe_track_event
+from services.analytics_service import safe_track_event, action_event_id
 from service_estimator import estimate_service
 
-# AI ENGINE
-from ai_engine.response_formatter import enrich_diagnosis_results
-from services.diagnosis_safety import safe_diagnose_vehicle
+from services.canonical_diagnosis_client import (
+    CanonicalDiagnosisUnavailable,
+    diagnose as canonical_diagnose,
+    process_answers as canonical_process_answers,
+    response_view as canonical_response_view,
+)
 
 # FAILURE DATABASE
 from failure_database import FAILURE_DATABASE
@@ -246,10 +249,6 @@ def car_suggestion():
 
 @tools_bp.route("/tools/ai-diagnosis", methods=["GET", "POST"])
 def ai_diagnosis_page():
-
-    diagnosis_result = None
-    questions = []
-
     if current_user.is_authenticated:
 
         cars = Car.query.filter_by(owner_id=current_user.id).all()
@@ -265,73 +264,64 @@ def ai_diagnosis_page():
 
 
     if request.method == "POST":
-
-        problem = request.form.get("problem")
-        safe_track_event("diagnosis_started", {"surface": "website"})
+        problem = (request.form.get("problem") or "").strip()
+        diagnosis_payload = {"feature": "diagnosis"}
+        event_id = action_event_id(request.form.get("analytics_request_token"))
+        if event_id:
+            diagnosis_payload["event_id"] = event_id
         extra_context = dashboard_light_context(request.files, request.form)
         if extra_context:
             problem = f"{problem or ''} {extra_context}".strip()
-
-        if problem:
-
-            results, questions = safe_diagnose_vehicle(problem, route_name="tools_ai_diagnosis")
-            safe_track_event("diagnosis_completed", {"surface": "website", "result_count": len(results or [])})
-
-            current_app.logger.info("AI diagnosis completed with %s result(s)", len(results or []))
-
-            # 🔥 SAVE TOP RESULT FOR FEEDBACK
-            if results:
-                session["last_result"] = results[0]["issue"]
-
-            causes = []
-
-            for r in results[:3]:
-                causes.append({
-                    "name": r["issue"],
-                    "probability": int(r["confidence"])
-                })
-
-            top_issue = results[0]["issue"] if results else None
-
-            failure_data = None
-
-            for failure in FAILURE_DATABASE:
-                if failure.get("problem") == top_issue:
-                    failure_data = failure
-                    break
-
-            cost_list = []
-
-            if failure_data:
-
-                cost_data = failure_data.get("repair_cost")
-
-                if isinstance(cost_data, dict):
-
-                    min_cost = cost_data.get("min")
-                    max_cost = cost_data.get("max")
-
-                    if min_cost and max_cost:
-                        cost_list = [f"Estimated repair cost: ₹{min_cost} – ₹{max_cost}"]
-
-                elif isinstance(cost_data, list):
-                    cost_list = cost_data
-
-
-            diagnosis_result = {
-                "causes": causes,
-                "severity": failure_data.get("severity", "Unknown").capitalize() if failure_data else "Unknown",
-                "user_checks": failure_data.get("user_checks", []) if failure_data else [],
-                "estimated_cost": cost_list,
-                "advice": failure_data.get("advice", "Consult a mechanic.") if failure_data else "Consult a mechanic."
-            }
+        selected_car = Car.query.get(request.form.get("car_id")) if request.form.get("car_id") else default_car
+        if not problem:
+            return render_template(
+                "canonical_diagnosis_result.html",
+                diagnosis=None,
+                diagnosis_error="Please describe the vehicle problem.",
+                problem=problem,
+                car=selected_car,
+            )
+        safe_track_event("diagnosis_started", diagnosis_payload)
+        try:
+            diagnosis = canonical_response_view(canonical_diagnose(problem))
+            matches = diagnosis["top_matches"]
+            if diagnosis["success"] and diagnosis["response_type"] in {"ranking", "safety_guidance"} and (matches or diagnosis["summary"]):
+                safe_track_event("diagnosis_completed", diagnosis_payload)
+            current_app.logger.info(
+                "Canonical AI diagnosis completed response_type=%s results=%s",
+                diagnosis["response_type"],
+                len(matches),
+            )
+            if matches:
+                session["last_result"] = matches[0].get("problem") or matches[0].get("issue")
+            session["diagnosis_candidates"] = [
+                item.get("problem") or item.get("issue")
+                for item in matches
+                if item.get("problem") or item.get("issue")
+            ]
+            return render_template(
+                "canonical_diagnosis_result.html",
+                diagnosis=diagnosis,
+                diagnosis_error=None,
+                problem=problem,
+                car=selected_car,
+            )
+        except CanonicalDiagnosisUnavailable as exc:
+            current_app.logger.warning(
+                "Canonical diagnosis unavailable error=%s", exc.__class__.__name__
+            )
+            return render_template(
+                "canonical_diagnosis_result.html",
+                diagnosis=None,
+                diagnosis_error=str(exc),
+                problem=problem,
+                car=selected_car,
+            )
 
     return render_template(
         "ai_diagnosis.html",
         cars=cars,
         default_car=default_car,
-        diagnosis_result=diagnosis_result,
-        questions=questions
     )
 
 
@@ -339,47 +329,49 @@ def ai_diagnosis_page():
 
 @tools_bp.route("/tools/ai-diagnosis-followup", methods=["POST"])
 def ai_diagnosis_followup():
-
-    problem = request.form.get("problem")
-    safe_track_event("diagnosis_started", {"surface": "website_followup"})
-
-    answers = {}
-
-    for key in request.form:
-        if key.startswith("q"):
-            answers[key] = request.form.get(key)
-
-    results, questions = safe_diagnose_vehicle(problem, answers, route_name="tools_ai_followup")
-    safe_track_event("diagnosis_completed", {"surface": "website_followup", "result_count": len(results or [])})
-
-    current_app.logger.info("AI diagnosis follow-up completed with %s result(s)", len(results or []))
-
-    final_issue = results[0]["issue"] if results else "Unknown"
-
-    # 🔥 SAVE RESULT FOR FEEDBACK
-    if results:
-        session["last_result"] = results[0]["issue"]
-
-    # 🔥 ADD ADVICE TO RESULTS (IMPORTANT FIX)
-    for r in results:
-        for failure in FAILURE_DATABASE:
-            if failure.get("problem") == r["issue"]:
-                r["advice"] = failure.get("advice", "Consult a mechanic")
-                break
-
-    diagnosis_view = enrich_diagnosis_results(results, problem)
-
-    return render_template(
-        "diagnosis_result.html",
-        results=diagnosis_view["results"],
-        ui_text=diagnosis_view["ui_text"],
-        response_language=diagnosis_view["language_code"],
-        response_language_name=diagnosis_view["language_name"],
-        final_issue=final_issue,
-        questions=questions,
-        problem=problem,
-        car={"id": 0, "brand": "Your Car", "model": "", "year": ""}
-    )
+    problem = (request.form.get("problem") or "").strip()
+    diagnosis_payload = {"feature": "diagnosis"}
+    event_id = action_event_id(request.form.get("analytics_request_token"))
+    if event_id:
+        diagnosis_payload["event_id"] = event_id
+    answers = {
+        key: request.form.get(key)
+        for key in request.form
+        if key.startswith("q")
+    }
+    problems = [value for value in request.form.getlist("problems") if value]
+    if not problems:
+        problems = list(session.get("diagnosis_candidates") or [])
+    if problems or problem or answers:
+        safe_track_event("diagnosis_started", diagnosis_payload)
+    car = Car.query.get(request.form.get("car_id")) if request.form.get("car_id") else None
+    try:
+        diagnosis = canonical_response_view(
+            canonical_process_answers(problems, answers, problem)
+        )
+        matches = diagnosis["top_matches"]
+        if diagnosis["success"] and diagnosis["response_type"] in {"ranking", "safety_guidance"} and (matches or diagnosis["summary"]):
+            safe_track_event("diagnosis_completed", diagnosis_payload)
+        if matches:
+            session["last_result"] = matches[0].get("problem") or matches[0].get("issue")
+        return render_template(
+            "canonical_diagnosis_result.html",
+            diagnosis=diagnosis,
+            diagnosis_error=None,
+            problem=problem,
+            car=car,
+        )
+    except CanonicalDiagnosisUnavailable as exc:
+        current_app.logger.warning(
+            "Canonical diagnosis follow-up unavailable error=%s", exc.__class__.__name__
+        )
+        return render_template(
+            "canonical_diagnosis_result.html",
+            diagnosis=None,
+            diagnosis_error=str(exc),
+            problem=problem,
+            car=car,
+        )
 
 
 # ================= 🔥 FEEDBACK ROUTE =================

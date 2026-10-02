@@ -13,6 +13,7 @@
 
 <div class="profile-card mechanic-form-shell">
 <form method="POST">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <div class="ui-grid ui-grid-2">
 <input type="text" name="business_name" placeholder="Garage / Workshop Name" class="profile-input" required>
 <input type="text" name="owner_name" placeholder="Owner / Lead Mechanic Name" class="profile-input" required>

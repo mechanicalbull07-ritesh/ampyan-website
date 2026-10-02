@@ -1,4 +1,6 @@
 import json
+import hashlib
+import hmac
 import os
 import queue
 import re
@@ -8,30 +10,118 @@ from collections import Counter
 from datetime import datetime, timedelta
 from urllib.parse import urlparse
 
-from flask import current_app, g, has_request_context, request
+from flask import current_app, g, has_request_context, request, session
 from flask_login import current_user
 from sqlalchemy import inspect, text
+from sqlalchemy.dialects.postgresql import insert as pg_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.exc import OperationalError, ProgrammingError
 
-from models.models import AnalyticsEvent, ApiRequestMetric, WebsiteVisit, db
+from models.models import AnalyticsDedupeClaim, AnalyticsEvent, ApiRequestMetric, WebsiteVisit, db
+from services.analytics_contract import (
+    ALLOWED_EVENT_TYPES, CANONICAL_EVENTS, EVENT_PARAMETERS, FEATURE_VALUES,
+    CONTENT_VALUES, METHOD_VALUES, SCREEN_VALUES, SCHEMA_VERSION,
+    CANONICAL_FEATURE, CANONICAL_CONTENT,
+)
 
 
-ALLOWED_EVENT_TYPES = {
-    "api_error",
-    "app_open",
-    "click",
-    "community_opened",
-    "diagnosis_completed",
-    "diagnosis_started",
-    "garage_added",
-    "login_failure",
-    "login_success",
-    "news_opened",
-    "page_view",
-    "screen_view",
-    "scroll_depth",
-}
 EXCLUDED_PAGE_PATHS = {"/health", "/healthz", "/ready"}
+CONTEXT_FIELDS = frozenset({"event_type", "session_id", "path", "referrer", "utm_source", "utm_medium", "utm_campaign", "source", "traffic_type", "platform", "trigger", "event_id"})
+LEGACY_PARAMETERS = {"api_error": {"status_code"}, "login_failure": {"reason"}, "login_success": {"method"}, "scroll_depth": {"depth"}, "screen_view": {"screen"}}
+CRITICAL_DEDUPE_EVENTS = frozenset({
+    "sign_up", "login", "vehicle_added", "vehicle_updated",
+    "diagnosis_started", "diagnosis_completed", "garage_contact_clicked", "share_clicked",
+})
+DEDUPE_WINDOW_SECONDS = 5
+
+
+def action_event_id(token):
+    """Turn a per-submission random form token into an opaque collector ID."""
+    if not re.fullmatch(r"[0-9a-f]{32}|[0-9a-f-]{36}", str(token or ""), re.I):
+        return None
+    secret = current_app.secret_key.encode("utf-8") if isinstance(current_app.secret_key, str) else current_app.secret_key
+    return hmac.new(secret, ("analytics-action:" + str(token)).encode(), hashlib.sha256).hexdigest()[:32]
+
+
+class InvalidAnalyticsEvent(ValueError):
+    pass
+
+
+def safe_path(value):
+    """Retain a path only; never retain query strings or URL credentials."""
+    parsed = urlparse(str(value or ""))
+    path = parsed.path or "/"
+    if not path.startswith("/") or any(ord(char) < 32 for char in path):
+        return "/"
+    static = {"/", "/about", "/tools", "/tools/ai-diagnosis", "/tools/ai-diagnosis-followup",
+        "/tools/fuel-cost", "/tools/emi-calculator", "/tools/depreciation-calculator",
+        "/tools/maintenance-cost", "/community", "/news", "/garages", "/marketplace",
+        "/videos", "/login", "/register", "/garage", "/garage-dashboard", "/app",
+        "/my-car-health", "/add-car", "/create-post", "/privacy", "/contact", "/help"}
+    if path in static:
+        return path
+    if path in {"/post/:id", "/news/:id", "/garages/:id", "/edit-car/:id", "/marketplace/:id"}:
+        return path
+    if path.startswith("/app/") and path[5:] in SCREEN_VALUES:
+        return path
+    for pattern, replacement in ((r"/post/\d+", "/post/:id"), (r"/news/\d+", "/news/:id"),
+                                 (r"/garages/\d+", "/garages/:id"), (r"/edit-car/\d+", "/edit-car/:id"),
+                                 (r"/marketplace/\d+", "/marketplace/:id")):
+        if re.fullmatch(pattern, path):
+            return replacement
+    return "/other"
+
+
+def safe_referrer(value):
+    parsed = urlparse(str(value or ""))
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        return ""
+    return f"{parsed.scheme}://{parsed.hostname.lower()}/"
+
+
+def _attribution(value):
+    value = str(value or "").strip().lower()
+    return value if re.fullmatch(r"[a-z0-9_-]{1,60}", value) and re.search(r"[a-z]", value) else ""
+
+
+def validate_event(event_type, payload):
+    if event_type not in ALLOWED_EVENT_TYPES:
+        raise InvalidAnalyticsEvent("unsupported_event")
+    if not isinstance(payload, dict) or payload.get("metadata") is not None:
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    allowed = CONTEXT_FIELDS | EVENT_PARAMETERS.get(event_type, LEGACY_PARAMETERS.get(event_type, set()))
+    if set(payload) - allowed:
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    if any(not isinstance(value, (str, int, float, bool, type(None))) for value in payload.values()):
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    if "traffic_type" in payload and payload["traffic_type"] not in {"web", "app"}:
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    if "session_id" in payload and not re.fullmatch(r"[0-9a-f]{32}|[0-9a-f-]{36}", str(payload["session_id"]), re.I):
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    if "event_id" in payload and not re.fullmatch(r"[0-9a-f]{32}|[0-9a-f-]{36}", str(payload["event_id"]), re.I):
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    for field, values in (("feature", FEATURE_VALUES), ("content_type", CONTENT_VALUES), ("method", METHOD_VALUES), ("screen", SCREEN_VALUES)):
+        if field in payload and payload[field] not in values:
+            raise InvalidAnalyticsEvent("invalid_parameters")
+    if "reason" in payload and payload["reason"] not in {"missing_credentials", "invalid_credentials"}:
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    if "status_code" in payload and (not isinstance(payload["status_code"], int) or payload["status_code"] < 400 or payload["status_code"] > 599):
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    if "depth" in payload and payload["depth"] not in {25, 50, 75, 100}:
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    if event_type in CANONICAL_EVENTS:
+        expected = EVENT_PARAMETERS[event_type]
+        if expected and not expected.issubset(payload):
+            raise InvalidAnalyticsEvent("invalid_parameters")
+        if event_type in CANONICAL_FEATURE and payload["feature"] != CANONICAL_FEATURE[event_type]:
+            raise InvalidAnalyticsEvent("invalid_parameters")
+        if event_type in CANONICAL_CONTENT and payload["content_type"] not in CANONICAL_CONTENT[event_type]:
+            raise InvalidAnalyticsEvent("invalid_parameters")
+        if event_type in {"sign_up", "login"} and payload["method"] not in {"email", "google"}:
+            raise InvalidAnalyticsEvent("invalid_parameters")
+    if len(json.dumps(payload)) > 4096:
+        raise InvalidAnalyticsEvent("invalid_parameters")
+    return True
 _queue = queue.Queue(maxsize=1000)
 _worker_lock = threading.Lock()
 _worker_started = False
@@ -47,6 +137,10 @@ _schema_retry_after = 0.0
 
 def analytics_enabled():
     return os.environ.get("ANALYTICS_ENABLED", "false").lower() == "true"
+
+
+def analytics_consent_granted():
+    return has_request_context() and request.cookies.get("ampyan_analytics_consent") == "granted"
 
 
 def _clean(value, limit=500):
@@ -127,7 +221,7 @@ def _referrer_source(referrer, utm_source=""):
     host = (parsed.netloc or "").lower()
     if not host:
         return "direct"
-    if "ampyan.com" in host:
+    if host == "ampyan.com" or host.endswith(".ampyan.com"):
         return "internal"
     return _clean(host, 120)
 
@@ -185,25 +279,27 @@ def request_context(payload=None, traffic_type="web"):
     ip_address = _client_ip()
     device, browser, os_name = _user_agent_parts(user_agent)
     user_id, is_admin_user = _current_user_parts()
-    referrer = _clean(payload.get("referrer") or (request.referrer if has_request_context() else ""), 500)
+    referrer = safe_referrer(payload.get("referrer") or (request.referrer if has_request_context() else ""))
+    attribution_cookie = (getattr(g, "analytics_attribution_cookie", None) or request.cookies.get("ampyan_analytics_attribution", "")) if has_request_context() else ""
+    stored_attribution = attribution_cookie.split(".") if attribution_cookie.count(".") == 2 else ["", "", ""]
+    query_source = request.args.get("utm_source", "") if has_request_context() else ""
+    query_medium = request.args.get("utm_medium", "") if has_request_context() else ""
+    query_campaign = request.args.get("utm_campaign", "") if has_request_context() else ""
+    source = _attribution(payload.get("utm_source") or payload.get("source") or query_source or stored_attribution[0])
+    medium = _attribution(payload.get("utm_medium") or query_medium or stored_attribution[1])
+    campaign = _attribution(payload.get("utm_campaign") or query_campaign or stored_attribution[2])
     is_admin = is_admin_user or (has_request_context() and request.path.startswith("/admin"))
     return {
-        "session_id": _clean(payload.get("session_id"), 100),
-        "source": _referrer_source(referrer, payload.get("utm_source") or payload.get("source")),
-        "path": _clean(payload.get("path") or (request.path if has_request_context() else ""), 500),
+        "session_id": _clean(payload.get("session_id") or getattr(g, "analytics_session_id", ""), 100) if re.fullmatch(r"[0-9a-f]{32}|[0-9a-f-]{36}", str(payload.get("session_id") or getattr(g, "analytics_session_id", "")), re.I) else "",
+        "source": _referrer_source(referrer, source),
+        "utm_medium": medium,
+        "utm_campaign": campaign,
+        "path": safe_path(payload.get("path") or (request.path if has_request_context() else "")),
         "referrer": referrer,
-        "country": _clean(
-            payload.get("country")
-            or (request.headers.get("CF-IPCountry", "") if has_request_context() else "")
-            or (request.headers.get("X-Country", "") if has_request_context() else ""),
-            100,
-        ),
-        "city": _clean(
-            payload.get("city")
-            or (request.headers.get("CF-IPCity", "") if has_request_context() else "")
-            or (request.headers.get("X-City", "") if has_request_context() else ""),
-            120,
-        ),
+        "country": (request.headers.get("CF-IPCountry", "").upper()
+                    if has_request_context() and re.fullmatch(r"[A-Za-z]{2}", request.headers.get("CF-IPCountry", ""))
+                    else ""),
+        "city": "",
         "device_type": _clean(payload.get("device_type") or device, 30),
         "browser": _clean(payload.get("browser") or browser, 80),
         "os_name": _clean(payload.get("os") or payload.get("os_name") or os_name, 80),
@@ -211,8 +307,8 @@ def request_context(payload=None, traffic_type="web"):
         "is_bot": _is_bot(user_agent),
         "is_internal": _is_internal(ip_address) or _bool(payload.get("is_internal")),
         "is_admin": is_admin,
-        "user_id": user_id,
-        "ip_address": ip_address,
+        "user_id": None,
+        "ip_address": "",
     }
 
 
@@ -315,6 +411,7 @@ def ensure_analytics_schema(reason=None):
         try:
             WebsiteVisit.__table__.create(db.engine, checkfirst=True)
             AnalyticsEvent.__table__.create(db.engine, checkfirst=True)
+            AnalyticsDedupeClaim.__table__.create(db.engine, checkfirst=True)
             ApiRequestMetric.__table__.create(db.engine, checkfirst=True)
             _add_missing_columns(WebsiteVisit.__table__)
             _add_missing_columns(AnalyticsEvent.__table__)
@@ -344,6 +441,25 @@ def _insert_payload(item):
     payload = dict(item)
     kind = payload.pop("_kind", "")
     if kind == "event":
+        dedupe_key = payload.pop("_dedupe_key", None)
+        if dedupe_key:
+            now = datetime.utcnow()
+            expires = now + timedelta(seconds=DEDUPE_WINDOW_SECONDS)
+            dialect = db.engine.dialect.name
+            if dialect == "postgresql":
+                statement = pg_insert(AnalyticsDedupeClaim).values(key=dedupe_key, expires_at=expires)
+            elif dialect == "sqlite":
+                statement = sqlite_insert(AnalyticsDedupeClaim).values(key=dedupe_key, expires_at=expires)
+            else:
+                raise RuntimeError("unsupported_analytics_dedupe_dialect")
+            statement = statement.on_conflict_do_update(
+                index_elements=[AnalyticsDedupeClaim.key],
+                set_={"expires_at": expires},
+                where=AnalyticsDedupeClaim.expires_at <= now,
+            ).returning(AnalyticsDedupeClaim.key)
+            if db.session.execute(statement).scalar_one_or_none() is None:
+                db.session.commit()
+                return False
         db.session.add(AnalyticsEvent(**payload))
     elif kind == "visit":
         db.session.add(WebsiteVisit(**payload))
@@ -444,45 +560,56 @@ def _enqueue(item):
 def safe_track_event(event_type, payload=None, traffic_type="web"):
     try:
         event_type = _clean(event_type, 60)
-        if event_type not in ALLOWED_EVENT_TYPES:
-            return False
         payload = payload or {}
+        validate_event(event_type, payload)
+        if not analytics_enabled() or (traffic_type == "web" and not analytics_consent_granted()):
+            return False
         context = request_context(payload, traffic_type=traffic_type)
-        metadata = {
-            key: _clean(value, 300)
-            for key, value in payload.items()
-            if key not in context and key not in {"metadata", "referrer"}
-        }
-        supplied_metadata = payload.get("metadata")
-        if isinstance(supplied_metadata, dict):
-            metadata.update({str(key)[:80]: _clean(value, 300) for key, value in supplied_metadata.items()})
-        return _enqueue({
+        approved = EVENT_PARAMETERS.get(event_type, LEGACY_PARAMETERS.get(event_type, set()))
+        metadata = {key: payload[key] for key in approved if key in payload}
+        metadata["schema_version"] = SCHEMA_VERSION
+        # Only identical submission IDs are duplicates; a new action is never
+        # suppressed merely because it occurs in the same session or five seconds.
+        dedupe_key = None
+        if event_type in CRITICAL_DEDUPE_EVENTS and payload.get("event_id"):
+            dedupe_key = hashlib.sha256(f"{event_type}:{payload['event_id']}".encode()).hexdigest()
+        accepted = _enqueue({
             "_kind": "event",
             "event_type": event_type,
             **context,
+            "_dedupe_key": dedupe_key,
             "metadata_json": json.dumps(metadata, separators=(",", ":"))[:4000],
         })
+        if accepted and event_type in CANONICAL_EVENTS and event_type != "car_health_viewed" and traffic_type == "web" and has_request_context():
+            pending = list(session.get("_analytics_pending", []))[-9:]
+            pending.append({"name": event_type, "parameters": {field: metadata[field] for field in approved if field in metadata}})
+            session["_analytics_pending"] = pending
+        return accepted
     except Exception:
         return False
 
 
 def safe_track_page_visit():
     try:
+        if not analytics_consent_granted():
+            return False
         context = request_context(traffic_type="web")
         return _enqueue({
             "_kind": "visit",
-            "ip_address": context["ip_address"],
-            "visitor_id": _clean(request.cookies.get("ampyan_visitor_id") or getattr(g, "set_visitor_cookie", ""), 80),
+            "ip_address": "",
+            "visitor_id": "",
             "user_id": context["user_id"],
             "path": context["path"],
             "method": request.method,
             "referrer": context["referrer"],
-            "user_agent": _clean(request.headers.get("User-Agent", ""), 500),
+            "user_agent": "",
             "device_type": context["device_type"],
             "session_id": context["session_id"],
             "source": context["source"],
+            "utm_medium": context["utm_medium"],
+            "utm_campaign": context["utm_campaign"],
             "country": context["country"],
-            "city": context["city"],
+            "city": "",
             "browser": context["browser"],
             "os_name": context["os_name"],
             "is_bot": context["is_bot"],
@@ -503,7 +630,7 @@ def safe_track_api_request(path, method, status_code, response_time_ms):
         context = request_context(traffic_type="api")
         _enqueue({
             "_kind": "api_metric",
-            "path": _clean(path, 500),
+            "path": safe_path(path),
             "method": _clean(method, 10),
             "status_code": int(status_code),
             "response_time_ms": max(0, min(int(response_time_ms), 3_600_000)),

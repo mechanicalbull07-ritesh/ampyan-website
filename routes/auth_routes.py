@@ -11,7 +11,7 @@ from sqlalchemy import func
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from models.models import User, db
-from services.analytics_service import safe_track_event
+from services.analytics_service import safe_track_event, action_event_id
 from services.email_service import send_email
 from services.public_image_storage import public_image_url
 
@@ -34,18 +34,14 @@ def _email_verification_required():
 
 
 def _sync_profile(name, email, phone=""):
-    payload = json.dumps({"name": name, "email": email, "phone": phone, "user_email": email}).encode("utf-8")
-    req = urllib_request.Request(
-        f"{_ampyan_api_base_url()}/profile/sync",
-        data=payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
+    from flask_login import current_user
+    if not current_user.is_authenticated or str(current_user.email).lower() != str(email).lower():
+        return False
+    from services.canonical_garage_client import sync_profile, GarageError
     try:
-        with urllib_request.urlopen(req, timeout=3):
-            return True
-    except Exception as exc:
-        current_app.logger.warning("AMPYAN auth/profile sync failed: %s", exc)
+        sync_profile(name, phone)
+        return True
+    except GarageError:
         return False
 
 
@@ -154,6 +150,11 @@ def register():
             )
 
             _commit_new_user_with_id_fallback(new_user)
+            sign_up_payload = {"method": "email"}
+            event_id = action_event_id(request.form.get("analytics_request_token"))
+            if event_id:
+                sign_up_payload["event_id"] = event_id
+            safe_track_event("sign_up", sign_up_payload)
             _sync_profile(username, email, new_user.mobile or "")
 
             if require_verification:
@@ -216,11 +217,20 @@ def login():
                 return redirect(url_for("auth.login"))
 
             login_user(user)
-            safe_track_event("login_success", {"method": "password"})
+            from services.canonical_garage_client import connect, GarageError
+            try:
+                connect(password=password)
+            except GarageError:
+                pass  # Website login remains valid; Garage explicitly requests reauthentication.
+            login_payload = {"method": "email"}
+            event_id = action_event_id(request.form.get("analytics_request_token"))
+            if event_id:
+                login_payload["event_id"] = event_id
+            safe_track_event("login", login_payload)
             if os.environ.get("ENABLE_AUTH_PROFILE_SYNC", "").lower() == "true":
                 _sync_profile(user.username, user.email, user.mobile or "")
 
-            if next_page and next_page.startswith("/"):
+            if next_page and next_page.startswith("/") and not next_page.startswith("//"):
                 return redirect(next_page)
             return redirect("/community")
 
@@ -263,6 +273,12 @@ def api_login():
         return jsonify({"status": "error", "message": "email verification required"}), 403
 
     login_user(user)
+    from services.canonical_garage_client import connect, GarageError
+    try:
+        connect(password=password)
+    except GarageError:
+        pass
+    # The Flutter client owns the canonical app login event after its response.
     safe_track_event("login_success", {"method": "password"}, traffic_type="app")
     _sync_profile(user.username, user.email, user.mobile or "")
     return jsonify({
@@ -274,12 +290,16 @@ def api_login():
 
 @auth_bp.route("/api/logout", methods=["POST"])
 def api_logout():
+    from services.canonical_garage_client import clear_credentials
+    clear_credentials()
     logout_user()
     return jsonify({"status": "success", "authenticated": False})
 
 
-@auth_bp.route("/logout")
+@auth_bp.route("/logout", methods=["POST"])
 def logout():
+    from services.canonical_garage_client import clear_credentials
+    clear_credentials()
     logout_user()
     flash("You have been logged out.")
     return redirect("/")
