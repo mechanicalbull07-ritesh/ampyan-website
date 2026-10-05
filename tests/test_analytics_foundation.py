@@ -9,7 +9,7 @@ import app as website
 from services import analytics_service as analytics
 from services.analytics_contract import CANONICAL_EVENTS, LEGACY_EVENTS, CANONICAL_FEATURE, CANONICAL_CONTENT
 import routes.auth_routes as auth_routes
-import routes.garage_routes as garage_routes
+import routes.canonical_garage_routes as garage_routes
 import routes.tools_routes as tools_routes
 from tests.csrf_helpers import csrf_form_data, csrf_json_headers
 
@@ -184,23 +184,27 @@ def test_login_event_only_after_authentication(monkeypatch):
 
 def test_vehicle_and_health_events_follow_success(monkeypatch):
     events = []
-    monkeypatch.setattr(garage_routes, "current_user", SimpleNamespace(id=123))
-    with website.app.app_context():
-        monkeypatch.setattr(garage_routes.Car, "query", MagicMock())
-    garage_routes.Car.query.filter_by.return_value.first.return_value = None
-    garage_routes.Car.query.filter_by.return_value.all.return_value = []
-    with website.app.app_context():
-        monkeypatch.setattr(garage_routes.DiagnosticLearning, "query", MagicMock())
-    garage_routes.DiagnosticLearning.query.filter_by.return_value.order_by.return_value.limit.return_value.all.return_value = []
     monkeypatch.setattr(garage_routes, "safe_track_event", lambda *args: events.append(args))
-    monkeypatch.setattr(garage_routes.db.session, "add", lambda car: None)
-    monkeypatch.setattr(garage_routes.db.session, "commit", lambda: None)
-    with website.app.test_request_context("/add-car", method="POST", data={"brand":"Test", "model":"Test"}):
+    def call(path, method='GET', payload=None):
+        if method == 'POST': return {'success':True}
+        if path.endswith('/cars'): return {'cars':[{'id':201}]}
+        if '/health?' in path: return {'car':{'id':201}, 'health':{}}
+        return {'mileage':{}}
+    monkeypatch.setattr(garage_routes, "call", call)
+    monkeypatch.setattr(garage_routes, "screen", lambda *args,**kwargs:'rendered')
+    with website.app.test_request_context("/add-car", method="POST", data={
+        "brand":"Test", "model":"Test", "fuel_type":"Petrol", "registration_year":"2020", "current_odometer_km":"1"}):
         assert garage_routes.add_car.__wrapped__().status_code == 302
     assert ("vehicle_added", {"feature":"vehicle"}) in events
     with website.app.test_request_context("/garage-dashboard"):
         garage_routes.garage_dashboard.__wrapped__()
     assert ("car_health_viewed", {"feature":"car_health"}) in events
+    events.clear()
+    def fail(*args,**kwargs): raise garage_routes.GarageError(503)
+    monkeypatch.setattr(garage_routes, 'call', fail)
+    with website.app.test_request_context('/garage-dashboard'), pytest.raises(garage_routes.GarageError):
+        garage_routes.garage_dashboard.__wrapped__()
+    assert events == []
 
 
 @pytest.mark.parametrize("response_type,expected_completed", [("ranking", True), ("clarification", False), ("error", False)])

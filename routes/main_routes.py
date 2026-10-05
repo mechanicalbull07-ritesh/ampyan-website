@@ -814,10 +814,17 @@ def mechanic_dashboard():
         flash("Create your garage profile to unlock the mechanic dashboard.")
         return redirect(url_for("main.register_garage"))
 
-    metrics = refresh_mechanic_reputation(profile)
+    # Derive display-only reputation without mutating the mapped profile on GET.
+    from types import SimpleNamespace
+    fields = ({column.name: getattr(profile, column.name)
+               for column in profile.__table__.columns}
+              if hasattr(profile, "__table__") else vars(profile).copy())
+    fields["reviews"] = profile.reviews
+    display = SimpleNamespace(**fields)
+    metrics = refresh_mechanic_reputation(display)
     response = render_template(
         "mechanic_dashboard.html",
-        mechanic=profile,
+        mechanic=display,
         review_count=metrics["review_count"],
         average_rating=metrics["average_rating"]
     )

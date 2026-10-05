@@ -1,4 +1,5 @@
 import json
+import os
 from pathlib import Path
 
 import pytest
@@ -7,8 +8,7 @@ from services import canonical_diagnosis_client as client
 
 
 SHARED_FIXTURE = (
-    Path(__file__).resolve().parents[2]
-    / "motronix_api"
+    Path(os.environ["AMPYAN_BACKEND_RC_PATH"])
     / "tests"
     / "fixtures"
     / "diagnosis_parity_cases.json"

@@ -4,6 +4,7 @@ from pathlib import Path
 import re
 from types import SimpleNamespace
 from unittest.mock import MagicMock, patch
+from flask.testing import FlaskClient
 
 from tests.csrf_helpers import csrf_form_data, csrf_json_headers, csrf_token
 
@@ -20,7 +21,8 @@ class WebsiteCsrfSecurityTest(unittest.TestCase):
         )
 
     def setUp(self):
-        self.client = self.app.test_client()
+        # Negative security requests must bypass the positive-fixture token injector.
+        self.client = FlaskClient(self.app, self.app.response_class)
 
     def test_global_csrf_is_active_and_get_does_not_require_token(self):
         self.assertTrue(self.app.config["WTF_CSRF_ENABLED"])
@@ -96,7 +98,7 @@ class WebsiteCsrfSecurityTest(unittest.TestCase):
 
     def test_token_cannot_be_reused_by_another_session(self):
         token = csrf_token(self.client)
-        other_client = self.app.test_client()
+        other_client = FlaskClient(self.app, self.app.response_class)
         response = other_client.post(
             "/api/track-event",
             headers={
@@ -189,18 +191,10 @@ class WebsiteCsrfSecurityTest(unittest.TestCase):
             with self.subTest(pattern=pattern):
                 self.assertIsNone(re.search(pattern, python_source))
 
+        from tests.csrf_source_checker import unprotected_forms
         for path in sorted((root / "templates").glob("*.html")):
-            source = path.read_text(encoding="utf-8")
-            for match in re.finditer(
-                r"<form\b[^>]*method=[\"']POST[\"'][^>]*>",
-                source,
-                re.IGNORECASE,
-            ):
-                closing = source.find("</form", match.end())
-                form_source = source[match.end():closing]
-                with self.subTest(template=path.name, offset=match.start()):
-                    self.assertGreaterEqual(closing, 0)
-                    self.assertIn('name="csrf_token"', form_source)
+            with self.subTest(template=path.name):
+                self.assertEqual(unprotected_forms(path.read_text(encoding="utf-8")), [])
 
     def test_mechanic_dashboard_route_renders_sorted_recent_reviews(self):
         reviews = [

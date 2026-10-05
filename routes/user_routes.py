@@ -45,22 +45,12 @@ def _remote_request(path, method="GET", payload=None, timeout=3):
 
 
 def _sync_current_user_profile():
-    profile_url = public_image_url("profile_images", current_user.profile_photo) if current_user.profile_photo else ""
-    if profile_url and profile_url.startswith("/"):
-        profile_url = f"{request.url_root.rstrip('/')}{profile_url}"
-    return _remote_request(
-        "/profile/sync",
-        method="POST",
-        payload={
-            "name": current_user.username,
-            "email": current_user.email,
-            "phone": current_user.mobile or "",
-            "user_email": current_user.email,
-            "profile_photo": profile_url,
-            "profile_image": profile_url,
-            "avatar_url": profile_url,
-        },
-    )
+    from services.canonical_garage_client import sync_profile, GarageError
+    try:
+        return sync_profile(current_user.username, current_user.mobile or '')
+    except GarageError:
+        flash('Website profile saved. Connect Garage to sync your app profile.')
+        return None
 
 
 def _safe_int(value, default=None):
@@ -186,8 +176,7 @@ def serialize_car(car):
 def profile():
     cars = Car.query.filter_by(owner_id=current_user.id).all()
 
-    for car in cars:
-        enrich_car_for_garage(car)
+    # Legacy cars remain identity/history records; no local health is calculated.
 
     local_posts = Post.query.filter_by(user_id=current_user.id).order_by(Post.id.desc()).all()
     remote_posts = _load_remote_profile_posts()
@@ -233,15 +222,16 @@ def update_profile():
 @user_bp.route("/api/session")
 def api_session():
     if not current_user.is_authenticated:
-        return jsonify({"authenticated": False, "user": None, "cars": [], "support": {"help_report_url": "/api/help-report"}})
-
-    cars = Car.query.filter_by(owner_id=current_user.id).order_by(Car.id.desc()).all()
-    return jsonify({
-        "authenticated": True,
-        "user": serialize_user(current_user),
-        "cars": [serialize_car(car) for car in cars],
-        "support": {"help_report_url": "/api/help-report"},
-    })
+        return jsonify(authenticated=False,user=None,cars=[],support={'help_report_url':'/api/help-report'})
+    from services.canonical_garage_client import call, GarageError
+    try:
+        cars = call('/api/garage/cars').get('cars',[])
+        garage_state = 'connected'
+    except GarageError as exc:
+        cars = []
+        garage_state = exc.message
+    return jsonify(authenticated=True,user=serialize_user(current_user),cars=cars,
+        garage_state=garage_state,support={'help_report_url':'/api/help-report'})
 
 
 @user_bp.route("/api/profile", methods=["GET", "POST"])
@@ -266,63 +256,41 @@ def api_profile():
 @user_bp.route("/api/cars", methods=["GET", "POST"])
 def api_cars():
     auth_error = _require_api_auth()
-    if auth_error:
-        return auth_error
-
-    if request.method == "POST":
-        payload = request.get_json(silent=True) or request.form
-        if not (payload.get("brand") or payload.get("model")):
-            return jsonify({"status": "error", "message": "brand or model is required"}), 400
-
-        car = Car(owner_id=current_user.id)
-        _apply_car_payload(car, payload)
-        if payload.get("is_default") or not Car.query.filter_by(owner_id=current_user.id).first():
-            Car.query.filter_by(owner_id=current_user.id).update({"is_default": False})
-            car.is_default = True
-
-        db.session.add(car)
-        db.session.commit()
-        return jsonify({"status": "success", "car": serialize_car(car)}), 201
-
-    cars = Car.query.filter_by(owner_id=current_user.id).order_by(Car.id.desc()).all()
-    return jsonify({"status": "success", "cars": [serialize_car(car) for car in cars]})
+    if auth_error: return auth_error
+    from services.canonical_garage_client import call, GarageError
+    if request.method == 'GET': return jsonify(call('/api/garage/cars'))
+    incoming = request.get_json(silent=True) or request.form
+    fields = ('brand','model','fuel_type','registration_year','current_odometer_km','transmission')
+    payload = {k:incoming[k] for k in fields if k in incoming}
+    if not all(payload.get(k) for k in ('brand','model','fuel_type','registration_year')): raise GarageError(400)
+    payload.setdefault('transmission','UNKNOWN')
+    return jsonify(call('/api/garage/cars','POST',payload)), 201
 
 
 @user_bp.route("/api/cars/<int:car_id>", methods=["GET", "PUT", "PATCH", "DELETE"])
 def api_car_detail(car_id):
     auth_error = _require_api_auth()
-    if auth_error:
-        return auth_error
-
-    car = Car.query.get_or_404(car_id)
-    if car.owner_id != current_user.id:
-        return jsonify({"status": "error", "message": "car not found"}), 404
-
-    if request.method == "GET":
-        return jsonify({"status": "success", "car": serialize_car(car)})
-
-    if request.method in {"PUT", "PATCH"}:
-        payload = request.get_json(silent=True) or request.form
-        _apply_car_payload(car, payload)
-        db.session.commit()
-        return jsonify({"status": "success", "car": serialize_car(car)})
-
-    db.session.delete(car)
-    db.session.commit()
-    return jsonify({"status": "success"})
+    if auth_error: return auth_error
+    from services.canonical_garage_client import call, GarageError
+    from routes.canonical_garage_routes import SYMPTOMS, TRANSMISSIONS
+    payload = None
+    method = request.method
+    if method in ('PUT','PATCH'):
+        incoming = request.get_json(silent=True) or request.form
+        allowed = {'transmission','usage_type',*SYMPTOMS}
+        if set(incoming) - allowed - {'csrf_token'}: raise GarageError(400)
+        payload = {k:incoming[k] for k in allowed if k in incoming}
+        if 'transmission' in payload and payload['transmission'] not in TRANSMISSIONS: raise GarageError(400)
+        method = 'PUT'
+    return jsonify(call(f'/api/garage/cars/{car_id}',method,payload))
 
 
 @user_bp.route("/api/cars/<int:car_id>/default", methods=["POST"])
 def api_set_default_car(car_id):
     auth_error = _require_api_auth()
-    if auth_error:
-        return auth_error
-
-    car = Car.query.get_or_404(car_id)
-    if car.owner_id != current_user.id:
-        return jsonify({"status": "error", "message": "car not found"}), 404
-
-    Car.query.filter_by(owner_id=current_user.id).update({"is_default": False})
-    car.is_default = True
-    db.session.commit()
-    return jsonify({"status": "success", "car": serialize_car(car)})
+    if auth_error: return auth_error
+    from services.canonical_garage_client import call
+    from flask import session
+    result = call(f'/api/garage/cars/{car_id}')
+    session['garage_selected'] = car_id
+    return jsonify(result)

@@ -16,9 +16,7 @@ def _clear_rate_limit():
 
 
 SNAPSHOTS = json.loads((
-    Path(__file__).resolve().parents[2]
-    / "ampyan_clean"
-    / "test"
+    Path(__file__).resolve().parent
     / "fixtures"
     / "diagnosis_53_contract_responses.json"
 ).read_text(encoding="utf-8"))

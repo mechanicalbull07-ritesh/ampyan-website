@@ -89,7 +89,7 @@ from io import BytesIO
 import textwrap
 from authlib.integrations.flask_client import OAuth
 from routes.main_routes import main_bp
-from routes.garage_routes import garage_bp
+from routes.canonical_garage_routes import garage_bp
 from routes.tools_routes import tools_bp
 from routes.user_routes import user_bp
 from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
@@ -855,7 +855,7 @@ mail = Mail(app)
 # ===============================
 # DATABASE CONFIG (LOCAL + PROD)
 # ===============================
-@app.route("/test-email")
+@app.route("/test-email", methods=["POST"])
 def test_email():
     if IS_PRODUCTION:
         return "Not found", 404
@@ -1524,6 +1524,13 @@ def google_callback():
             db.session.commit()
 
         login_user(user)
+        from services.canonical_garage_client import connect, clear_credentials, GarageError
+        clear_credentials()
+        if isinstance(token, dict) and token.get('id_token'):
+            try:
+                connect(id_token=token['id_token'])
+            except GarageError:
+                flash('Website signed in. Garage sign-in needs attention; no account was linked automatically.')
 
         next_page = session.pop("login_next", None)
         if is_safe_local_redirect(next_page):
@@ -1559,6 +1566,7 @@ SENSITIVE_PATHS = {
 
 RATE_LIMIT_RULES = {
     "/login": (20, 60),
+    "/garage/connect": (20, 60),
     "/register": (12, 60),
     "/forgot-password": (8, 60),
     "/login/google": (20, 60),
@@ -1696,6 +1704,12 @@ def security_guard():
 
 @app.before_request
 def restore_whitelisted_admin_role():
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        # Fail closed for stale admin roles without changing account rows on a view.
+        if request.path.startswith('/admin') and current_user.is_authenticated:
+            if current_user.role == 'admin' and (current_user.email or '').strip().lower() not in ADMIN_EMAIL_SET:
+                abort(403)
+        return
     if request.endpoint in {"favicon", "health", "healthz", "ready", "version"} or request.path in {"/favicon.ico", "/health", "/healthz", "/ready", "/version"}:
         return
     if request.path.startswith("/static"):
@@ -1879,6 +1893,8 @@ def attach_visitor_cookie(response):
 
 @app.before_request
 def reset_ai_usage():
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
 
     if request.endpoint in {"favicon", "health", "healthz", "ready", "version"} or request.path in {"/favicon.ico", "/health", "/healthz", "/ready", "/version"}:
         return
@@ -2961,6 +2977,8 @@ def delete_comment(comment_id):
 
 @app.route("/verify-email/<token>", methods=["GET", "POST"])
 def verify_email(token):
+    if request.method == "GET":
+        return render_template("confirm_email.html")
 
     user = User.query.filter_by(verification_token=token).first()
 

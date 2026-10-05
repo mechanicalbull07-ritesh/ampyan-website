@@ -31,6 +31,23 @@ def main():
             env=os.environ.copy(), capture_output=True, text=True, timeout=20,
         )
         assert preflight.returncode == 0, preflight.stderr[-500:]
+        # Every synthetic browser exercises current CSRF rather than disabling it.
+        from flask import session
+        from flask.testing import FlaskClient
+        from flask_wtf.csrf import generate_csrf
+        class CsrfClient(FlaskClient):
+            def open(self, *args, **kwargs):
+                if kwargs.get('method', 'GET').upper() not in ('GET', 'HEAD', 'OPTIONS'):
+                    with self.session_transaction() as saved:
+                        with website.app.test_request_context():
+                            session.update(saved)
+                            token = generate_csrf()
+                            saved['csrf_token'] = session['csrf_token']
+                    headers = dict(kwargs.get('headers') or {})
+                    headers.setdefault('X-CSRFToken', token)
+                    kwargs['headers'] = headers
+                return super().open(*args, **kwargs)
+        website.app.test_client_class = CsrfClient
         client = website.app.test_client()
         client.set_cookie("ampyan_analytics_consent", "granted")
         client.get("/about")
@@ -189,7 +206,22 @@ def main():
         print("session: first/navigation/refresh/<30/>30/new tab/restart PASS; visitor ID separate PASS")
         print("consent: unknown/grant/deny/granted-to-denied/denied-to-granted/return PASS")
 
-        # Exercise real website actions against the same isolated database.
+        # Exercise real website analytics actions with controlled remote responses.
+        # Actual bearer/ownership/backend behavior is covered by test_canonical_garage.
+        import routes.canonical_garage_routes as garage_routes
+        synthetic_car = {'id':1,'brand':'Tata','model':'Altroz','fuel_type':'Petrol','transmission':'UNKNOWN'}
+        def garage_response(path, method='GET', payload=None):
+            if path == '/api/garage/cars':
+                if method == 'POST':
+                    assert payload['transmission'] == 'UNKNOWN'
+                    return {'success':True,'car':synthetic_car}
+                return {'success':True,'cars':[synthetic_car]}
+            if path == '/api/garage/cars/1/health?read_only=1':
+                return {'success':True,'car':synthetic_car,'health':{}}
+            if path == '/api/garage/cars/1/mileage':
+                return {'success':True,'mileage':{}}
+            raise AssertionError('Unexpected canonical Garage operation')
+        garage_routes.call = garage_response
         import routes.auth_routes as auth_routes
         import routes.tools_routes as tools_routes
         auth_routes._sync_profile = lambda *args: None
@@ -201,24 +233,24 @@ def main():
         browser = website.app.test_client()
         browser.set_cookie("ampyan_analytics_consent", "granted")
         browser.get("/register")
-        signup = browser.post("/register", data=csrf_form_data(browser, "/register", **{
+        signup = browser.post("/register", data={
             "username": "localtester", "email": "local@example.test", "password": "localpass123",
             "analytics_request_token": secrets.token_hex(16),
-        }))
+        })
         assert signup.status_code == 302
-        login = browser.post("/login", data=csrf_form_data(browser, "/login", **{
+        login = browser.post("/login", data={
             "username": "localtester", "password": "localpass123",
             "analytics_request_token": secrets.token_hex(16),
-        }))
+        })
         assert login.status_code == 302
-        vehicle = browser.post("/add-car", data=csrf_form_data(browser, "/add-car", **{
-            "brand": "Tata", "model": "Altroz", "year": "2022", "fuel": "petrol",
+        vehicle = browser.post("/add-car", data={
+            "brand": "Tata", "model": "Altroz", "registration_year": "2022", "fuel_type": "Petrol", "current_odometer_km": "0",
             "analytics_request_token": secrets.token_hex(16),
-        }))
+        })
         assert vehicle.status_code == 302
-        diagnosis = browser.post("/tools/ai-diagnosis", data=csrf_form_data(browser, "/tools/ai-diagnosis", **{
+        diagnosis = browser.post("/tools/ai-diagnosis", data={
             "problem": "battery issue", "analytics_request_token": secrets.token_hex(16),
-        }))
+        })
         assert diagnosis.status_code == 200
         health = browser.get("/garage-dashboard")
         assert health.status_code == 200
@@ -244,7 +276,7 @@ def main():
             db.session.remove()
             for name in events:
                 assert AnalyticsEvent.query.filter_by(event_type=name).count() == 2, name
-        print("real website signup/login/vehicle/diagnosis/health actions -> database: PASS")
+        print("website actions with controlled remote responses -> analytics database: PASS")
         print("all six events denied by consent; denied diagnosis creates no rows: PASS")
 
 
