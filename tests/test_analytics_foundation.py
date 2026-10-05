@@ -1,3 +1,4 @@
+from flask import session
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -184,25 +185,27 @@ def test_login_event_only_after_authentication(monkeypatch):
 
 def test_vehicle_and_health_events_follow_success(monkeypatch):
     events = []
-    monkeypatch.setattr(garage_routes, "safe_track_event", lambda *args: events.append(args))
+    monkeypatch.setattr(garage_routes, 'safe_track_event', lambda *args: events.append(args))
+    monkeypatch.setattr(garage_routes, 'current_user', SimpleNamespace(get_id=lambda: '41'))
     def call(path, method='GET', payload=None):
-        if method == 'POST': return {'success':True}
+        assert method == 'GET'
         if path.endswith('/cars'): return {'cars':[{'id':201}]}
         if '/health?' in path: return {'car':{'id':201}, 'health':{}}
         return {'mileage':{}}
-    monkeypatch.setattr(garage_routes, "call", call)
-    monkeypatch.setattr(garage_routes, "screen", lambda *args,**kwargs:'rendered')
-    with website.app.test_request_context("/add-car", method="POST", data={
-        "brand":"Test", "model":"Test", "fuel_type":"Petrol", "registration_year":"2020", "current_odometer_km":"1"}):
-        assert garage_routes.add_car.__wrapped__().status_code == 302
-    assert ("vehicle_added", {"feature":"vehicle"}) in events
-    with website.app.test_request_context("/garage-dashboard"):
+    monkeypatch.setattr(garage_routes, 'call', call)
+    monkeypatch.setattr(garage_routes, 'screen', lambda *args, **kwargs: 'rendered')
+    with website.app.test_request_context('/add-car'):
+        assert garage_routes.add_car.__wrapped__() == 'rendered'
+    assert events == []  # Website no longer creates vehicles or emits creation events.
+    with website.app.test_request_context('/garage-dashboard'):
+        session['garage_credentials'] = {'website_user':'41','token':'synthetic'}
         garage_routes.garage_dashboard.__wrapped__()
-    assert ("car_health_viewed", {"feature":"car_health"}) in events
+    assert events == [('car_health_viewed', {'feature':'car_health'})]
     events.clear()
-    def fail(*args,**kwargs): raise garage_routes.GarageError(503)
+    def fail(*args, **kwargs): raise garage_routes.GarageError(503)
     monkeypatch.setattr(garage_routes, 'call', fail)
     with website.app.test_request_context('/garage-dashboard'), pytest.raises(garage_routes.GarageError):
+        session['garage_credentials'] = {'website_user':'41','token':'synthetic'}
         garage_routes.garage_dashboard.__wrapped__()
     assert events == []
 

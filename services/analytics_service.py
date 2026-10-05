@@ -136,6 +136,8 @@ _schema_retry_after = 0.0
 
 
 def analytics_enabled():
+    if has_request_context() and (request.path.startswith('/account-deletion') or request.path.startswith('/admin/account-deletion')):
+        return False
     return os.environ.get("ANALYTICS_ENABLED", "false").lower() == "true"
 
 

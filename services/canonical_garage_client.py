@@ -1,11 +1,12 @@
 """Authenticated backend boundary; no local health calculations or owner headers."""
 import os
-from urllib.parse import urlsplit
+from urllib.parse import urlsplit, parse_qs
 import requests
 from flask import current_app, session
 from flask_login import current_user
 
 MESSAGES = {
+    405: 'Manage vehicle details in the AMPYAN App. This Website dashboard is read-only.',
     401: 'Sign in to Garage again. Your Garage session is missing or expired.',
     403: 'You do not have permission to perform this action.',
     404: 'This vehicle or record is unavailable to your account.',
@@ -35,6 +36,16 @@ def _token():
     return saved['token']
 
 def call(path, method='GET', payload=None, *, public=False):
+    target = urlsplit(path)
+    if target.path == '/api/garage/cars' or target.path.startswith('/api/garage/cars/'):
+        parts = target.path.removeprefix('/api/garage/cars').strip('/').split('/')
+        allowed = target.path == '/api/garage/cars' or (
+            parts[0].isdigit() and (len(parts) == 1 or
+            (len(parts) == 2 and parts[1] in {'health', 'mileage', 'configuration', 'service-records'})))
+        if method.upper() not in {'GET', 'HEAD'} or not allowed:
+            raise GarageError(405)
+        if parts[-1] == 'health' and parse_qs(target.query).get('read_only') != ['1']:
+            raise GarageError(405)
     base = current_app.config.get('AMPYAN_API_BASE_URL') or os.environ.get('AMPYAN_API_BASE_URL', '')
     url = urlsplit(base)
     if url.scheme not in ('http', 'https') or not url.netloc or url.username or url.password or url.query or url.fragment:

@@ -79,35 +79,6 @@ def _payload_value(payload, *names, default=None):
     return default
 
 
-def _apply_car_payload(car, payload):
-    service_interval = 10000
-
-    car.brand = _payload_value(payload, "brand", default=car.brand)
-    car.model = _payload_value(payload, "model", default=car.model)
-    car.year = _safe_int(_payload_value(payload, "year", default=car.year))
-    car.fuel_type = _payload_value(payload, "fuel_type", "fuel", default=car.fuel_type)
-    car.mileage = _safe_int(_payload_value(payload, "mileage", default=car.mileage))
-    car.current_km = _safe_int(_payload_value(payload, "current_km", default=car.current_km), 0)
-    car.last_service_km = _safe_int(_payload_value(payload, "last_service_km", default=car.last_service_km))
-    car.daily_km = _safe_int(_payload_value(payload, "daily_km", default=car.daily_km))
-    car.brake_replaced_km = _safe_int(_payload_value(payload, "brake_replaced_km", default=car.brake_replaced_km))
-    car.tyre_replaced_km = _safe_int(_payload_value(payload, "tyre_replaced_km", default=car.tyre_replaced_km))
-    car.clutch_replaced_km = _safe_int(_payload_value(payload, "clutch_replaced_km", default=car.clutch_replaced_km))
-    car.battery_replaced_year = _safe_int(_payload_value(payload, "battery_replaced_year", default=car.battery_replaced_year))
-
-    if "insurance_expiry" in payload:
-        car.insurance_expiry = _safe_date(payload.get("insurance_expiry"))
-    if "pollution_expiry" in payload:
-        car.pollution_expiry = _safe_date(payload.get("pollution_expiry"))
-    if "last_service_date" in payload:
-        car.last_service_date = _safe_date(payload.get("last_service_date"))
-    if "next_service_date" in payload:
-        car.next_service_date = _safe_date(payload.get("next_service_date"))
-
-    car.next_service_km = car.last_service_km + service_interval if car.last_service_km else None
-    return car
-
-
 def _require_api_auth():
     if not current_user.is_authenticated:
         return jsonify({"status": "error", "message": "authentication required"}), 401
@@ -253,36 +224,19 @@ def api_profile():
     return jsonify({"status": "success", "user": serialize_user(current_user)})
 
 
-@user_bp.route("/api/cars", methods=["GET", "POST"])
+@user_bp.route("/api/cars", methods=["GET"])
 def api_cars():
     auth_error = _require_api_auth()
     if auth_error: return auth_error
-    from services.canonical_garage_client import call, GarageError
-    if request.method == 'GET': return jsonify(call('/api/garage/cars'))
-    incoming = request.get_json(silent=True) or request.form
-    fields = ('brand','model','fuel_type','registration_year','current_odometer_km','transmission')
-    payload = {k:incoming[k] for k in fields if k in incoming}
-    if not all(payload.get(k) for k in ('brand','model','fuel_type','registration_year')): raise GarageError(400)
-    payload.setdefault('transmission','UNKNOWN')
-    return jsonify(call('/api/garage/cars','POST',payload)), 201
+    from services.canonical_garage_client import call
+    return jsonify(call('/api/garage/cars'))
 
-
-@user_bp.route("/api/cars/<int:car_id>", methods=["GET", "PUT", "PATCH", "DELETE"])
+@user_bp.route("/api/cars/<int:car_id>", methods=["GET"])
 def api_car_detail(car_id):
     auth_error = _require_api_auth()
     if auth_error: return auth_error
-    from services.canonical_garage_client import call, GarageError
-    from routes.canonical_garage_routes import SYMPTOMS, TRANSMISSIONS
-    payload = None
-    method = request.method
-    if method in ('PUT','PATCH'):
-        incoming = request.get_json(silent=True) or request.form
-        allowed = {'transmission','usage_type',*SYMPTOMS}
-        if set(incoming) - allowed - {'csrf_token'}: raise GarageError(400)
-        payload = {k:incoming[k] for k in allowed if k in incoming}
-        if 'transmission' in payload and payload['transmission'] not in TRANSMISSIONS: raise GarageError(400)
-        method = 'PUT'
-    return jsonify(call(f'/api/garage/cars/{car_id}',method,payload))
+    from services.canonical_garage_client import call
+    return jsonify(call(f'/api/garage/cars/{car_id}'))
 
 
 @user_bp.route("/api/cars/<int:car_id>/default", methods=["POST"])

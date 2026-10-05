@@ -17,9 +17,7 @@ class Forms(HTMLParser):
         if tag=='form' and self.current is not None:
             self.forms.append(self.current); self.current=None
 
-CASES=[('connect','/garage/connect',1),('garage','/garage',2),('add','/add-car',1),
-       ('edit','/edit-car/201',5),('services','/garage/cars/201/services',1),
-       ('confirmation','/verify-email/synthetic',1)]
+CASES=[('connect','/garage/connect',1),('garage','/garage',0),('onboarding','/add-car',0),('services','/garage/cars/201/services',0),('confirmation','/verify-email/synthetic',1)]
 
 @pytest.mark.parametrize('view,path,count',CASES)
 def test_ten_rendered_forms_and_middleware(monkeypatch,view,path,count):

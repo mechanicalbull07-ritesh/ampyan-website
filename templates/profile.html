@@ -8,12 +8,12 @@
 <div class="page-header-copy">
 <p class="page-kicker">AMPYAN Profile</p>
 <h1 class="page-title">{{ current_user.username }}</h1>
-<p class="page-subtitle">Manage your account, car details, service intelligence and community activity from one place.</p>
+<p class="page-subtitle">Manage your account and community activity here. View Car Health on the Website and update vehicle details in the App.</p>
 </div>
 
 <div class="ui-button-row">
 <a href="#edit-profile" class="ui-button-secondary">Edit Profile</a>
-<a href="/add-car" class="auth-button">Add Car</a>
+<a href="{{ ampyan_app_url }}" rel="noopener" class="auth-button">Manage vehicles in App</a>
 </div>
 </div>
 
@@ -122,7 +122,7 @@
 <div class="profile-card profile-section-block">
 <h2 class="section-heading">Your Cars</h2>
 
-<p>Car Health, service history and vehicle inputs are available in your connected Garage.</p>
+<p>View Car Health and service history in your connected Garage. Update vehicle details in the AMPYAN App.</p>
 <a class="ui-button-secondary" href="/garage">Open Garage</a>
 {% if cars %}<p>Your older website vehicle records are preserved and have not been linked automatically.</p>{% endif %}
 
