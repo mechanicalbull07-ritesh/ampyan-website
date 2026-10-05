@@ -88,7 +88,7 @@ from urllib.parse import parse_qs, urlparse
 from io import BytesIO
 import textwrap
 from authlib.integrations.flask_client import OAuth
-from services.google_profile_picture import current_user_picture
+from services.google_profile_picture import current_user_picture, log_authenticated_avatar_state
 from routes.main_routes import main_bp
 from routes.canonical_garage_routes import garage_bp
 from routes.tools_routes import tools_bp
@@ -1462,11 +1462,17 @@ def platform():
 
 @app.route("/google/callback")
 def google_callback():
+    avatar_helper_called = False
     try:
         token = google.authorize_access_token()
 
         user_info = token.get("userinfo") if isinstance(token, dict) else None
 
+        userinfo_fallback_attempted = not bool(user_info)
+        app.logger.info(
+            'avatar_diagnostic stage=google_userinfo google_userinfo_fallback_attempted=%s',
+            userinfo_fallback_attempted,
+        )
         if not user_info:
             user_info = google.get("userinfo").json()
 
@@ -1527,7 +1533,9 @@ def google_callback():
 
         login_user(user)
         from services.google_profile_picture import remember_google_picture
-        remember_google_picture(user.get_id(), user_info)
+        avatar_helper_called = True
+        remember_google_picture(user.get_id(), user_info,
+                                userinfo_fallback_attempted=userinfo_fallback_attempted)
         from services.canonical_garage_client import connect, clear_credentials, GarageError
         clear_credentials()
         if isinstance(token, dict) and token.get('id_token'):
@@ -1545,6 +1553,19 @@ def google_callback():
         app.logger.warning("Google callback failed: %s detail=%s", e.__class__.__name__, str(e)[:300])
         flash("Google login failed. Please try again.")
         return redirect(url_for("auth.login"))
+
+    finally:
+        app.logger.info(
+            'avatar_diagnostic stage=google_callback_exit avatar_helper_called=%s',
+            avatar_helper_called,
+        )
+
+
+@app.after_request
+def avatar_boolean_diagnostics(response):
+    if request.endpoint != 'google_callback':
+        log_authenticated_avatar_state(current_user)
+    return response
 
 
 # ================= SECURITY BASICS =================
