@@ -10,7 +10,7 @@ import app as website
 from models.models import db,User,Car
 from services import canonical_garage_client as api
 
-RC='b4d4fb22f93baf55b8ec7555efbb94ff9dfc3fc9'
+RC='e73bbb53f95f16897c74375d1432bd4e563f6427'
 
 @pytest.fixture(scope='module')
 def backend(tmp_path_factory):

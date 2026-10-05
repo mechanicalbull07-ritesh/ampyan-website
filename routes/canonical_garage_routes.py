@@ -66,7 +66,7 @@ def garage_dashboard():
     mileage = call(path(selected, '/mileage'))
     health = data.get('health') or {}
     page = screen('health', cars=cars, car=data['car'], health=health, mileage=mileage.get('mileage') or {},
-                  rows=checklist_rows(health.get('service_checklist') or {}))
+                  rows=checklist_rows(health.get('service_checklist') or {}), configuration=data.get('configuration') or {})
     safe_track_event('car_health_viewed', {'feature':'car_health'})
     return page
 
@@ -120,6 +120,8 @@ def edit_car(car_id):
     car = call(path(car_id))['car']
     if request.method == 'POST':
         action = request.form.get('section')
+        if action == 'configuration':
+            return save_configuration(car_id, car)
         if action == 'odometer':
             payload = dict(actual_km=integer('actual_km'), user_confirmed=request.form.get('user_confirmed')=='yes',
                 source='MANUAL', timezone='Asia/Kolkata', observed_at=request.form.get('observed_at'),
@@ -171,7 +173,41 @@ def edit_car(car_id):
         flash('Saved. Car Health has been refreshed.')
         return redirect(f'/garage-dashboard?car_id={car_id}')
     mileage = call(path(car_id,'/mileage'))
-    return screen('edit', car=car, mileage=mileage.get('mileage') or {}, history=mileage.get('history') or {})
+    configuration = call(path(car_id, '/configuration'))['configuration']
+    return screen('edit', car=car, mileage=mileage.get('mileage') or {}, history=mileage.get('history') or {}, configuration=configuration)
+
+def save_configuration(car_id, car):
+    configuration = call(path(car_id, '/configuration'))['configuration']
+    error = None
+    status = 400
+    fields = {f['key']: f for f in configuration['fields']}
+    try:
+        revision = integer('setup_revision')
+        if revision != configuration['revision']:
+            raise GarageError(409)
+        changes = {}
+        for name, raw in request.form.items():
+            if not name.startswith('setup.'):
+                continue
+            key = name[len('setup.'):]
+            field = fields.get(key)
+            if field is None or raw not in {o['value'] for o in field['options']}:
+                raise GarageError(400)
+            if raw != field['value']:
+                value = {'unknown':None, 'true':True, 'false':False}.get(raw, raw)
+                changes[key] = value
+        if changes:
+            call(path(car_id, '/configuration'), 'PATCH', {'revision':revision, 'changes':changes})
+        return redirect('/garage-dashboard?car_id=' + str(car_id))
+    except GarageError as exc:
+        status = exc.status
+        error = ('Vehicle setup changed. Your selections are retained; review the current details before retrying.'
+                 if status == 409 else 'Setup was not saved. Check the selected details and any conflicting saved confirmations.'
+                 if status == 400 else exc.message)
+    mileage = call(path(car_id, '/mileage'))
+    return screen('edit', car=car, configuration=configuration, setup_error=error,
+        mileage=mileage.get('mileage') or {}, history=mileage.get('history') or {}), status
+
 
 @garage_bp.route('/garage/cars/<int:car_id>/services', methods=['GET','POST'])
 @login_required

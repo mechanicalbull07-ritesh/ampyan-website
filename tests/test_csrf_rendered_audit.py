@@ -18,7 +18,7 @@ class Forms(HTMLParser):
             self.forms.append(self.current); self.current=None
 
 CASES=[('connect','/garage/connect',1),('garage','/garage',2),('add','/add-car',1),
-       ('edit','/edit-car/201',4),('services','/garage/cars/201/services',1),
+       ('edit','/edit-car/201',5),('services','/garage/cars/201/services',1),
        ('confirmation','/verify-email/synthetic',1)]
 
 @pytest.mark.parametrize('view,path,count',CASES)
@@ -27,7 +27,8 @@ def test_ten_rendered_forms_and_middleware(monkeypatch,view,path,count):
     with website.app.test_request_context(path):
         html=render_template('confirm_email.html' if view=='confirmation' else 'canonical_garage.html',
             view=view,car=car,cars=[car],mileage={},history={},records=[],symptoms={},transmissions=['UNKNOWN'],
-            operation_id='synthetic',observed_at='2026-10-02',service_types=['General service'])
+            operation_id='synthetic',observed_at='2026-10-02',service_types=['General service'],
+            configuration={'revision':0,'fields':[],'conflicts':[],'setup_incomplete':True})
         parser=Forms();parser.feed(html)
         forms=[f for f in parser.forms if f['attrs'].get('method','get').lower()=='post']
         assert len(forms)==count
