@@ -88,6 +88,7 @@ from urllib.parse import parse_qs, urlparse
 from io import BytesIO
 import textwrap
 from authlib.integrations.flask_client import OAuth
+from services.google_profile_picture import current_user_picture
 from routes.main_routes import main_bp
 from routes.canonical_garage_routes import garage_bp
 from routes.tools_routes import tools_bp
@@ -836,6 +837,7 @@ def inject_image_helpers():
         news_read_time=news_read_time,
         news_render_blocks=news_render_blocks,
         profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename),
+        current_user_profile_image_url=lambda: current_user_picture(current_user, lambda filename: static_image_url_if_exists("profile_images", filename)),
         news_category_label=news_category_label,
         effective_news_category=effective_news_category,
     )
@@ -1524,6 +1526,8 @@ def google_callback():
             db.session.commit()
 
         login_user(user)
+        from services.google_profile_picture import remember_google_picture
+        remember_google_picture(user.get_id(), user_info)
         from services.canonical_garage_client import connect, clear_credentials, GarageError
         clear_credentials()
         if isinstance(token, dict) and token.get('id_token'):

@@ -165,7 +165,7 @@ AMPYAN
 <div class="nav-profile">
 
 <div class="profile-badge">
-{% set current_profile_photo_url = profile_image_url(current_user.profile_photo) %}
+{% set current_profile_photo_url = current_user_profile_image_url() %}
 {% if current_profile_photo_url %}
 <img src="{{ current_profile_photo_url }}" alt="{{ current_user.username }}">
 {% else %}

@@ -292,6 +292,8 @@ def api_login():
 def api_logout():
     from services.canonical_garage_client import clear_credentials
     clear_credentials()
+    from services.google_profile_picture import clear_google_picture
+    clear_google_picture()
     logout_user()
     return jsonify({"status": "success", "authenticated": False})
 
@@ -300,6 +302,8 @@ def api_logout():
 def logout():
     from services.canonical_garage_client import clear_credentials
     clear_credentials()
+    from services.google_profile_picture import clear_google_picture
+    clear_google_picture()
     logout_user()
     flash("You have been logged out.")
     return redirect("/")
