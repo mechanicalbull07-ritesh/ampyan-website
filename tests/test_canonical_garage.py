@@ -224,3 +224,16 @@ def test_logout_clears_bearer_and_selected_car(client):
     with client.session_transaction() as saved:
         assert 'garage_credentials' not in saved and 'garage_selected' not in saved
     assert client.get('/api/cars').status_code==401
+
+
+def test_manual_browser_request_real_authenticated_backend(client,backend):
+    response=client.post('/account-deletion/request',data={'confirm':'yes','user_id':'9901','email':'acceptance-9901@example.invalid'},headers=csrf(client))
+    assert response.status_code==200 and b'owner-bound request is recorded' in response.data
+    with connection(backend) as conn:
+        row=conn.execute("SELECT owner_id,status,challenge_hash FROM account_deletion_request WHERE active_owner=9001").fetchone()
+        assert row==(9001,'PENDING',None)
+        assert conn.execute('SELECT count(*) FROM account_deletion_task').fetchone()[0]==0
+    again=client.post('/account-deletion/request',data={'confirm':'yes'},headers=csrf(client))
+    assert again.status_code==200
+    assert requests.post(backend['url']+'/api/account-deletion/requests',json={'confirm':True,'user_id':9001}).status_code==401
+    assert requests.post(backend['url']+'/api/account-deletion/public',json={'email':'acceptance-9901@example.invalid','confirm':True}).status_code==404

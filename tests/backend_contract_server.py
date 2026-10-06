@@ -13,7 +13,7 @@ for key in list(os.environ):
 os.environ.update(ENV='test',RENDER='false',AMPYAN_SCHEMA_MANAGED_EXTERNALLY='1',
  DATABASE_URL='sqlite:///'+str(root/'backend.sqlite'),
  AUTH_SIGNING_KEY='synthetic-website-integration-key-only-not-for-real-accounts',
- SECRET_KEY='synthetic-backend-test-key')
+ SECRET_KEY='synthetic-backend-test-key', ACCOUNT_DELETION_ENABLED='true', ACCOUNT_DELETION_MODE='manual')
 meta_path=os.environ.get('AMPYAN_WEBSITE_TEST_PG_META')
 if meta_path:
     import json,psycopg2

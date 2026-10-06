@@ -1,0 +1,35 @@
+P16C AUTOMATION PRESERVATION AND FUTURE RE-ENABLE CONTRACT
+
+Backend mail/create/dispatch/verify/complete/retry_completion_mail functions remain
+preserved in services/account_deletion.py. Existing automated tests still run in
+an explicit automated test mode. No background deletion/email worker is registered.
+Only the shared erase/process functions gained a notify_completion switch (default
+true preserves automation) and manual provenance survives execution/retry.
+
+1.0.5 defaults to ACCOUNT_DELETION_MODE=manual. Its route gate hides public email
+intake, challenge verification, send-verification and retry-completion-mail. Manual
+intake and execution never invoke those functions; no email task is generated.
+
+The original Website handlers are preserved in
+services/account_deletion_automated_ui.py as inactive source, and the original
+three templates in templates/future_automated_*.html. That source is not imported
+or registered and is not a ready-to-import module: re-integrate its original app
+imports/globals deliberately during a future release.
+The original Flutter screen is preserved byte-for-byte in
+docs/future-automation/account_deletion_screen.dart.txt. The API's optional code
+transport is retained but no manual UI calls it.
+
+Re-enable only as a future reviewed release, never by flipping 1.0.5 configuration:
+- Resolve P16E's SMTP TLS identity blocker with a hostname/CA-chain-verifying SSL
+  context, mandatory STARTTLS (or explicitly implemented verified implicit TLS),
+  fail-closed behavior and no insecure retry. Select/configure an authorized sender
+  and SMTP provider only under separate authorization, then validate delivery.
+- Add and validate worker/dispatch operations deliberately, including concurrency,
+  retry ambiguity, payload purge, logging controls, expiry and authorization.
+- Restore/review the Website handlers/templates and Flutter challenge screen with
+  matching feature flags; use ACCOUNT_DELETION_MODE=automated only for that release.
+- Do not silently convert or adopt active manual requests as automated requests.
+  Resolve/handoff each active workflow explicitly. Do not rotate AUTH_SIGNING_KEY
+  without an encrypted-outbox/receipt migration plan.
+- Run the preserved automated suite, TLS/mail tests, end-to-end delivery checks,
+  deletion completeness tests and existing App/Website/Car Health release gates.

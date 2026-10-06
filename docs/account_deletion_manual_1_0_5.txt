@@ -1,0 +1,95 @@
+AMPYAN 1.0.5 — P16G MANUAL ACCOUNT DELETION
+
+Release candidates are isolated in audit/p16g/{backend,website,flutter}.
+P16D and the user's current working tree are preserved. No production writes,
+email sends, credentials, migration, push or deployment occur in this task.
+
+SUPPORT AND CONFIGURATION
+Existing address: hiampyan@gmail.com. Confirmed published by GET /contact.
+No SMTP/Brevo setting or credential is required for this deletion flow.
+Backend: ACCOUNT_DELETION_ENABLED=true only after the existing additive migration
+and application rollout are authorized; ACCOUNT_DELETION_MODE=manual (default).
+Website's existing ACCOUNT_DELETION_ENABLED fence should be enabled in the same
+controlled rollout. Preserve existing AUTH_SIGNING_KEY and service credentials.
+AMPYAN_SUPPORT_EMAIL optionally overrides the existing address on Backend and
+Website; Flutter uses the same name as a --dart-define. Keep them consistent.
+Do not change any configuration as part of P16G preparation.
+
+OWNER INTAKE
+App: Profile -> Account -> Delete Account -> Request Account Deletion.
+Backend takes identity solely from the validated bearer credential. It creates
+PENDING with server-side MANUAL_1_0_5 authenticated provenance, account-generation
+and email binding, hashed receipt and encrypted receipt recovery. No challenge,
+mail body, email outbox task or worker is created. Duplicates reuse the receipt.
+The mailto draft has only a fixed support recipient, safe subject and generic
+body; no owner ID, email, receipt, token, password or OTP is inserted.
+Owner must select the registered sender address and deliberately send the draft.
+
+OUTSIDE THE APP
+/account-deletion is public and offers the same support mailto plus instructions.
+Email alone initiates support intake, never an approved destructive request.
+The /account-deletion/request browser route creates the owner-bound request after
+Website sign-in and existing AMPYAN Garage bearer sign-in. It forwards confirm
+only, never Website/user IDs or claimed account email. No App reinstall is needed.
+If access is lost, provide ordinary account-access assistance; do not bypass the
+required authenticated request, use display names, or create a substitute account.
+
+ADMIN OWNERSHIP REVIEW
+1. Use an authorized, active administrator's authenticated Backend/Garage session.
+2. Open /admin/account-deletion; open a request's ownership review.
+3. Require the server-created authenticated request and unchanged registered email
+   binding. Read the registered email only in this restricted detail screen.
+4. Find the original inbound support thread from that registered mailbox. Inspect
+   the actual sender and mail authentication/anti-spoofing headers; a display name,
+   quoted/forwarded sender, arbitrary supplied address or screenshot is not proof.
+   Where authenticity cannot be established, keep NOT VERIFIED and investigate.
+5. Store a restricted review record linking the thread to the request and noting
+   successful sender authenticity review. Do not copy secrets into the record.
+6. Enter the actual sender email and SHA-256 of that review record, confirm receipt,
+   and choose Mark VERIFIED. Backend independently compares the address against
+   its registered email; it does not trust the supplied user ID. The administrator
+   attests to real mailbox evidence; the app does not inspect the support mailbox.
+7. If either proof is absent, stop. Do not approve or execute deletion. The owner
+   cannot approve their own deletion as an administrator; use an admin handoff.
+
+EXECUTION AND COMPLETENESS
+Execute verified deletion calls the existing P16C service. It fences mutations,
+blocks the account, performs child-first relational erasure/anonymization, checks
+for remaining owner data, and clears the worker private cache. Cross-owner content
+and approved anonymous discussion topology are preserved. No SQL row surgery.
+PROCESSING is not COMPLETED. Failed execution records an error, never completion;
+retain approved provenance for an authorized retry of the same request.
+Review every media/provider/public-content/local-cleanup task. Record real work
+and restricted evidence; a hash alone does not demonstrate cleanup. Verify every
+worker's private cache and applicable Firebase/AI/provider attributable stores.
+
+BACKUPS AND HISTORIC SUPPORT COPIES
+No fixed backup retention period or immediate historic-backup erasure is claimed.
+Before recording PROCESSOR_REVIEW success, document real retention exceptions,
+processing timing and the reviewed outcomes. Maintain a restricted, purpose-bound
+restore-suppression record using the minimum selectors needed to reapply deletion
+when old backups are restored. Test restore suppression before restored data can
+be served. Do not claim blanket historical erasure. Review original support-thread
+retention and remove unnecessary personal details under the adopted retention
+policy; preserve only genuinely necessary evidence. Operator adoption is a release
+condition, not something a local test can prove.
+
+COMPLETION
+Only after relational PASS and all required cleanup tasks SUCCEEDED may the
+administrator choose Complete. The backend durably commits COMPLETED and clears
+owner linkage/receipt recovery. It does not create or send a completion email.
+Read back verified COMPLETED; then manually reply to the original support thread:
+“Your AMPYAN account deletion is complete.” Explain any reviewed retention/local
+limitations accurately. Do not send that confirmation on error or PROCESSING.
+The App's owner-scoped completion receipt clears local owner data and signs out;
+other accounts' local records are preserved. Offline devices cannot be erased
+remotely. Deleted credentials and old bearer sessions must fail authentication.
+
+RELEASE CONDITIONS (NOT EXECUTED HERE)
+The three P16C deletion tables are absent from P16D production inspection; use the
+preserved, reviewed additive migration with fresh backup and authorized rollout.
+No new P16G migration or column is introduced. Publish/test the public HTTPS URL
+and authenticated browser path; enter https://ampyan.com/account-deletion in Play
+Console's Data safety deletion field. Validate the actual released App navigation.
+Confirm support inbox access, administrator access and backup/provider procedure
+adoption. Confirm authoritative Flutter origin/main ancestry before release.
