@@ -3774,9 +3774,8 @@ def diagnosis_alias():
 
 
 @app.route("/mygarage")
-@app.route("/my-car-health")
 def mygarage_alias():
-    return redirect("/garage-dashboard", code=301)
+    return redirect("/my-car-health", code=301)
 
 
 @app.route("/health")
