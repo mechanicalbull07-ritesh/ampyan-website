@@ -6,3 +6,88 @@ body.light .cg.ch{--ch-bg:#fff;--ch-line:#ccd5e1;--ch-muted:#47576d;--ch-blue:#1
 @media(max-width:700px){.cg.ch{padding:0 16px;margin-top:16px}.ch .ch-hero{grid-template-columns:minmax(0,1fr);gap:12px;padding:20px 0}.ch-wordmark{width:115px;justify-self:start;grid-row:1}.ch-values{grid-template-columns:minmax(0,1fr);gap:16px;padding-bottom:24px}.ch .ch-vehicle,.ch .ch-data-grid{grid-template-columns:minmax(0,1fr)}.ch .ch-vehicle{gap:24px;padding:20px}.ch article[data-section],.ch .ch-app{padding:20px}.ch article[data-section=checklist]{grid-column:auto;grid-row:auto}.ch .ch-app{grid-template-columns:minmax(0,1fr) 95px}.ch .ch-app h2{font-size:1.3em}.ch .ch-data-grid{gap:24px}.ch dl{grid-template-columns:minmax(0,1fr)}.ch dt{margin-top:6px}.ch dd{margin:0}.ch article.ch-check{grid-template-columns:minmax(0,1fr)}.ch-status{justify-self:start;margin-bottom:8px}.ch .ch-app .action{font-size:.875em}.ch .ch-help{padding:20px}.ch :is(.ch-values,.ch-app,.ch-vehicle,.ch-closing) *{overflow-wrap:anywhere}.ch .ch-lead{font-size:2em}}
 @media(max-width:400px){.ch .ch-app{grid-template-columns:minmax(0,1fr)}.ch-toon{width:110px;justify-self:end}.ch .ch-app .ch-stores{font-size:.875em}}
 @media(prefers-reduced-motion:reduce){.ch *{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+
+/* P17A: density polish; keep every value, status and action visible. */
+.cg.ch { margin-bottom: 32px; line-height: 1.5; }
+.ch > nav { margin-bottom: 12px; }
+.ch .ch-hero { padding: 20px 0; }
+.ch-values { gap: 18px; padding: 10px 0 22px; }
+.ch .ch-vehicle { padding: 22px; margin-bottom: 18px; }
+.ch .ch-forecast-app { gap: 18px; margin-bottom: 18px; align-items: start; }
+.ch article[data-section], .ch .ch-app { padding: 22px; }
+.ch article[data-section] > h2 { margin-bottom: 16px; }
+.ch dl { gap: 8px 18px; padding-top: 12px; margin: 12px 0 16px; }
+.ch article[data-section=forecast] > dl:first-of-type > dd:first-of-type {
+  font-size: 1.35em;
+  line-height: 1.25;
+  color: var(--ch-blue);
+}
+.ch .ch-app { align-items: center; grid-template-columns: minmax(0,1fr) 100px; }
+.ch .ch-app h2 { font-size: 1.35em; }
+.ch .ch-app .ch-stores { margin-top: 10px; gap: 4px 14px; }
+.ch-toon { max-width: 100px; align-self: center; }
+.ch .ch-data-grid { gap: 18px; align-items: start; }
+.ch article.ch-check {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  padding: 12px 0;
+}
+.ch .ch-check h3 { flex: 1 1 160px; min-width: 0; font-size: 1em; margin: 0; }
+.ch .ch-check .ch-status { margin: 0; padding: 2px 7px; }
+.ch .ch-check p { margin: 0; font-size: .875em; line-height: 1.5; }
+.ch .ch-check-action, .ch .ch-check-guidance { flex-basis: 100%; }
+.ch .ch-check-details { display: flex; flex-wrap: wrap; gap: 4px 16px; flex-basis: 100%; }
+.ch .ch-check-details p { color: var(--ch-muted); }
+.ch .ch-help { margin: 18px 0; padding: 18px 22px; gap: 12px; }
+.ch .ch-help h2 { font-size: 1.15em; margin-bottom: 6px; }
+.ch .ch-closing { padding: 18px 0; gap: 12px; }
+.ch .ch-closing h2 { font-size: 1.15em; margin-bottom: 6px; }
+/* Preserve comfortable touch targets, including contextual and store links. */
+.ch a, .ch button, .ch select { min-height: 44px; }
+.ch > nav a, .ch-stores a { display: inline-flex; align-items: center; }
+.ch article[data-section] > a:not(.action) { padding: 10px 0; }
+@media (max-width: 1000px) {
+  .ch .ch-app { grid-template-columns: minmax(0,1fr) 110px; }
+}
+@media (max-width: 700px) {
+  .cg.ch { margin-top: 10px; }
+  .ch > nav { margin-bottom: 4px; }
+  .ch .ch-hero { padding: 12px 0; gap: 8px; }
+  .ch-wordmark { width: 78px; }
+  .ch .ch-lead { font-size: 1.8em; }
+  .ch-values { gap: 8px; padding: 6px 0 16px; }
+  .ch-values > div {
+    display: grid;
+    grid-template-columns: minmax(0,.85fr) minmax(0,1.15fr);
+    gap: 4px 10px;
+    align-items: baseline;
+    padding-left: 10px;
+  }
+  .ch-values strong { font-size: .875em; }
+  .ch-values p { margin: 0; line-height: 1.4; }
+  .ch .ch-vehicle { gap: 16px; padding: 16px; margin-bottom: 16px; }
+  .ch article[data-section], .ch .ch-app { padding: 16px; }
+  .ch article[data-section] > h2 { margin-bottom: 12px; font-size: 1.25em; }
+  .ch .ch-forecast-app, .ch .ch-data-grid { gap: 16px; }
+  .ch .ch-forecast-app { margin-bottom: 16px; }
+  .ch dl { gap: 4px; margin: 10px 0 12px; padding-top: 10px; }
+  .ch dt { margin-top: 4px; }
+  .ch .ch-app { grid-template-columns: minmax(0,1fr) 70px; gap: 10px; }
+  .ch .ch-app h2 { font-size: 1.2em; }
+  .ch .ch-app .ch-stores { font-size: .875em; }
+  .ch-toon { max-width: 70px; }
+  .ch .ch-app .action { font-size: .875em; }
+  .ch article.ch-check { padding: 10px 0; }
+  .ch .ch-help { padding: 16px; margin: 16px 0; }
+  .ch .ch-closing { padding: 16px 0; }
+}
+@media (max-width: 360px) {
+  .ch .ch-app { grid-template-columns: minmax(0,1fr) 56px; gap: 8px; }
+  .ch-toon { max-width: 56px; }
+}
+@media (max-width: 700px) {
+  /* The decorative dot must not consume a benefit grid cell. */
+  .ch-values .ch-dot { display: none; }
+}
