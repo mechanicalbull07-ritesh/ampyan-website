@@ -67,6 +67,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/ai.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account_deletion_navigation.css') }}">
 <link rel="stylesheet" href="/static/css/news.css">
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/garage.css') }}">
@@ -173,7 +174,7 @@ AMPYAN
 {% endif %}
 </div>
 
-<button class="user-button" onclick="toggleUserMenu()">
+<button class="user-button" type="button" onclick="toggleUserMenu()" aria-label="Account menu" aria-controls="userMenu" aria-expanded="false">
 {{ current_user.username }}
 <i class="fa-solid fa-chevron-down"></i>
 </button>
@@ -184,6 +185,10 @@ AMPYAN
 
 <a href="/profile">
 <i class="fa-solid fa-user"></i> Profile
+</a>
+
+<a href="/account-deletion" class="account-deletion-link">
+<i class="fa-solid fa-user-shield" aria-hidden="true"></i> Account Deletion
 </a>
 
 {% if current_user.role == "mechanic" %}
@@ -344,12 +349,12 @@ Ask anything about buying, service, engine, EV or scams.
 <div><strong>AMPYAN</strong><a href="/about">About</a><a href="/contact">Contact</a><a href="/vision">Vision</a><a href="/platform">Platform</a></div>
 <div><strong>Explore</strong><a href="/community">Community</a><a href="/garages">Garages</a><a href="/marketplace">Marketplace</a><a href="/news">News</a><a href="/videos">Videos</a></div>
 <div><strong>Tools</strong><a href="/tools/fuel-cost">Fuel Cost</a><a href="/tools/emi-calculator">EMI</a><a href="/tools/depreciation-calculator">Depreciation</a><a href="/tools/maintenance-cost">Repair Estimate</a><a href="/tools/car-suggestion">Car Suggestion</a></div>
-<div><strong>Support</strong><a href="/help">Help &amp; Feedback</a><a href="/contact">Contact Support</a></div>
+<div><strong>Support</strong><a href="/help">Help &amp; Feedback</a><a href="/contact">Contact Support</a><a href="/account-deletion" class="account-deletion-link">Account Deletion</a></div>
 <div><strong>Legal</strong><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a><a href="/disclaimer">Disclaimer</a></div>
 </nav>
 {% else %}
 <div class="footer-links">
-<a href="/privacy">Privacy Policy</a> <a href="/terms">Terms of Service</a> <a href="/disclaimer">Disclaimer</a> <a href="/contact">Contact / Support</a> <a href="/help">Help / Report Issue</a>
+<a href="/privacy">Privacy Policy</a> <a href="/terms">Terms of Service</a> <a href="/disclaimer">Disclaimer</a> <a href="/contact">Contact / Support</a> <a href="/help">Help / Report Issue</a> <a href="/account-deletion" class="account-deletion-link">Account Deletion</a>
 </div>
 {% endif %}
 {% if analytics_enabled %}<button type="button" id="analytics-preferences">Analytics preferences</button>{% endif %}
@@ -521,16 +526,23 @@ window.prompt("Copy this link",shareUrl);
 });
 
 function toggleUserMenu(){
-
 const menu=document.getElementById("userMenu");
-
-if(menu.style.display==="block"){
+const button=document.querySelector('[aria-controls="userMenu"]');
+if(!menu || !button) return;
+const open=menu.style.display!=="block";
+menu.style.display=open ? "block" : "none";
+button.setAttribute("aria-expanded", open ? "true" : "false");
+}
+document.addEventListener("keydown",function(event){
+if(event.key!=="Escape") return;
+const menu=document.getElementById("userMenu");
+const button=document.querySelector('[aria-controls="userMenu"]');
+if(menu && button && menu.style.display==="block"){
 menu.style.display="none";
-}else{
-menu.style.display="block";
+button.setAttribute("aria-expanded","false");
+button.focus();
 }
-
-}
+});
 
 // AMPYAN HOME PAGE REDESIGN START
 function toggleMobileNav(){

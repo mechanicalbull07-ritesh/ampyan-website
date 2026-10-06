@@ -2,7 +2,7 @@
 
 {% block content %}
 
-<section class="page-shell">
+<section class="page-shell account-deletion-help">
 <div class="page-header">
 <div class="page-header-copy">
 <p class="page-kicker">Help & Reports</p>
@@ -22,23 +22,21 @@
 {% endwith %}
 
 <section id="account-deletion" class="help-info-card">
-<h2>Request deletion of your AMPYAN account and associated data</h2>
-<p><a href="/account-deletion">Open the dedicated AMPYAN account-deletion request page</a>.</p>
-<p>You can request deletion without reinstalling the app. Choose “Delete AMPYAN account and associated data” below and provide the email associated with your account. Do not include passwords, login tokens or identity documents in this form.</p>
-<p>This submits a request to AMPYAN support; it does not immediately delete or deactivate your account. Support must verify account ownership before acting and will confirm the deletion scope, processing time and any justified retention with you. You may also email hiampyan@gmail.com from your account email with the subject “AMPYAN account deletion”.</p>
-<p>Request deletion of your account, profile and associated Garage, service, configuration, mileage, Diagnosis and Community data. Local device records are separate; uninstalling the app alone does not delete your server account.</p>
+<h2>Account Deletion</h2>
+<p>Use the dedicated Account Deletion page to request permanent deletion of your AMPYAN account and associated data. You can open it without signing in or reinstalling the App.</p>
+<a href="/account-deletion" class="ui-button-secondary account-deletion-link">Delete AMPYAN account and associated data</a>
+<p>This link opens the deletion process. It does not submit a general help report, create a deletion request or delete your account. Never include passwords or login tokens in a report.</p>
 </section>
 <div class="help-layout">
 <form method="POST" class="help-form-card">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<label class="form-label">Report Type</label>
-<select name="category" class="auth-input" required>
+<label class="form-label" for="help-report-category">Report Type</label>
+<select id="help-report-category" name="category" class="auth-input" required>
 <option value="">Select issue type</option>
 <option value="Wrong Information">Wrong information</option>
 <option value="Feature Problem">Feature problem</option>
 <option value="Calculator Issue">Calculator issue</option>
 <option value="Vehicle Intelligence Feedback">Vehicle intelligence feedback</option>
-<option value="Account Deletion">Delete AMPYAN account and associated data</option>
 <option value="Login / Account Issue">Login / account issue</option>
 <option value="Garage Data Issue">Garage data issue</option>
 <option value="Other">Other</option>

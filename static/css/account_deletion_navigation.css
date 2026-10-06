@@ -1,0 +1,30 @@
+/* Native navigation links; inherit the site's light/dark theme. */
+.account-deletion-link {
+    max-width: 100%;
+    box-sizing: border-box;
+    white-space: normal;
+    overflow-wrap: anywhere;
+}
+.account-deletion-link:focus-visible {
+    outline: 3px solid var(--accent, #ff5630);
+    outline-offset: 3px;
+}
+.footer-groups .account-deletion-link,
+.footer-links .account-deletion-link,
+.profile-actions .account-deletion-link,
+.help-info-card .account-deletion-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+}
+
+/* Let the Help entry and its context reflow when users enlarge text. */
+.account-deletion-help .page-header-copy {
+    min-width: 0;
+    max-width: 100%;
+}
+.account-deletion-help .page-title,
+.account-deletion-help #account-deletion h2,
+.account-deletion-help #account-deletion p {
+    overflow-wrap: anywhere;
+}

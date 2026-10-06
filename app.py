@@ -3000,6 +3000,11 @@ def api_help_report():
     message = (payload.get("message") or "").strip()
     email = (payload.get("email") or "").strip()
 
+    # Legacy generic report clients use the dedicated deletion navigation flow.
+    # Redirect before validation/persistence; never create a competing HelpReport.
+    if category == "Account Deletion":
+        return redirect("/account-deletion", code=303)
+
     if not category or not message:
         return jsonify({"status": "error", "message": "category and message are required"}), 400
     if len(message) > 2000:
