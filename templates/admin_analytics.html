@@ -1,0 +1,572 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Studio</p>
+<h1 class="page-title">Analytics</h1>
+<p class="page-subtitle">Privacy-safe traffic, click, safety and vehicle intelligence for operating AMPYAN.</p>
+</div>
+</div>
+
+{% if analytics_degraded %}
+<div class="ui-card card-spacer">
+<p class="section-copy">Analytics temporarily unavailable. The dashboard remains available and will recover automatically.</p>
+</div>
+{% endif %}
+
+<div class="admin-studio-nav card-spacer">
+<a href="/admin"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
+<a href="/admin/analytics/overview" class="{% if section == 'overview' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i><span>Overview</span></a>
+<a href="/admin/analytics/traffic" class="{% if section == 'traffic' %}active{% endif %}"><i class="fa-solid fa-signal"></i><span>Traffic</span></a>
+<a href="/admin/analytics/engagement" class="{% if section == 'engagement' %}active{% endif %}"><i class="fa-solid fa-arrow-pointer"></i><span>Engagement</span></a>
+<a href="/admin/analytics/users" class="{% if section == 'users' %}active{% endif %}"><i class="fa-solid fa-users"></i><span>Users</span></a>
+<a href="/admin/analytics/safety" class="{% if section == 'safety' %}active{% endif %}"><i class="fa-solid fa-shield-halved"></i><span>Safety</span></a>
+<a href="/admin/analytics/vehicles" class="{% if section == 'vehicles' %}active{% endif %}"><i class="fa-solid fa-car-side"></i><span>Vehicles</span></a>
+</div>
+
+{% if section == "overview" %}
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Human Views Today</span><div class="stat-number">{{ live_analytics.human_page_views_today }}</div></div>
+<div class="stat-card"><span>Human Sessions Today</span><div class="stat-number">{{ live_analytics.human_sessions_today }}</div></div>
+<div class="stat-card"><span>App Opens Today</span><div class="stat-number">{{ live_analytics.app_opens_today }}</div></div>
+<div class="stat-card"><span>API Errors Today</span><div class="stat-number">{{ live_analytics.api_errors_today }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Public Views</span><div class="stat-number">{{ visit_count }}</div></div>
+<div class="stat-card"><span>Today Public Views</span><div class="stat-number">{{ today_page_views }}</div></div>
+<div class="stat-card"><span>Unique Visitors</span><div class="stat-number">{{ total_unique_visitors }}</div></div>
+<div class="stat-card"><span>Public Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>New Visitors 24h</span><div class="stat-number">{{ user_frequency_summary.day.new }}</div></div>
+<div class="stat-card"><span>Repeated Visitors 24h</span><div class="stat-number">{{ user_frequency_summary.day.repeated }}</div></div>
+<div class="stat-card"><span>Admin Views 30d</span><div class="stat-number">{{ admin_activity.views_30d }}</div></div>
+<div class="stat-card"><span>Admin Clicks 30d</span><div class="stat-number">{{ admin_activity.clicks_30d }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Human Sessions 24h</span><div class="stat-number">{{ live_analytics.human_sessions_24h }}</div></div>
+<div class="stat-card"><span>App Opens 24h</span><div class="stat-number">{{ live_analytics.app_opens_24h }}</div></div>
+<div class="stat-card"><span>API Errors 24h</span><div class="stat-number">{{ live_analytics.api_errors_24h }}</div></div>
+<div class="stat-card"><span>Failed Logins 24h</span><div class="stat-number">{{ live_analytics.failed_logins_24h }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Last 24 hours</h3>
+<div class="admin-table-wrap">
+<table class="admin-analytics-table">
+<thead><tr><th>Hour</th><th>Views</th><th>Sessions</th><th>App</th><th>API Errors</th></tr></thead>
+<tbody>
+{% for row in live_analytics.hourly_24h[-12:] %}
+<tr><td>{{ row.hour }}</td><td>{{ row.page_views }}</td><td>{{ row.sessions }}</td><td>{{ row.app_events }}</td><td>{{ row.api_errors }}</td></tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Website visits</h3>
+<div class="admin-bar-list">
+{% for label, count in hourly_traffic[-12:] %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 8, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Top sources</h3>
+{% if live_analytics.top_sources %}
+<div class="ui-meta-list">
+{% for source, count in live_analytics.top_sources[:8] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ source }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No source data yet.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Top pages/features</h3>
+{% if live_analytics.top_features %}
+<div class="ui-meta-list">
+{% for label, count in live_analytics.top_features[:8] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No feature data yet.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Top referrers</h3>
+{% if top_referrers %}
+<div class="ui-meta-list">
+{% for source, count in top_referrers[:8] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ source }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No referrer data yet.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Safety alerts</h3>
+<div class="admin-alert-stack">
+{% for alert in safety_alerts %}
+<div class="admin-alert-row"><span><strong>{{ alert.severity }}</strong> {{ alert.title }}<br><small>{{ alert.detail }}</small></span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Public user frequency</h3>
+<div class="admin-mini-stats">
+<div><span>Hour Unique</span><strong>{{ user_frequency_summary.hour.unique }}</strong></div>
+<div><span>Day Unique</span><strong>{{ user_frequency_summary.day.unique }}</strong></div>
+<div><span>Week Repeat</span><strong>{{ user_frequency_summary.week.repeated }}</strong></div>
+<div><span>Month New</span><strong>{{ user_frequency_summary.month.new }}</strong></div>
+</div>
+</div>
+</div>
+{% endif %}
+
+{% if section == "traffic" %}
+<div class="ui-card card-spacer">
+<h2>Traffic quality</h2>
+<p class="section-copy">Eligible origin-served public HTML page loads in the last 24 hours. These are page responses, not unique visitors or verified humans. Counts include visits regardless of analytics choice.</p>
+<div class="ui-grid ui-grid-4">
+<div class="stat-card"><span>Total eligible page loads</span><div class="stat-number">{{ traffic_quality.total }}</div></div>
+<div class="stat-card"><span>Human-like</span><div class="stat-number">{{ traffic_quality.totals.human_like }}</div></div>
+<div class="stat-card"><span>Likely bots</span><div class="stat-number">{{ traffic_quality.totals.likely_bot }}</div></div>
+<div class="stat-card"><span>Unknown</span><div class="stat-number">{{ traffic_quality.totals.unknown }}</div></div>
+</div>
+<h3>Hourly eligible page loads (UTC)</h3>
+<div class="admin-bar-list">
+{% for label, count in traffic_quality.hourly %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 8, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+
+<h2>Consented analytics</h2>
+<p class="section-copy">The following website visit and behavioral reports depend on analytics consent. GA4 page views are reported separately in GA4 and are not added to these counts.</p>
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Today Public</span><div class="stat-number">{{ today_page_views }}</div></div>
+<div class="stat-card"><span>Yesterday</span><div class="stat-number">{{ yesterday_page_views }}</div></div>
+<div class="stat-card"><span>Change</span><div class="stat-number">{{ "+" if traffic_delta_today >= 0 else "" }}{{ traffic_delta_today }}</div></div>
+<div class="stat-card"><span>Today Visitors</span><div class="stat-number">{{ today_unique_visitors }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Hourly traffic</h3>
+<div class="admin-bar-list">
+{% for label, count in hourly_traffic %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 8, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+
+<div class="admin-analytics-panel admin-wide-panel card-spacer">
+<h3>Unique, new and repeated users</h3>
+<div class="admin-table-wrap">
+<table class="admin-analytics-table">
+<thead><tr><th>Period</th><th>Views</th><th>Unique</th><th>New</th><th>Repeated</th><th>Logged-in</th></tr></thead>
+<tbody>
+<tr><td>Hour</td><td>{{ user_frequency_summary.hour.views }}</td><td>{{ user_frequency_summary.hour.unique }}</td><td>{{ user_frequency_summary.hour.new }}</td><td>{{ user_frequency_summary.hour.repeated }}</td><td>{{ user_frequency_summary.hour.logged_in }}</td></tr>
+<tr><td>Day</td><td>{{ user_frequency_summary.day.views }}</td><td>{{ user_frequency_summary.day.unique }}</td><td>{{ user_frequency_summary.day.new }}</td><td>{{ user_frequency_summary.day.repeated }}</td><td>{{ user_frequency_summary.day.logged_in }}</td></tr>
+<tr><td>Week</td><td>{{ user_frequency_summary.week.views }}</td><td>{{ user_frequency_summary.week.unique }}</td><td>{{ user_frequency_summary.week.new }}</td><td>{{ user_frequency_summary.week.repeated }}</td><td>{{ user_frequency_summary.week.logged_in }}</td></tr>
+<tr><td>Month</td><td>{{ user_frequency_summary.month.views }}</td><td>{{ user_frequency_summary.month.unique }}</td><td>{{ user_frequency_summary.month.new }}</td><td>{{ user_frequency_summary.month.repeated }}</td><td>{{ user_frequency_summary.month.logged_in }}</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Daily traffic</h3>
+<div class="admin-bar-list">
+{% for label, count in daily_traffic %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 4, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Monthly traffic</h3>
+<div class="admin-bar-list">
+{% for label, count in monthly_traffic %}
+<div class="admin-bar-row"><span>{{ label }}</span><div><i style="width:{{ [count * 2, 100]|min }}%;"></i></div><strong>{{ count }}</strong></div>
+{% endfor %}
+</div>
+</div>
+</div>
+
+<div class="admin-analytics-panel admin-wide-panel card-spacer">
+<h3>Page performance</h3>
+{% if page_metrics %}
+<div class="admin-table-wrap">
+<table class="admin-analytics-table">
+<thead><tr><th>Page</th><th>Views</th><th>30d</th><th>Unique</th><th>Logged-in</th><th>Guests</th><th>Clicks</th><th>Last Visit</th></tr></thead>
+<tbody>
+{% for page in page_metrics %}
+<tr>
+<td>{{ page.path }}</td><td>{{ page.views }}</td><td>{{ page.views_30d }}</td><td>{{ page.unique }}</td><td>{{ page.logged_in }}</td><td>{{ page.guest }}</td><td>{{ page.clicks }}</td>
+<td>{{ page.last_visit.strftime("%d %b %H:%M") if page.last_visit else "N/A" }}</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% else %}
+<p class="section-copy">No page metrics yet.</p>
+{% endif %}
+</div>
+{% endif %}
+
+{% if section == "engagement" %}
+<div class="ui-grid ui-grid-3 card-spacer">
+<div class="stat-card"><span>Public Clicks</span><div class="stat-number">{{ click_events_count }}</div></div>
+<div class="stat-card"><span>Logged-in Views</span><div class="stat-number">{{ logged_in_views }}</div></div>
+<div class="stat-card"><span>Guest Views</span><div class="stat-number">{{ guest_views }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Admin Clicks 24h</span><div class="stat-number">{{ admin_activity.clicks_24h }}</div></div>
+<div class="stat-card"><span>Admin Clicks 30d</span><div class="stat-number">{{ admin_activity.clicks_30d }}</div></div>
+<div class="stat-card"><span>Admin Views 24h</span><div class="stat-number">{{ admin_activity.views_24h }}</div></div>
+<div class="stat-card"><span>Active Admins 30d</span><div class="stat-number">{{ admin_activity.unique_admins_30d }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Top clicked items</h3>
+{% if top_clicks %}
+<div class="ui-meta-list">
+{% for label, count in top_clicks %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">Clicks will appear after users interact with links and buttons.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Top click pages</h3>
+{% if top_click_pages %}
+<div class="ui-meta-list">
+{% for path, count in top_click_pages %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ path }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No click page data yet.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Device split</h3>
+{% if device_breakdown %}
+<div class="admin-mini-stats">
+{% for device in device_breakdown %}
+<div><span>{{ device.device_type|capitalize }}</span><strong>{{ device.views }}</strong></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No device data yet.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Browsers</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.browsers %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Operating systems</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.operating_systems %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Countries and cities</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.top_countries[:5] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+{% for label, count in live_analytics.top_cities[:5] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Separated traffic 24h</h3>
+<div class="admin-mini-stats">
+<div><span>Bots</span><strong>{{ live_analytics.bot_events_24h }}</strong></div>
+<div><span>Internal</span><strong>{{ live_analytics.internal_events_24h }}</strong></div>
+<div><span>Admin</span><strong>{{ live_analytics.admin_events_24h }}</strong></div>
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Slow API endpoints</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.slow_endpoints %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+</div>
+</div>
+{% endif %}
+
+{% if section == "safety" %}
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>DB Status</span><div class="stat-number stat-number-sm">{{ live_analytics.db_status }}</div></div>
+<div class="stat-card"><span>Fallback Active</span><div class="stat-number stat-number-sm">{{ "Yes" if live_analytics.analytics_fallback_active else "No" }}</div></div>
+<div class="stat-card"><span>API Errors 24h</span><div class="stat-number">{{ live_analytics.api_errors_24h }}</div></div>
+<div class="stat-card"><span>Failed Logins 24h</span><div class="stat-number">{{ live_analytics.failed_logins_24h }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Last analytics error</h3>
+<div class="ui-meta-list">
+<div class="ui-meta-item"><span class="ui-meta-label">Error</span><span class="ui-meta-value">{{ live_analytics.last_analytics_error }}</span></div>
+<div class="ui-meta-item"><span class="ui-meta-label">Time</span><span class="ui-meta-value">{{ live_analytics.last_analytics_error_at or "N/A" }}</span></div>
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Slow endpoints</h3>
+<div class="ui-meta-list">
+{% for label, count in live_analytics.slow_endpoints %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ label }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% else %}
+<div class="ui-meta-item"><span class="ui-meta-label">None</span><span class="ui-meta-value">0</span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Separated traffic</h3>
+<div class="admin-mini-stats">
+<div><span>Bots</span><strong>{{ live_analytics.bot_events_24h }}</strong></div>
+<div><span>Internal</span><strong>{{ live_analytics.internal_events_24h }}</strong></div>
+<div><span>Admin</span><strong>{{ live_analytics.admin_events_24h }}</strong></div>
+</div>
+</div>
+</div>
+{% endif %}
+
+{% if section == "users" %}
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Total Users</span><div class="stat-number">{{ user_rows|length }}</div></div>
+<div class="stat-card"><span>Active Users</span><div class="stat-number">{{ active_user_rows|length }}</div></div>
+<div class="stat-card"><span>Inactive Users</span><div class="stat-number">{{ inactive_user_count }}</div></div>
+<div class="stat-card"><span>Frequency</span><div class="stat-number stat-number-sm">{{ frequency_label }}</div></div>
+</div>
+
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Hour Unique</span><div class="stat-number">{{ user_frequency_summary.hour.unique }}</div></div>
+<div class="stat-card"><span>Day New</span><div class="stat-number">{{ user_frequency_summary.day.new }}</div></div>
+<div class="stat-card"><span>Week Repeated</span><div class="stat-number">{{ user_frequency_summary.week.repeated }}</div></div>
+<div class="stat-card"><span>Month Unique</span><div class="stat-number">{{ user_frequency_summary.month.unique }}</div></div>
+</div>
+
+<div class="ui-card card-spacer">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">User Frequency</p>
+<h2 class="section-heading">Users, cars and document status</h2>
+<p class="section-copy">Times are shown in Indian Standard Time. Contact and vehicle information is visible for admin support and reminders.</p>
+</div>
+<span class="garage-trust-score">{{ active_user_rows|length }} active in {{ frequency_label }}</span>
+</div>
+
+<form method="GET" class="admin-filter-row">
+{% for key, label, delta in frequency_options %}
+<button type="submit" name="frequency" value="{{ key }}" class="{% if frequency_filter == key %}active{% endif %}">{{ label }}</button>
+{% endfor %}
+</form>
+</div>
+
+<div class="admin-analytics-panel admin-wide-panel card-spacer">
+<h3>All users</h3>
+{% if user_rows %}
+<div class="admin-table-wrap">
+<table class="admin-analytics-table admin-user-table">
+<thead>
+<tr>
+<th>User</th>
+<th>Email ID</th>
+<th>Contact Number</th>
+<th>Car</th>
+<th>Insurance</th>
+<th>Pollution</th>
+<th>Buy Year</th>
+<th>Next Service</th>
+<th>Frequency</th>
+<th>Last Seen</th>
+</tr>
+</thead>
+<tbody>
+{% for row in user_rows %}
+{% set user = row.user %}
+{% set car = row.primary_car %}
+<tr>
+<td>
+<strong>{{ user.username }}</strong>
+<small>{{ user.role }}{% if user.is_banned %} • Banned{% endif %}</small>
+</td>
+<td>{{ user.email }}</td>
+<td>{{ user.mobile or "N/A" }}</td>
+<td>
+{% if car %}
+{{ car.brand or "Unknown" }} {{ car.model or "Vehicle" }}
+<small>{{ car.fuel_type or "Fuel N/A" }} • {{ row.cars|length }} car{{ "s" if row.cars|length != 1 else "" }}</small>
+{% else %}
+N/A
+{% endif %}
+</td>
+<td>{{ car.insurance_expiry if car and car.insurance_expiry else "N/A" }}</td>
+<td>{{ car.pollution_expiry if car and car.pollution_expiry else "N/A" }}</td>
+<td>{{ car.year if car and car.year else "N/A" }}</td>
+<td>
+{% if car %}
+{% if car.next_service_date %}{{ car.next_service_date.strftime("%d %b %Y") }}
+{% elif car.next_service_km %}{{ car.next_service_km }} km
+{% else %}N/A{% endif %}
+{% else %}N/A{% endif %}
+</td>
+<td>
+<strong>{{ row.visit_count }}</strong> visits
+<small>{{ row.event_count }} actions</small>
+</td>
+<td>
+{{ row.last_seen }}
+<small>{{ row.last_path }}</small>
+</td>
+</tr>
+{% endfor %}
+</tbody>
+</table>
+</div>
+{% else %}
+<p class="section-copy">No users found.</p>
+{% endif %}
+</div>
+{% endif %}
+
+{% if section == "safety" %}
+<div class="ui-grid ui-grid-3 card-spacer">
+<div class="stat-card"><span>Events 24h</span><div class="stat-number">{{ security_events_24h|length }}</div></div>
+<div class="stat-card"><span>Events 30d</span><div class="stat-number">{{ security_events|length }}</div></div>
+<div class="stat-card"><span>Suspicious Sources</span><div class="stat-number">{{ suspicious_ips|length }}</div></div>
+</div>
+
+<div class="admin-analytics-grid card-spacer">
+<div class="admin-analytics-panel">
+<h3>Safety alerts</h3>
+<div class="admin-alert-stack">
+{% for alert in safety_alerts %}
+<div class="admin-alert-row"><span><strong>{{ alert.severity }}</strong> {{ alert.title }}<br><small>{{ alert.detail }}</small></span></div>
+{% endfor %}
+</div>
+</div>
+<div class="admin-analytics-panel">
+<h3>Suspicious sources</h3>
+{% if suspicious_ips %}
+<div class="ui-meta-list">
+{% for ip, count in suspicious_ips %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ ip }}</span><span class="ui-meta-value">{{ count }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No repeated suspicious source in the last 24 hours.</p>
+{% endif %}
+</div>
+<div class="admin-analytics-panel">
+<h3>Recent security events</h3>
+{% if security_events %}
+<div class="ui-meta-list">
+{% for event in security_events[:12] %}
+<div class="ui-meta-item"><span class="ui-meta-label">{{ event.path }} • {{ event.label }}</span><span class="ui-meta-value">{{ event.severity }}</span></div>
+{% endfor %}
+</div>
+{% else %}
+<p class="section-copy">No security events recorded yet.</p>
+{% endif %}
+</div>
+</div>
+{% endif %}
+
+{% if section == "vehicles" %}
+<div class="ui-grid ui-grid-4 card-spacer">
+<div class="stat-card"><span>Vehicle Profiles</span><div class="stat-number">{{ total_cars }}</div></div>
+<div class="stat-card"><span>Car Owners</span><div class="stat-number">{{ car_owner_count }}</div></div>
+<div class="stat-card"><span>Service Due</span><div class="stat-number">{{ service_due_cars|length }}</div></div>
+<div class="stat-card"><span>Expired Docs</span><div class="stat-number">{{ insurance_expired_cars|length + pollution_expired_cars|length }}</div></div>
+</div>
+
+<div class="ui-card card-spacer">
+<div class="admin-section-head">
+<div>
+<p class="page-kicker">Owner Garage Data</p>
+<h2 class="section-heading">Vehicle and service overview</h2>
+<p class="section-copy">Admin-only operational view for support, safety reminders and service troubleshooting. Use only for lawful AMPYAN support and platform operations.</p>
+</div>
+<span class="garage-trust-score">{{ recent_cars|length }} latest</span>
+</div>
+<div class="admin-mini-stats admin-vehicle-stats">
+<div><span>Total Cars</span><strong>{{ total_cars }}</strong></div>
+<div><span>Owners</span><strong>{{ car_owner_count }}</strong></div>
+<div><span>Service Due</span><strong>{{ service_due_cars|length }}</strong></div>
+<div><span>Due Soon</span><strong>{{ service_soon_cars|length }}</strong></div>
+<div><span>Insurance Expired</span><strong>{{ insurance_expired_cars|length }}</strong></div>
+<div><span>Pollution Expired</span><strong>{{ pollution_expired_cars|length }}</strong></div>
+</div>
+
+{% if recent_cars %}
+<div class="admin-car-grid">
+{% for car in recent_cars %}
+<article class="simple-list-card admin-car-card">
+<div class="admin-user-top">
+<div>
+<h3>{{ car.brand or "Unknown" }} {{ car.model or "Vehicle" }}</h3>
+<p class="section-copy">Owner: {{ car.owner.username if car.owner else "Unknown" }}{% if car.owner and car.owner.email %} • {{ car.owner.email }}{% endif %}</p>
+</div>
+<div class="ui-pill-row">
+{% if car.is_default %}<span class="ui-pill ui-tag-good">Default</span>{% endif %}
+{% if car.next_service_km and car.current_km and car.current_km >= car.next_service_km %}
+<span class="ui-pill ui-tag-danger">Service due</span>
+{% elif car.next_service_km and car.current_km and 0 <= (car.next_service_km - car.current_km) <= 500 %}
+<span class="ui-pill ui-tag-warn">Due soon</span>
+{% else %}
+<span class="ui-pill">Garage</span>
+{% endif %}
+</div>
+</div>
+<div class="admin-car-meta">
+<div><span>Year</span><strong>{{ car.year or "N/A" }}</strong></div>
+<div><span>Fuel</span><strong>{{ car.fuel_type or "N/A" }}</strong></div>
+<div><span>Mileage</span><strong>{{ car.mileage or "N/A" }}</strong></div>
+<div><span>Daily KM</span><strong>{{ car.daily_km or "N/A" }}</strong></div>
+<div><span>Current KM</span><strong>{{ car.current_km or "N/A" }}</strong></div>
+<div><span>Last Service</span><strong>{{ car.last_service_km or "N/A" }}</strong></div>
+<div><span>Next Service</span><strong>{{ car.next_service_km or "N/A" }}</strong></div>
+<div><span>Insurance</span><strong>{{ car.insurance_expiry or "N/A" }}</strong></div>
+<div><span>Pollution</span><strong>{{ car.pollution_expiry or "N/A" }}</strong></div>
+</div>
+</article>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No owner cars have been added yet.</div>
+{% endif %}
+</div>
+{% endif %}
+
+</section>
+
+{% endblock %}

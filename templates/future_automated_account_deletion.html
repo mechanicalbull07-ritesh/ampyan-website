@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="page-shell">
+<div class="page-header"><div class="page-header-copy"><p class="page-kicker">AMPYAN Account</p><h1 class="page-title">Request deletion of your AMPYAN account</h1><p class="page-subtitle">Request deletion without installing the App. Never enter a password here.</p></div></div>
+{% with messages = get_flashed_messages() %}{% for message in messages %}<p role="status" class="help-message">{{ message }}</p>{% endfor %}{% endwith %}
+<section class="help-info-card"><h2>What happens</h2>
+<p>Enter your account email and confirm your request. If the account can be located, deletion-specific instructions are queued for the AMPYAN administrator to send only to the email stored on that account. Provider acceptance is not proof of inbox delivery. Enter the request reference and code below. The AMPYAN administrator processes verified requests. Sending a request or verifying it does not mean deletion is complete.</p>
+<p>Deletion removes identifiable account/authentication/profile data, vehicles, configuration, service records, mileage/health data, Diagnosis and private interactions. Public discussion may remain only without the deleted user's identity and personal contribution content; other users' replies are preserved.</p>
+<p>Logging out or uninstalling is not account deletion. Offline local device copies cannot be erased remotely; the App clears the deleted owner's records when it next receives completion. Clear local App data if you no longer use the App.</p>
+<p>Some information may be retained only where required for security, fraud prevention, legal obligations or backup integrity. No fixed retention duration is established here. Any applicable exception must be reviewed and disclosed as part of processing; we do not retain all personal data by default. Backup restores must reapply completed deletion decisions.</p>
+<p>Verification and completion routing data is encrypted and used only while needed for processing or notification recovery. Check your receipt status in the App. Completion email acceptance by the mail provider is not a guarantee of inbox delivery. Processing/provider failures remain pending for operator recovery; no completion is claimed until required cleanup is verified.</p>
+<p><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms</a> · <a href="/help">Help</a></p></section>
+<form method="POST" class="help-form-card"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="request">
+<label class="form-label" for="account-email">Account email</label><input id="account-email" name="email" type="email" class="auth-input" maxlength="150" autocomplete="email" required>
+<label><input type="checkbox" name="confirm" value="yes" required> I deliberately request account deletion and understand that verification is required.</label><button type="submit" class="auth-button">Request verification</button></form>
+<form method="POST" class="help-form-card"><input type="hidden" name="csrf_token" value="{{ csrf_token() }}"><input type="hidden" name="action" value="verify"><h2>Verify your request</h2>
+<label class="form-label" for="request-reference">Request reference from verification email</label><input id="request-reference" name="request_id" class="auth-input" maxlength="32" required>
+<label class="form-label" for="verification-code">Deletion verification code</label><input id="verification-code" name="code" class="auth-input" maxlength="128" autocomplete="off" required>
+<button type="submit" class="auth-button">Verify deletion request</button></form></section>
+{% endblock %}

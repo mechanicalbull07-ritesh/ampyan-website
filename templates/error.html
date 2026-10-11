@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="news-status-page">
+<div class="news-status-card">
+<p class="page-kicker">{{ eyebrow|default("AMPYAN", true) }}</p>
+<h1>{{ title|default("Something went wrong", true) }}</h1>
+<p>{{ message|default("Please try again in a moment.", true) }}</p>
+<a href="{{ action_url|default(url_for('news_list'), true) }}" class="auth-button">{{ action_label|default("Back to News", true) }}</a>
+</div>
+</section>
+{% endblock %}

@@ -1,0 +1,48 @@
+AMPYAN Website V1 P6B reconciled local release candidate
+
+Compatibility: backend b4d4fb22f93baf55b8ec7555efbb94ff9dfc3fc9.
+Flutter reference: 0400688e0d9420e5a3c59d56eaa7587624a56227.
+Reconciles remote main 0af9dd727524094f639b4a8cf90f8692f8db7a2e with
+validated V1 Website RC c32d8892cc4d2034a6f09a6e7cc8aec400996b4e.
+Preserves remote Blog, rich News, SEO, navigation, consent and traffic analytics
+alongside canonical V1 Garage. The durable P6B manifest records the new tree and
+per-file hashes after independently completed validation.
+No production/staging changes, migration, push or deployment is authorized.
+
+Runtime: CPython 3.14.3. Install requirements-test.txt in a fresh environment.
+Pillow is pinned to 12.1.1, the version actually used during P4A validation;
+this corrects stale packaging, not the validated runtime behavior. The existing
+google-auth 2.49.0.dev0 pin is retained and its wheel availability was verified.
+All production dependencies and test dependency closure are pinned.
+
+Clean checkout validation (backend checkout must be clean at the exact RC):
+python tools/validate_website_rc.py --root <NEW-/tmp-directory> \
+  --backend <frozen-backend-checkout> \
+  --backend-python <separate-backend-test-environment-python> \
+  --postgres-bin <PostgreSQL-18-bin-directory>
+
+Install the backend environment from its own requirements-test.txt; do not mix
+its dependency pins with the website environment. The runner uses only explicit
+local synthetic databases, ignores inherited database URLs, disables PostgreSQL
+TCP, verifies the actual data directory, and stops/removes its cluster afterward.
+No recovery directory, Codex log, pre-existing database or sibling Flutter tree
+is needed. The repository-local Diagnosis JSON is immutable synthetic contract
+input copied byte-for-byte from the frozen Flutter commit, not user data.
+
+Required deployment variable names: DATABASE_URL, SECRET_KEY,
+AMPYAN_API_BASE_URL, ENV (production), PORT (provided by host).
+Google login additionally requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET
+with an OAuth audience accepted by the backend. Credentials remain external.
+Other optional environment names are inventoried in the external RC manifest.
+.env.example contains only intended public configuration defaults/placeholders.
+Never version databases, real credentials, tokens, signing material, cache/build
+outputs, audit/recovery reports or runtime-generated synthetic records.
+
+The historical analytics local validation tool remains source-controlled as
+test infrastructure; no generated database or synthetic account dump is included.
+Service-record deletion is not exposed by this website RC. Vehicle deletion is
+validated against P4B; Add Service and service history use the frozen API.
+Do not broaden the RC by introducing a separate service-record deletion feature.
+
+Live Google OAuth and interactive browser/physical-device smoke remain release
+execution checks; local automated validation does not represent a deployment.

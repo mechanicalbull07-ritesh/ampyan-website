@@ -1,0 +1,1753 @@
+{
+  "format": 1,
+  "files": [
+    {
+      "path": ".env.example",
+      "sha256": "e717ef971971c96007c060eda9ac44ac9981ab0b9234c2215083935e32486a84"
+    },
+    {
+      "path": ".gitignore",
+      "sha256": "7d1ff0619c6368146807a7fe425fe0f72d00c7222c2ef35b874a9bf712923ff4"
+    },
+    {
+      "path": ".python-version",
+      "sha256": "5ab05f548328863dd73c057cc6bde305fc62a87522b3f28eadb9bbdd3b1409be"
+    },
+    {
+      "path": "Procfile",
+      "sha256": "4428ef404c513d3430bcf823f8b66cd0a12a0ba39c059cfbe822161c231e4c2f"
+    },
+    {
+      "path": "WEBSITE_GARAGE_V1.txt",
+      "sha256": "bf9b0ea89d24da00c37ec07631bbea314d3947460bfbd710a9bc076592e423a2"
+    },
+    {
+      "path": "WEBSITE_RC.txt",
+      "sha256": "a692893c57f68dff5ea0311007b209044e1cb2fa535b0fd406fcb4a6d34e1411"
+    },
+    {
+      "path": "ai_engine/__init__.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "ai_engine/component_detector.py",
+      "sha256": "0c4ba7e2060801b60bfbf2195464ce1513c562c28e1d219324c616f19565c86d"
+    },
+    {
+      "path": "ai_engine/diagnostic_answer_engine copy.py",
+      "sha256": "6322bb33d4bc6fd2a4e6f9afde20b9b1c43f49f7810019c294c2f75c93efdfb4"
+    },
+    {
+      "path": "ai_engine/diagnostic_engine.py",
+      "sha256": "4056462b743d235e589a3bab4b8721fc63d5f70224fee78687152b7d18f58fbf"
+    },
+    {
+      "path": "ai_engine/diagnostic_learning.py",
+      "sha256": "ae4d0500cacf35c1330fd3b24f1b14732dd4a5a39a263cd4e3dc580f6a30f68d"
+    },
+    {
+      "path": "ai_engine/diagnostic_question_engine.py",
+      "sha256": "6c593a7bf5ed643c1ed1045dad8462341e61645290046a176e6a3731aaffd9e7"
+    },
+    {
+      "path": "ai_engine/diagnostic_tree.py",
+      "sha256": "35e17447e1beaa6ec7f6b5e02ca494bb8febd8be6ff7616583f3081d08d36915"
+    },
+    {
+      "path": "ai_engine/evidence_engine.py",
+      "sha256": "3858a996b8fc9bb4426355e35bc9d07dcc02e2dc064dce23ad330b74794cee0a"
+    },
+    {
+      "path": "ai_engine/explanation_engine.py",
+      "sha256": "7208af1f42fd538bfd50097015a4bb0b4cda0f5c25beeb52609456c269fda381"
+    },
+    {
+      "path": "ai_engine/garage_intelligence.py",
+      "sha256": "863f951ab92e329deaf254b502db5653107b398aeeedb99a8d9812c75df99e16"
+    },
+    {
+      "path": "ai_engine/language_engine.py",
+      "sha256": "110484abeb3655c5c0cf5b509f4100d194c7a5aea88662e0ceb3da86d267d7f3"
+    },
+    {
+      "path": "ai_engine/probability_engine.py",
+      "sha256": "ef369f1a9fbdaf0629f1040c058e70665700e632dee48b197255c2130e11cf86"
+    },
+    {
+      "path": "ai_engine/question_engine.py",
+      "sha256": "175d13f32bedafd6c8ee2f4fba26c4bef48cf746ac4127537f1c0c2f40952dd3"
+    },
+    {
+      "path": "ai_engine/reasoning_engine.py",
+      "sha256": "0e2cb61eb0d7a87d67baceb571ae0f8387891b863c9c13743f875f8924efd343"
+    },
+    {
+      "path": "ai_engine/response_formatter.py",
+      "sha256": "654ccaebe06eee8108c47c2cdd76e7bb1f0e42daa0c710eeddc540bc865f8610"
+    },
+    {
+      "path": "ai_engine/symptom_graph_engine.py",
+      "sha256": "8bddc10e72c5a595c4b2a5629eb7ed9f028f352a38f1bcf774b8e0442b7eaff9"
+    },
+    {
+      "path": "ai_engine/symptom_weight_engine.py",
+      "sha256": "289b2e7eb64824f14815e023765dd6c30f2b5d5f067ebe9765cef9ecf89393ab"
+    },
+    {
+      "path": "ai_engine/synonym_engine.py",
+      "sha256": "f2b298ee351b3b7ac1733fc7f3de364a9bc45b7db2e1ca43360559df88337cb8"
+    },
+    {
+      "path": "ai_engine/system_detector.py",
+      "sha256": "2c76cec67eb00d73feff1e670a5e1c9171fc5f87a52003939ee78a0cc00db3c0"
+    },
+    {
+      "path": "ai_engine/text_processor.py",
+      "sha256": "e6ed9020d3b7556f3f26cfd925d137e762b99307b1935297700f3ce5312092ff"
+    },
+    {
+      "path": "app.py",
+      "sha256": "499bb7adfad2e52399260a25f4a93c0e75f12205f57a7f6cc665d3889fbe8ca3"
+    },
+    {
+      "path": "docs/account_deletion_future_automation.txt",
+      "sha256": "004b4b84748c90ab7fa404609e25b3e52fd68fe4970d24239c1474b0a4094dc0"
+    },
+    {
+      "path": "docs/account_deletion_manual_1_0_5.txt",
+      "sha256": "4414c4684fc3d3d9df057a28503b2788797b37bee83df499b724968792584ab7"
+    },
+    {
+      "path": "docs/community_blog_phase1c_handoff.md",
+      "sha256": "c17c2e8977502e9260abcf63b5a9bdcf6bf724a81519901e95e1f86046c57098"
+    },
+    {
+      "path": "docs/community_blog_phase1d_handoff.md",
+      "sha256": "7903c5a94af565ca5a0d5fcc9dcacf769d4ed2b56781ffac9c414c6a24b9b119"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_payload_matrix.json",
+      "sha256": "44baffd1409c34dd1275daafb97cc2890dd318beba4e6fc6ea9c32aa6572613f"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_payload_matrix.md",
+      "sha256": "c56637987e14206f136db9dc6097fa82859f9a2ccbe62d1edf510cfab5fd2ee5"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_performance_raw.json",
+      "sha256": "43227e6ce1b5f96fcd324f402a8dbe1559217fb2bdfac3756215f10fd37b8570"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_performance_summary.md",
+      "sha256": "25c470ec0f915c999b11cf16bf1cfec44d295d086792e8e693ecf915a1872a00"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_resource_cycles.json",
+      "sha256": "14f33cd1e6e9512b7f3b10e2f155add9c0ce09dcd31a996fd60821ebbb15e2c5"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_visual_hashes.sha256",
+      "sha256": "fcd7e84c98c37997026851b777dfed65849987669562e3c5c50a5b92e43a3eee"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_visual_manifest.json",
+      "sha256": "c2a974b0e0f4158ee362bee96de3fc5f83c8e83d6c8d845689eb3a54245fdec0"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_visual_manifest.md",
+      "sha256": "2c9beac2b8bc3d677189e2bbbd099c776b767c446a9c0fc2de7466b7c8febfe6"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_visual_reviews.json",
+      "sha256": "eb482aed58e24be5edcb91f14e5053e44737b579c082e1d537823e141efb17d8"
+    },
+    {
+      "path": "docs/evidence/community_blog_phase1d_visual_runtime_metrics.json",
+      "sha256": "91ec97b5709df30cf9bb56dea3f2dae23e666bb3f1e01c681749f80428da38c2"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/analytics-1024x768.png",
+      "sha256": "6447091a8b28165cfd316a27db415ec458aaf70966b819767610ba6e35c09015"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/analytics-1440x900.png",
+      "sha256": "3a1ec309d5bd94150bebc6d26439b542330e4ab7e639d79643841bced902a683"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/analytics-360x800.png",
+      "sha256": "235b949f976c589847bb5dc23a54fd8036f22bd4c424c2d5b4dbe4084e5eeba7"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/analytics-390x844.png",
+      "sha256": "c3ef39a89744da09af22aae0c34c3763b89ced8dcc21fc1590cfccd854c6973f"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/analytics-768x1024.png",
+      "sha256": "091ec5ed202b24a9bead9923a31e11abac28d2c99b0bbb0c23c360873cf83e40"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-all-blocks-1024x768.png",
+      "sha256": "344ac49c2466462cd8592ecd958133a0f7b783a855a12cbfd3efd08cabddf72b"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-all-blocks-1440x900.png",
+      "sha256": "e2a39081592a0cf87f888cc0480803b383a10bbc7a7fdf66a1548126f9adcbb6"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-all-blocks-360x800.png",
+      "sha256": "5b4aec0493ad8607c77880aace355acdb0d9e3b917b74e481b093e949f2106e5"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-all-blocks-390x844.png",
+      "sha256": "754282e5ca1b14359706782ecf96ae562ea59ec7142c7188b5efdfc763963e88"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-all-blocks-768x1024.png",
+      "sha256": "cbba7422da256da69b42ea5dce7a431be480a3fff87d2d63e9b7f910b7e8fdd9"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-comments-1024x768.png",
+      "sha256": "bcd5e48286e386f95d09d436683416dc45b98a60ecd2804e936b3bc8659dae55"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-comments-1440x900.png",
+      "sha256": "be8ef18f33944b167d0a9442d3dc378b45fa46a4f77e3ea2e14c56dd2df8b361"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-comments-360x800.png",
+      "sha256": "5669e33a1aa23647f351e9e09a600db4c4d2b35682b31bec3cd6eefb7f5a5d45"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-comments-390x844.png",
+      "sha256": "b218185b1a0f0cde459549c32724ab24b6644f814c4d1ee5ae7a6b53366e62aa"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-comments-768x1024.png",
+      "sha256": "aa048d28ab03dda0a2b8faa4b7d37e6a45940fb76e8362d597d51e439d78a7ce"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-deleted-parent-reply-1024x768.png",
+      "sha256": "b1390a0b20d2dc6bc1a0c293e612b11e69fcdbcd9e8c6a1180d12ed7fa293eac"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-deleted-parent-reply-1440x900.png",
+      "sha256": "b91c77849dc576a647e249e9f20deb69d218b45f91d9d643b8309172c1e1f2a7"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-deleted-parent-reply-360x800.png",
+      "sha256": "0779c1fc3473f9c6603bc269c07846e057b59712d89c58a4b247f2732209390f"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-deleted-parent-reply-390x844.png",
+      "sha256": "13e1eb0079b1eeedc97c7ac45555606761ec1c2bd6295db9da04fa94a029b050"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-deleted-parent-reply-768x1024.png",
+      "sha256": "e22711108f6a388a33cf7c1cfcd43cc277dc926c399c06570a2f27589785018f"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-published-1024x768.png",
+      "sha256": "abca58f3fb6f3d7759250f1acfab401042572969df3c6fc2e8f0b85429e4b2f8"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-published-1440x900.png",
+      "sha256": "0f6f17a82bd57c8c02852c40adf8cdb97b3aedd10d6d3fef1c2a0cab621a7d16"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-published-360x800.png",
+      "sha256": "47e6f11412398addbc3ae5c0056168b47f2f340e5b7a9e911527a7475c309fbc"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-published-390x844.png",
+      "sha256": "3547b06477b3d2f734cfb767a3b007923b4b995997647d698bbc3f94eff3bbb5"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-published-768x1024.png",
+      "sha256": "936cc65a5fba7006f1643851f9c5a7c0b238109e7318803e559def325c084174"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-report-1024x768.png",
+      "sha256": "a5fe4fc483a1cf72bf595508b03d04bd8d500eab2a0a60c886b3c6cbaa50b9c6"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-report-1440x900.png",
+      "sha256": "d422b0ae55e962aebb8cd78ba29e3f717cedb83c3387c479c265d2a1457bdf8c"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-report-360x800.png",
+      "sha256": "a08047e8914c8443f2ac8e1bc01a9406458d685bcbede0c3513bb1222467fb4a"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-report-390x844.png",
+      "sha256": "47dc381e52109b6cd6dde63e5c9013ee3ffd885a21e3201f7cc21e5b79143ec6"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-report-768x1024.png",
+      "sha256": "778617e26f9a515755ae31a1c832a34b1b4cca64660a8a5da3fedf90d33e1353"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-rich-long-1024x768.png",
+      "sha256": "994d7a5cc4d9a2177400f821d60c9a21bccd81323ea47feb2db77bbe1a6582d3"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-rich-long-1440x900.png",
+      "sha256": "591a2ce24578ace8fc24d1b613452299c22f1f58bef22f5f148cf09e1a5832e6"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-rich-long-360x800.png",
+      "sha256": "3b913ae3900fba9a1641477a80edfb1f0f936421ed783e660d906ec87f9be283"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-rich-long-390x844.png",
+      "sha256": "bad6773999a0797efecec20788fb27b9d022ef42c45b551123fab40eaa504818"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-rich-long-768x1024.png",
+      "sha256": "d3ca1915cad2be0835af6542187fc52e25fe80f338bff1d42b030601b3b6e6c0"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-share-1024x768.png",
+      "sha256": "0605e2a7133ccb36346add82befc41ea23143f5727cc9059550a9f0cbf170578"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-share-1440x900.png",
+      "sha256": "71e58f08d63b67d80f8cc22a87c916b44f210746d734b1015632d3479095cee7"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-share-360x800.png",
+      "sha256": "43f2d384479025fa5075b601249c46bf70896be2fa73c5c299d795eb398cc1dc"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-share-390x844.png",
+      "sha256": "a03fa7d9a19067a4c80fb1c0f799e6d6792b88578f84efc537522a07c29936e7"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/detail-share-768x1024.png",
+      "sha256": "af4e7e68cb4584f5acc52977d839dcd1c0e998ee8d6db5b68e42ea9667305d90"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-empty-1024x768.png",
+      "sha256": "dbe274cc08606b88381ead439befed6e732d6c9aca616fb0eacf86d4644474ce"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-empty-1440x900.png",
+      "sha256": "0d3086edd065dac19a397b5ab361c0b65d866fba07fa6fb9a57af14914502680"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-empty-360x800.png",
+      "sha256": "89903b61c254b0d8211943222b6761927b72ee346a6ac7c7a42188c2da95f226"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-empty-390x844.png",
+      "sha256": "554bada83df38d80808ccac3917fb7d585bb3e957d607c6986306b77ba139335"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-empty-768x1024.png",
+      "sha256": "29897c1495faf7e5cdfc06a5f268df031e349975d0ff917015ec0dbbacb96d6d"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-media-1024x768.png",
+      "sha256": "6614657c131fb786a8b0b6b7e78b36d56a9547bbed4cc627cee76e3e4e0a95f1"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-media-1440x900.png",
+      "sha256": "3ac86553b61fc72c474cd7c0311ac42814ed103994b66d63e0e417cb1775e224"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-media-360x800.png",
+      "sha256": "85d6e07afdc3fc1ae51320c4d9e5a1a9455804cb28e64c7502422a3293bfebfe"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-media-390x844.png",
+      "sha256": "0269fd4dd615ec96467ec0d870600b21d67d6cf3d1654d4e9d2db752f15fb6e0"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-media-768x1024.png",
+      "sha256": "1217fd9f543d293d9ff863f0f8273616b94e6cd4797459de80e7d2305314652e"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-populated-1024x768.png",
+      "sha256": "4e5731c84f567c25c8911f7c3fdd3a5fbd099ef22589d6e09b6ba885a459a760"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-populated-1440x900.png",
+      "sha256": "09b2df6ce8963912cc9fc16aae6616a6202aa272aa70093aef7c0ed81127af73"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-populated-360x800.png",
+      "sha256": "f5e4a805ad6f399343df86997ea0010612262bcfbc25fd4b4cc677c5ece14fdf"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-populated-390x844.png",
+      "sha256": "ee96f20fef3d49f4644379556363e6cba7a8f412eb4059c9c64d16c0faf41885"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-populated-768x1024.png",
+      "sha256": "a4b26c9b979363d83c117add96154a39336a70730278b39f32257bdb1691d250"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-preview-1024x768.png",
+      "sha256": "41003e744a9dd584071fe8a5e20df463b602c2749f3bbca86c16e9ee5c179453"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-preview-1440x900.png",
+      "sha256": "ce0f85e1d68f2247aef646c94f2550e8bb3ac7dcf9a3dc29633c50ea706a5c3f"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-preview-360x800.png",
+      "sha256": "0b90d81a10b0ce29e19f0e3350fab8681506d97d4d1d36219a92971873f927f8"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-preview-390x844.png",
+      "sha256": "71c39910e6e97600fa3916939918b2b21ee021bfb2b3e47867d45e14001c9257"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-preview-768x1024.png",
+      "sha256": "ceb7d5d56e78e94726532c523dc1abffd845bb568155b1f22a119b9c9811d3ce"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-rejected-1024x768.png",
+      "sha256": "d2da4100f6984608a7af639759cb4c94d85c5451f86adc424c74f6694201eef4"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-rejected-1440x900.png",
+      "sha256": "238ff1175f9244cc07a42f029dcebe9e355518acb1f1b1e8128a5bb4348f3b2d"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-rejected-360x800.png",
+      "sha256": "6e584bf7a880d7e0f0d88caac5a042dca88f4081019f957cf41578fc119091b9"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-rejected-390x844.png",
+      "sha256": "76a6ff562881b8db3fdb8c7a5525f3fd895becb937b06264e1776d6b5c599106"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-rejected-768x1024.png",
+      "sha256": "760f732b18c732f9ff00040f9a0709d8362a66b186bf8c20f74e7889e5ba8b2a"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-validation-1024x768.png",
+      "sha256": "1b81a862275c5e11b3812c0f294f2b81bb49757b923048690c2ceaa48c37a9b1"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-validation-1440x900.png",
+      "sha256": "b982b2f4f256dfa78f050ffe666546f476d24167a8ce5c1e1f31aa6cb0fb4754"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-validation-360x800.png",
+      "sha256": "ff50caebe0e25f3c4ff9ecb04eab57985e55eaeb19b4a5425798958dd9ea25ca"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-validation-390x844.png",
+      "sha256": "09fcfa0cf621d108ce64c2fbd0507105e07d80ad78f59fbaf91e5f70eae30edc"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/editor-validation-768x1024.png",
+      "sha256": "18feef11e2b38c3b937af318072d4eb56272a02fd7d82c42ca0c2670c1f5d3e8"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-category-1024x768.png",
+      "sha256": "706e9d52e9f8e3adc23f4fb8fda9b89a88b77b92dd2201108d6b1420549f390f"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-category-1440x900.png",
+      "sha256": "3daa243946617874fdb803dfbe24edc1edb4eab467fa64104057b024d9e70e56"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-category-360x800.png",
+      "sha256": "4511f66823aaf83e20591158f64ec1911029877592af004dd1bcc4916a7d5603"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-category-390x844.png",
+      "sha256": "5cac966a3fc4623d6d86b6b54a3447f86471511fa0123f1c07485821f3df69e3"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-category-768x1024.png",
+      "sha256": "d15f5bbe39f7b9983c6a1e03aa7e6febcf0239dd2be8ac6dc5a0a9af44af51a8"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-latest-1024x768.png",
+      "sha256": "3411fada142c5539a9331ff23d54a474eb02f22318f4f57ee0bd8ff3de1cad82"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-latest-1440x900.png",
+      "sha256": "72da05f9f674bbb18b9950d8953503318a6d6964e52bb5d8d7c1f79ea9dd9cbe"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-latest-360x800.png",
+      "sha256": "e9132001b307898b78af47da2dd03a3710c24632e3a55c8fbc1edec070685a53"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-latest-390x844.png",
+      "sha256": "208ef6528b8584e38f9e1cbb8de33b9e843e1cd6c414cf47f4fb44246a500854"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-latest-768x1024.png",
+      "sha256": "3f6da67d945356ffe520260af19287fc4260b1ef9e51ecb6dd10a71e1b153aa6"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-most-discussed-1024x768.png",
+      "sha256": "a8dd8c75d55c35d54176c1417f48288956c0a327cc956723a716e6f5f8824323"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-most-discussed-1440x900.png",
+      "sha256": "6ca1e01d0524302b6cb1f5085bb1a35f6d9496df07ddbcc4eaf343d844d77d15"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-most-discussed-360x800.png",
+      "sha256": "8d207f93943a4d38d0dd8027125376b0b33b60556f6fb1bd4f738c144bd7efc5"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-most-discussed-390x844.png",
+      "sha256": "e48cb469f9cbb6d875baf0a58234b660bf6d80e97c0bf8beb3ab5e9db7e481c8"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-most-discussed-768x1024.png",
+      "sha256": "5fc22152994c214a42786c73c2847e66f4697eb9efda2884c0760dc52f0c07da"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-popular-1024x768.png",
+      "sha256": "b437b86ffbc1991cbfbffb62080ee707b28d1eb6ae6a94b6300b85e60615d46a"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-popular-1440x900.png",
+      "sha256": "4446af57d0edb151657040d6a4484a4fd2b8d9057f2f851cd2184a3cb75ac60d"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-popular-360x800.png",
+      "sha256": "0b108a5f06a29cc935edde94de225d11f731e33b6f152075d6a14a3c4b6fe475"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-popular-390x844.png",
+      "sha256": "a321c2b49cbee479fe6bc681814a4efb6470d535dc5c63eb1a79637fd562355c"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-popular-768x1024.png",
+      "sha256": "694523f22a981497da9e6e0f39b1f1366d202b26a0d6a555c406dbd63e8179e5"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-search-empty-1024x768.png",
+      "sha256": "2ecdc642fffa918a0ab2de027d139f8d4a443fcccf70b54f7d3ecabf97ae8f4a"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-search-empty-1440x900.png",
+      "sha256": "099e619182d0cb9fa73f839a1a06d47daf4fc82b6a249e0db4c9ba2ac5791c40"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-search-empty-360x800.png",
+      "sha256": "3df2e54f00f47230001fa917357a438450ee524c4e5fd0d4bdb5cfee699dc336"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-search-empty-390x844.png",
+      "sha256": "56cd1f237ec7365ae73acf19a74156424ab5c48d56c344fffdf6434168181f4c"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-search-empty-768x1024.png",
+      "sha256": "fc75e9f1351b52714a05f38bc74ce2f6e3a72fd3efd6640b4f6b6461b935fe3f"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-tag-1024x768.png",
+      "sha256": "ddf8c2b6b52ba7ed06d9cf3edcf91b641c9cd33536442bb19c04e711dfcd148e"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-tag-1440x900.png",
+      "sha256": "5472491bae6dc66b6664c1361186d26d68f0e30a9011c44555853c6de238e0a8"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-tag-360x800.png",
+      "sha256": "213eb845a16d2bb9e9d369847f9d5f2e85232e19f733abc68378d30323c86a94"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-tag-390x844.png",
+      "sha256": "5c58c8f915f59dc6a5e766c57191b4353e442063e48c7e2060a257c1b8e4f909"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-tag-768x1024.png",
+      "sha256": "f674481cfcba071c8051ba2ad615c80bdb8fcadc50d00745a10c4a64524b7ed1"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-trending-1024x768.png",
+      "sha256": "a6f59728ddf3a60f073b0d7fee7c182a140f37536fc6f1b74cec7330b66bb594"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-trending-1440x900.png",
+      "sha256": "6df63ad5e8f5290dac3e4eb173dcfc8728a050fe95ae4a12a25cc06c29d99964"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-trending-360x800.png",
+      "sha256": "1d2a8f2824fa0a4b0c3e3c1562be91bc0b741136e42ed22dd897b0a3a957c51b"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-trending-390x844.png",
+      "sha256": "36b89b291392765051499724e5acf54fbaf8887228e73fcf128e79d12c50043b"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/listing-trending-768x1024.png",
+      "sha256": "61f1756ebbe42a7a552cc663c91821ba06ed098c406962cc575137fd54e62225"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/login-required-1024x768.png",
+      "sha256": "3f6f2f73f3c32e0fe44aef10c748829e3f0f89af22d3b182ac3795cb6fd990a7"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/login-required-1440x900.png",
+      "sha256": "2cbc596c285f277f46aba924e3d0cef26687022dafec7e0b6b0ed2c8ec4c31c0"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/login-required-360x800.png",
+      "sha256": "9e9f7e2b0d1662669d83b017cf36772dfd0baedfe3cc8499136b7245a6897c3f"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/login-required-390x844.png",
+      "sha256": "dffba323e86ae35a8ba016da8b0e52d93b41fc09b3636e30cbe2508411351328"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/login-required-768x1024.png",
+      "sha256": "4db9d944a08b61420550d3d91b4611a43f56850ee463a450a58d914945b56384"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-action-1024x768.png",
+      "sha256": "23f6a3eeb74a50b0380eb3ae2cc2f476ad59a15c0c6a95caa9507049a5bea47b"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-action-1440x900.png",
+      "sha256": "0f2086404c0cb47b013c3be72262fb40c2170f80c475e8f10d150ec3c7768b1b"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-action-360x800.png",
+      "sha256": "a2657396056fcfbf27cb81a31fd5da6edf9aa137029c243b709604aa99cdacb0"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-action-390x844.png",
+      "sha256": "d1f4f1ffa2321d9a83bcb1bcd65171a3dbdedae1168944713de1fff187e17667"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-action-768x1024.png",
+      "sha256": "568fe1f134abfde39fd96e8c950408319a614566dd3ac059c9ae5effad0d9467"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-queue-1024x768.png",
+      "sha256": "426496bb253dd7522dd8ec34ca63adc07820d1414a8230adb5516cd307270c7d"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-queue-1440x900.png",
+      "sha256": "cd161fd39181698fb9b25e470b586a480ee6f4de502fcefc8327552e0d7b9b48"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-queue-360x800.png",
+      "sha256": "5fe56048f2302e0cc92e8c3b25a52cf38f68ecdb92a470d947cc5852c80cab56"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-queue-390x844.png",
+      "sha256": "8d3cfbb722a4ad8510a08d92127a7acd79d665717b7179522bbf44b6c354f219"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/moderation-queue-768x1024.png",
+      "sha256": "785afd19f6ac26e369913238dfc8fb1cbd127d5a0676ae2432b8464f01965802"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-1024x768.png",
+      "sha256": "c251046204106b2727fd3af16032db69d4223e31ea5993b92bb14a6ef38508dc"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-1440x900.png",
+      "sha256": "8d1e164aec609bcaee9483a83c637cc7ebdbb45bb26d62cf259c26db1a6393d8"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-360x800.png",
+      "sha256": "a4165ebf6165e1f29c8f9cb247671d9d2beecfd6e7254423497d820208c321fa"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-390x844.png",
+      "sha256": "a736f49fbd278ea062419495c21bbce42fae069aa903e3f86ce46661a858bbc3"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-768x1024.png",
+      "sha256": "9c6cd5394ad0b051ea1735613ca918d397400bca7b33ec8ea25739f3c7aa1ff4"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-statuses-1024x768.png",
+      "sha256": "f06558f0be9c6a9cafb4402a988fb54676a051418a5a1800d82235869f69b871"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-statuses-1440x900.png",
+      "sha256": "f35f60623badc10fde812b46f2baf897de5f4d865aa93a670d1b4174fc37f612"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-statuses-360x800.png",
+      "sha256": "76f1b5117d28aed82f05bfb495e75337d35719de2bd38bdff2572b1601085c5d"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-statuses-390x844.png",
+      "sha256": "550f3e7fea9de4795db4109ba0fa9bb4223387b20f95e8c007b7af5928732161"
+    },
+    {
+      "path": "docs/evidence/phase1d_visual/my-blogs-statuses-768x1024.png",
+      "sha256": "293150d6a36f8d748ec0583cc9f4dde891f4abf9f26b23f793e3367a740b6b11"
+    },
+    {
+      "path": "docs/phase1e/README.md",
+      "sha256": "0c3e7c7086163e8b360b024d87f9ead9e6b10e6862d1df5f3354396b7e6db000"
+    },
+    {
+      "path": "docs/phase1e/backup_checklist.md",
+      "sha256": "659b46073cba18b02a3312c3f3ff98abba572e78e5dcc2d050b1d727eb612714"
+    },
+    {
+      "path": "docs/phase1e/deployment_checklist.md",
+      "sha256": "7ff7d9030e8d27295cea2707260df8e073f0ed6e96e6e718d8a3c05c4b7e104e"
+    },
+    {
+      "path": "docs/phase1e/environment_checklist.md",
+      "sha256": "b12142ff56cb3a2e0ae8ba0ae1eaa2aee61e1c2375bf4aa99f5de167f2cfe790"
+    },
+    {
+      "path": "docs/phase1e/monitoring_checklist.md",
+      "sha256": "4059dcbe393a419f63c23a906cbbceac3d487db73f6ab9808206d2f329d51022"
+    },
+    {
+      "path": "docs/phase1e/production_migration_checklist.md",
+      "sha256": "9b94b69a5a6f078915ac0b57093f23a0eac6a1ac0d285953d11a7837ac0b058e"
+    },
+    {
+      "path": "docs/phase1e/release_checklist.md",
+      "sha256": "0d8a299677860bafcfcae194e5d14dca2e8da87a0ad69f956be109f20dc93f2d"
+    },
+    {
+      "path": "docs/phase1e/rollback_checklist.md",
+      "sha256": "042fc5a2a61b81146522c6cecf9a2f07a414233feda0acc9470abb379e569879"
+    },
+    {
+      "path": "docs/phase1e/smoke_test_checklist.md",
+      "sha256": "a3a7b5e19ff59feb0fb0af5cca145d68e4079896910fc6cb182a227d39c3ba38"
+    },
+    {
+      "path": "docs/phase1f/backup_verification_report.md",
+      "sha256": "28f4fd48fa5336c4402501109a60537574dfa1cccf463198bd9ef9a44a26a0c1"
+    },
+    {
+      "path": "docs/phase1f/environment_verification_report.md",
+      "sha256": "d044bf41dd075e1938816d29828bd11aeb0f913bc0f37969567b445e3140f21d"
+    },
+    {
+      "path": "docs/phase1f/migration_preflight_checklist.md",
+      "sha256": "9f99637701fcd90c63f789943fdad13bfc1b2cccdf343100e14126470fe7e5b6"
+    },
+    {
+      "path": "docs/phase1f/production_release_approval_report.md",
+      "sha256": "e4c97ff16a176914076295f51a86e5ca51bd060cd8bcef385b39a75c11e31fba"
+    },
+    {
+      "path": "docs/phase1f/recommended_commit_sequence.md",
+      "sha256": "020df29f164898d25137822e6b6259890fc8d28686fd663458e93039768ff474"
+    },
+    {
+      "path": "docs/phase1f/release_inventory.md",
+      "sha256": "08cc315a8ac6db42250d19da72080216e2351f1fe03874a5638f61390f6fc4ac"
+    },
+    {
+      "path": "docs/phase2/README.md",
+      "sha256": "489289b191fb61d3b02e96d85d9ad07fb6941ffff8461e6c1ec207902a805386"
+    },
+    {
+      "path": "docs/phase2/deployment_preparation.md",
+      "sha256": "cf423492c1db20e6521aa79fd4700e9adea2e4a984d312b3741a13b8311b3971"
+    },
+    {
+      "path": "docs/phase2/final_environment_verification_report.md",
+      "sha256": "c6deb6bb35b79904e79656a6aa52f223d68edfde561f9cc165df87bc01d8ec4a"
+    },
+    {
+      "path": "docs/phase2/production_release_approval.md",
+      "sha256": "a86f0099ff3019e8abe2cc0ba42b7e13e3cd564c79f122f6e3c32b7837bd95b9"
+    },
+    {
+      "path": "docs/website_csrf_security.md",
+      "sha256": "b6ec771fa699532ec9648dce0bcc07c215c9b71026c1c0299268ca7049440f7e"
+    },
+    {
+      "path": "failure_database.py",
+      "sha256": "f7d9540efa0446bab96eaa8af58b48d5e96a5e1dd345ce53027958a3a7721b39"
+    },
+    {
+      "path": "gunicorn.conf.py",
+      "sha256": "8e64d971c5893e39179c54bbf3358f0241b35894ca6bc9c2f2e83dbf73d42a38"
+    },
+    {
+      "path": "migrations/20260531_add_analytics.sql",
+      "sha256": "2dcf5b3e6316208f9e6f1a94d54b9ae73f7cd5a8d1dac23c9f0342630d854b91"
+    },
+    {
+      "path": "migrations/20260720_add_news_content_blocks.sql",
+      "sha256": "2fcfe8c926a0143af10ff031d60733b561c78da8dd5d77dd30a54924a33dc34f"
+    },
+    {
+      "path": "models/models.py",
+      "sha256": "1c54d51b699c143021c7077e117ae5fd2e86ef5187a87c42469f73c4f095cc9d"
+    },
+    {
+      "path": "render.yaml",
+      "sha256": "61795a1ca2f4891834f9e9a02fef0c1eb195602968b7dec2a07136350cd828c1"
+    },
+    {
+      "path": "requirements-test.txt",
+      "sha256": "57206168390f60cf2d79e86442b8fd378d46538031480ab12f4e386230b35577"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "7a791771dd4c86684343e94580897c2b1293a43b99b2a0d37025809c9d6cefcc"
+    },
+    {
+      "path": "routes/_init_.py",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "routes/admin_routes.py",
+      "sha256": "7e841d0a759551b58dc8cf855a862e847add8dc73cc09380266683559433e586"
+    },
+    {
+      "path": "routes/ai_routes.py",
+      "sha256": "820361c9c78a9f27d212efe0ab9ca896bb23d8e923c4a326bac2f3b2b7db459c"
+    },
+    {
+      "path": "routes/auth_routes.py",
+      "sha256": "05f43ee5483fc69cdd286bbf7a2e2dde7b66265293b4e2dfec4edc06fb852d42"
+    },
+    {
+      "path": "routes/blog_routes.py",
+      "sha256": "f14832e2209f03e20a4750250cc115f6ae71974b33329cd9137cc14ad5ec86da"
+    },
+    {
+      "path": "routes/canonical_garage_routes.py",
+      "sha256": "83b87ee1923f7427235396e4820c27a94a2c4af4b604cf2da7d71d32fd94e884"
+    },
+    {
+      "path": "routes/community_routes.py",
+      "sha256": "284ac022beb04184a2528559025aba5ef9dc8ae5f0ae21302f89fcf15a99fc89"
+    },
+    {
+      "path": "routes/garage_routes.py",
+      "sha256": "c565af8a3ffa96bdeda823aa17b9fc0243bb8461db99ca49e76b4e0cdb0edd9c"
+    },
+    {
+      "path": "routes/main_routes.py",
+      "sha256": "e93d91a67e8fed662b46d35f752d20613b28c97861b8dd8bd9cc438de97ccab4"
+    },
+    {
+      "path": "routes/tools_routes.py",
+      "sha256": "6a8e067b6b771707655d2ac46dbdb4efcc2a68a7d419d6ea5122f1c310548689"
+    },
+    {
+      "path": "routes/user_routes.py",
+      "sha256": "13fb74f3f4c0d9609361d50e73cb2897064308f7a01c6f3d9740a91a32b679e1"
+    },
+    {
+      "path": "scripts/check_diagnosis_quality.py",
+      "sha256": "3bf334b52e1d614c167d91e590d89a799e6fac92b8f730b45b33f737664e48cc"
+    },
+    {
+      "path": "scripts/garage_seed.json",
+      "sha256": "3f51bd31b5d50bf97d97aef7735c40707e9da01043b16a7e2513f90e372d3d27"
+    },
+    {
+      "path": "scripts/import_garages_seed.py",
+      "sha256": "201d6759ffed99c62f44e28df3b5d1fb2689a520f272cc49dbd2ca2a72cc1e8a"
+    },
+    {
+      "path": "scripts/prepare_analytics_schema.py",
+      "sha256": "6e6e262fe7d88846718ec9b97f4e3b79ad937226048fe68e91f60f2dcc632fa1"
+    },
+    {
+      "path": "scripts/prepare_traffic_metric_schema.sql",
+      "sha256": "f43450798458717e34131d477e1373aa37d70956035265c9a969ec40652e2c08"
+    },
+    {
+      "path": "scripts/seed_managed_personas.py",
+      "sha256": "9a6da5ad97f45845013ef2d36bf572174b1d9c4f03afde4e4ba5b354d652d7ff"
+    },
+    {
+      "path": "scripts/validate_failure_database.py",
+      "sha256": "f8dddae8ea00af20696912aa95a8e76774d0d35b31da60c1919756a1901a1090"
+    },
+    {
+      "path": "service_estimator.py",
+      "sha256": "cb58b8dfda1f0cc2a49846193090de58338f00eeafa026a231db3ae20e3735d5"
+    },
+    {
+      "path": "services/account_deletion_automated_ui.py",
+      "sha256": "3c7a4496c943ca04ef547c58e272e1da14e7a51b04a9c50e640b92465f80c06b"
+    },
+    {
+      "path": "services/account_deletion_client.py",
+      "sha256": "4251fabf9ad72ad8c3bffd5cce5cd67d9f2b95413332a2fb4d321067a3c61bae"
+    },
+    {
+      "path": "services/analytics_contract.py",
+      "sha256": "c05198384a2dbc9229d63946e510a4ec47fc67ca4f85ecc380396f51b93feaa1"
+    },
+    {
+      "path": "services/analytics_service.py",
+      "sha256": "09ccc9f53e332b60331ac59af2293482b2d91e47df06ad790bee1d8ab635fce3"
+    },
+    {
+      "path": "services/app_api_sync.py",
+      "sha256": "516d917ff9b57a3b2705c5fe1f9c969404a3686c0a62915bbfe0d7b47bc6d6b0"
+    },
+    {
+      "path": "services/automotive_knowledge_engine.py",
+      "sha256": "e9a46bfb52223d815ead8c8edac1bfe193b16b8ae48637fde493aa73925f126f"
+    },
+    {
+      "path": "services/blog_api_client.py",
+      "sha256": "dc3daa3d0b60edff56878e4051382bf34b66927e05d4b3d372cca27811567b63"
+    },
+    {
+      "path": "services/canonical_diagnosis_client.py",
+      "sha256": "ed389b1358f5549166faced4dcd2c2762db7d23f2f786a22026426f5429c1a0b"
+    },
+    {
+      "path": "services/canonical_garage_client.py",
+      "sha256": "34f52fd360db3c3fdd5102ebe498c86fcae2e3bdec70b821ac7f7b2cab036155"
+    },
+    {
+      "path": "services/capability-authorization.json",
+      "sha256": "a15f4948df3ef13a1bf36757be3f1421d45d317657e47f25dd5f052e4a8abd8a"
+    },
+    {
+      "path": "services/capability_security.py",
+      "sha256": "f1c66ea30785ec32c936a3829291fb1cda0bbcc4dfa559d69dffa042e80f4edd"
+    },
+    {
+      "path": "services/car_health_engine.py",
+      "sha256": "bdfaea300107d964a65a7fef7133d183774e1ae089518f4c1c8ee13d7d53e81e"
+    },
+    {
+      "path": "services/car_recommendation_service.py",
+      "sha256": "97d4fa0440b29002c9ad9c9567c4d3ae26c3d5c71271c52321a3bbddc1e8fc30"
+    },
+    {
+      "path": "services/checklist_labels.json",
+      "sha256": "4ccdae95efb6c7801aa3076199d1b5d21b8d24148a4e771ec0e7f2f59ca7d659"
+    },
+    {
+      "path": "services/component_health_engine.py",
+      "sha256": "8d6a88ad2a5fa533b8d43e9987902ad3312592e589ed51e32ec348ad7d5a8e3f"
+    },
+    {
+      "path": "services/dashboard_light_intake.py",
+      "sha256": "9062985f0fa3baf1e091b06cb0a9fe9ea4465e94bdb92ac8ca2638926a4b6e53"
+    },
+    {
+      "path": "services/diagnosis_safety.py",
+      "sha256": "b7a54b57e6358e8a26e91b11d2b435fc5cbbefc73ed3e0f5a66da7126a76ad5e"
+    },
+    {
+      "path": "services/driving_pattern_engine.py",
+      "sha256": "3a14efd3b8f778e0f1605d5665aed469e9cf866dbf32091ca2ef10760676692c"
+    },
+    {
+      "path": "services/email_service.py",
+      "sha256": "0543907d547355424e9de53727df4d2701f1257770895ef169af7782c00f7b95"
+    },
+    {
+      "path": "services/failure_prediction_engine.py",
+      "sha256": "280483430f6cbd02022bfeae6ac30c5273bb32f3905b35e5aaac364cbc03886b"
+    },
+    {
+      "path": "services/garage_network_service.py",
+      "sha256": "168310614e088c7d2b13c2f7de7554db1aab1988a63311d5ae2316fccd0968d7"
+    },
+    {
+      "path": "services/garage_presentation.py",
+      "sha256": "bb9c0172c081129278ba279b74fb77693392eb181d1d6519b2f0a0fff5f54c17"
+    },
+    {
+      "path": "services/garage_summary.py",
+      "sha256": "e006d5e9a3e6dc0753ae111c6d993248ce6d69e9ee063476a1d87ae063a0f168"
+    },
+    {
+      "path": "services/google_profile_picture.py",
+      "sha256": "3d799b6b407c41615b63a531b3e0ae116144c9213ad6ed7e64ca543dd59f949f"
+    },
+    {
+      "path": "services/india_car_catalog.py",
+      "sha256": "a306c2fa9d9813f76bbc89ba3d4e3f4a7486a65e8944d4b36c45ffcfc8f15b21"
+    },
+    {
+      "path": "services/maintenance_engine.py",
+      "sha256": "2d596493d39ffda78dad4a4981db452dbb6a1f35c346efc74bd6858646bfc364"
+    },
+    {
+      "path": "services/maintenance_qa.py",
+      "sha256": "63e907a2f57c6b26f23b23f7b322f69c216d7d8650dea18bbe2407395fafee1c"
+    },
+    {
+      "path": "services/manual_deletion.py",
+      "sha256": "e168be8694f090ad725805c6b4dc2765e032a2339b352aa732c4b4c5dd3815eb"
+    },
+    {
+      "path": "services/news_admission.py",
+      "sha256": "b747facd50be4e65c69d01a4ab8c9087333d20b9e3a1c3da42153e95f081d5f9"
+    },
+    {
+      "path": "services/news_content.py",
+      "sha256": "86ac5cb42afb7bff4122906449a8e74da5fdd4df0bfd131f7ee184d557c9a307"
+    },
+    {
+      "path": "services/news_write_guard.py",
+      "sha256": "2a3830664caa86018f7f62d94390dfa5945215cf5f5e9680b5b23f9e12ffd441"
+    },
+    {
+      "path": "services/public_image_storage.py",
+      "sha256": "a8a8df763926b09b253729525e98a0b0a699718bd90359854991ae7387b4cab4"
+    },
+    {
+      "path": "services/service_interval_engine.py",
+      "sha256": "7173dbfa0f72f49a79003d3cf073c3927fec67ab99bbf4701bc980718e47cb5c"
+    },
+    {
+      "path": "services/service_reminder.py",
+      "sha256": "f8da60445c0e2641d52bbbb083cf1c1ddf09bea2222d3df5943d79969d9d1c92"
+    },
+    {
+      "path": "services/service_schedule_engine.py",
+      "sha256": "69e99bb790f149786628ccc1a43580c4d1bb0e215989e094d0bff1927c2f8c4e"
+    },
+    {
+      "path": "services/service_timeline_engine.py",
+      "sha256": "f33def4c333717729e2185d1357fc23872f0e5b91a3cdf975d9cba327fb3f989"
+    },
+    {
+      "path": "services/traffic_quality.py",
+      "sha256": "a8be2dce2f627ad408a27d59188faa34b3620287ba5a145cd2eaa51edbaa108e"
+    },
+    {
+      "path": "start.sh",
+      "sha256": "f0124bcdf782dae7a8f98e844b4dcc67331e6f9242328d3fd79f9117db7c6b35"
+    },
+    {
+      "path": "static/css/account_deletion_navigation.css",
+      "sha256": "e764d29a5838953cb220f7562ca5ac8c8886dcdfd7c85393154b900c9fbb76d0"
+    },
+    {
+      "path": "static/css/admin.css",
+      "sha256": "a0c3d12f9c099e2e8f679d806da62a9ef860e24df81536368f3e4ad35489ebc4"
+    },
+    {
+      "path": "static/css/ai.css",
+      "sha256": "5764adf6babeefc770b8b542d933dce94d65973cb9c5808fc14d54d29f0ec4b9"
+    },
+    {
+      "path": "static/css/animations.css",
+      "sha256": "7223988363e086a46e41a17c5700151d18faef3d20a7888eedfae8d74229bcba"
+    },
+    {
+      "path": "static/css/auth.css",
+      "sha256": "9ddd8996a2f755aebdd570f024ebb47107ad88b6606dc3d3e6e1c462c6845a3d"
+    },
+    {
+      "path": "static/css/base.css",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "static/css/blogs-rich-media.css",
+      "sha256": "a55f83b6d1760e5c0ae2c679268e5c6f571321e27e665d5dd4d018dc452c7324"
+    },
+    {
+      "path": "static/css/blogs.css",
+      "sha256": "ae1d58547676fb92e160e04fc006594f28125b30c9e98b292ca820ae766981de"
+    },
+    {
+      "path": "static/css/car_health_dashboard.css",
+      "sha256": "ab4d8b7616b2547d521852eefe02dfd91f237a0c982103a7b6afea12d612506c"
+    },
+    {
+      "path": "static/css/community.css",
+      "sha256": "a5d4f1834db3b76362c1a34a082dc1bce94d43af712c2462253131e63e1e5371"
+    },
+    {
+      "path": "static/css/components.css",
+      "sha256": "d5e08a619e96be6449ee5ed64ac45f6e948ab77df239ec5beec02553c9ce414e"
+    },
+    {
+      "path": "static/css/footer.css",
+      "sha256": "c7fcfa259aae1a6bc68bfb4f42424d50de12e26e77e83a9ff1899f97e37d8fe0"
+    },
+    {
+      "path": "static/css/garage.css",
+      "sha256": "0917f3a54dbbca912fdfa8ec1459bbd154e28f5776b79eb82e1d619ad31c899e"
+    },
+    {
+      "path": "static/css/global.css",
+      "sha256": "5a341f742dc96af182223abbf6248d35f29ce2861e49d4f85fec1e30ed9b5f86"
+    },
+    {
+      "path": "static/css/hero.css",
+      "sha256": "3e68a10fbe7cc6a251aabb9636ded59ea02bd3d8291cc2d470b62f934c00b1d6"
+    },
+    {
+      "path": "static/css/legal.css",
+      "sha256": "5ede72a62c0c807b15ec6c153c1e1db5aeda92fa0d42a9f74793ba2134704dbd"
+    },
+    {
+      "path": "static/css/navbar.css",
+      "sha256": "0d1ef506a63d3d4a17acb0400b42d1eaead2fd20f8ecd22d67277c45c8251daf"
+    },
+    {
+      "path": "static/css/news.css",
+      "sha256": "abe8455f59c6873273eaa0ce48adf43fb8d68e72e5993908d6521c045ff52c51"
+    },
+    {
+      "path": "static/css/profile.css",
+      "sha256": "f582cab3b1a3655e959f3f93c1b8ee49181e9feaff59ee4fc4d8e6f9f5979f2d"
+    },
+    {
+      "path": "static/images/applogo.png",
+      "sha256": "bdd9b55b651787897e73c17349b3e84b2df5524fa5168ef21c40c7e62d48eb4b"
+    },
+    {
+      "path": "static/images/car-bg.jpg",
+      "sha256": "4ce91e143a5e96a5fda73a15b52c213e9036cdfa5089e99b996044b1d6aa3b2a"
+    },
+    {
+      "path": "static/images/car-diagram.png",
+      "sha256": "bf0ee7c39c1cd1d54159be8ef6b42899ba0555a75af767c9b268dc8478f04a48"
+    },
+    {
+      "path": "static/images/car-health/ampyan-toon-phone.webp",
+      "sha256": "ef11c35cb78ececaa60ce99d45df6d40578f479cf3e323bfed987c6e469de4f5"
+    },
+    {
+      "path": "static/images/car-health/ampyan-wordmark.webp",
+      "sha256": "39ebaa8b3f550ca3e94dac6478bfceaaa07b9214a9e4e37c1239aa5e2ecd11e4"
+    },
+    {
+      "path": "static/images/cars/maruti-suzuki-xl6.png",
+      "sha256": "8e399da2b07ac4dda85f3ffb6d239cd513e72f964a17aa4a49947679316f4c78"
+    },
+    {
+      "path": "static/images/favicon.png",
+      "sha256": "fb945c5545bdf8966e2db8cb0acb546ea06766140a91270f9c1c015494a41dac"
+    },
+    {
+      "path": "static/images/google-play-badge.png",
+      "sha256": "f72611e2df8e88204009fd896d05d5e8e83c77009c63943bbffa169559934849"
+    },
+    {
+      "path": "static/images/logo-navbar.png",
+      "sha256": "3588ca93ce48b12e6e8d0e10d9b1d5d1e410d4a7c9a492674ca507a6bad7bec2"
+    },
+    {
+      "path": "static/images/logo-navbar.svg",
+      "sha256": "382fe4b9d4f423592c6bde49d823aa19b748f4b5ce14029ea7ec800d1362072b"
+    },
+    {
+      "path": "static/images/logo.png",
+      "sha256": "0258ce4c4a876d39a8fc88ad41ab8d2a99afdb157210a89303e058a5d5f1b7eb"
+    },
+    {
+      "path": "static/images/logo2.png",
+      "sha256": "32a9778966ce033cea9129b38bab4a19a554a6fa90567f6e2bbeedb1cf84c62e"
+    },
+    {
+      "path": "static/images/logo3 fav.png",
+      "sha256": "699fbac9612fbdfd2b1e6163e7a32cc0c4fa363aa00936054e4d85dcaa78d99e"
+    },
+    {
+      "path": "static/images/logo4.png",
+      "sha256": "d442154115a66adfb429e9a601ba8b9a0a5cef9fd25cbdcdc71e9798ff70d6b7"
+    },
+    {
+      "path": "static/images/mechanic.PNG",
+      "sha256": "3b5bcedc2795bf80e724830277b03575fd2470a317028f2114fc1ea072515a3c"
+    },
+    {
+      "path": "static/js/blogs.js",
+      "sha256": "17dd244ee6014b11a1c3d3626835fa3e38fbe750d4603767ddb5150dab9223cc"
+    },
+    {
+      "path": "static/js/csrf.js",
+      "sha256": "9dd1eb2b8def5b4708221b88676bc26d697b32a9f775e58c5c0fb77c215b14a1"
+    },
+    {
+      "path": "static/js/news-editor.js",
+      "sha256": "04d5dcda02c7988d92a43e16f7ee16108ee9d0a5eadf907b2d463dfd817a2eb9"
+    },
+    {
+      "path": "static/news_images/AMPYAN_-_Powering_Intelligent_Mobility.png",
+      "sha256": "8e329187c65f658cd1a8e8fbefaebaf1a00a16b235d7142b9485b00ea5456bb1"
+    },
+    {
+      "path": "static/news_images/Screenshot_2026-03-08_at_9.13.28_PM.png",
+      "sha256": "22e092e9ebe5cf1c8c385b9b1750d1404ac2afbb146a1b8aea1c98d8cbc0e8e0"
+    },
+    {
+      "path": "static/post_images/ChatGPT_Image_Mar_7_2026_08_11_29_PM.png",
+      "sha256": "dd35956c655fdf47bc443baad08716ecacdf1ff82e7fc77a0cac7a911d32b038"
+    },
+    {
+      "path": "static/post_images/ChatGPT_Image_Mar_7_2026_08_11_38_PM.png",
+      "sha256": "fb556c69e3763bcc003235b195191662941608c7d4dab523c55f5374aef691bb"
+    },
+    {
+      "path": "static/post_images/D2CF983C-8940-488F-B767-80F01134DD3F.PNG",
+      "sha256": "9a0007ddbcd99f9f1cd2c0f4dabb63564ad8d5f85f5972526936ef548d48befb"
+    },
+    {
+      "path": "static/profile_images/D2CF983C-8940-488F-B767-80F01134DD3F.PNG",
+      "sha256": "9a0007ddbcd99f9f1cd2c0f4dabb63564ad8d5f85f5972526936ef548d48befb"
+    },
+    {
+      "path": "static/style.css",
+      "sha256": "7215b08a6dc181129a0b780fe646d610b17e295be338fd09649bf5ef3147d791"
+    },
+    {
+      "path": "templates/about.html",
+      "sha256": "7980c97b22a180d1c2a880065f7d9240122ea78b599aa3bd69a11ca9702c049a"
+    },
+    {
+      "path": "templates/account_deletion.html",
+      "sha256": "89cada832cc359c003777afd739db534c6558822ff8e0c189217baccb9547584"
+    },
+    {
+      "path": "templates/account_deletion_admin.html",
+      "sha256": "888ccedffad897a74e97780ce74700e19ca8533810d00b6d3ca2970ba3d87af9"
+    },
+    {
+      "path": "templates/account_deletion_owner.html",
+      "sha256": "bae702aba570e0748e922c8e43bfd01d18393dc0d3c57ada856aec5a3cddae9d"
+    },
+    {
+      "path": "templates/account_deletion_tasks.html",
+      "sha256": "ffccb171e16de7fe35366c7abd9e7bb59757aad76851848ae44d1fb8c1925634"
+    },
+    {
+      "path": "templates/add_car.html",
+      "sha256": "f557371980386e4d6e853d3d1bd29956f867c20defe25092b051564f7bf2609d"
+    },
+    {
+      "path": "templates/admin.html",
+      "sha256": "636989280fc9abe54296880f4a1da2d1e7bf3e8e90d142914b0c96907c11f6de"
+    },
+    {
+      "path": "templates/admin_analytics.html",
+      "sha256": "0fbe28b3171da81d7deea8c16b6c535d419caf820a563ad5b4f209afc7a66f5b"
+    },
+    {
+      "path": "templates/ai_diagnosis.html",
+      "sha256": "171fda61e8787cce5b07ba4c39dbc8d1ba889a1a8d196fc69e56177c3e0a0bab"
+    },
+    {
+      "path": "templates/auth.html",
+      "sha256": "12d6533efc7eab479a6b4ff100caef29a189586d24c23f5225fc17888ae30777"
+    },
+    {
+      "path": "templates/base.html",
+      "sha256": "82dd5149e28eddea93a5d791696f4edb27ac12a2013b8d0346653f6b0ef39a52"
+    },
+    {
+      "path": "templates/blogs/_blocks.html",
+      "sha256": "ad00cb56177f7b56ce383c9cd925b9f6cac363094fbe577248a5c457a2712295"
+    },
+    {
+      "path": "templates/blogs/analytics.html",
+      "sha256": "f823415fcd336e7018717cbb869fd8280aef9cee37869b1646781ecca888c9c3"
+    },
+    {
+      "path": "templates/blogs/detail.html",
+      "sha256": "8096a34abc11284edcb7291c8bf3f8d258230429e8abd63ce9bb95dc75f042f7"
+    },
+    {
+      "path": "templates/blogs/editor.html",
+      "sha256": "933bd4098b8cc0f58eeec3b29b97000ce0f46cec963348d2160ce908f1c5e2d6"
+    },
+    {
+      "path": "templates/blogs/index.html",
+      "sha256": "d8399014f6a241d98af2cd8d8eebe8f2448ba536407d9d191e657973c7354112"
+    },
+    {
+      "path": "templates/blogs/moderation.html",
+      "sha256": "795cdb910217b2c331f653a397698f1d865fa8d978b169fab8f0c7ef63993e80"
+    },
+    {
+      "path": "templates/blogs/my_blogs.html",
+      "sha256": "613ec3af0be6cdf942b8b1c718a6d011b4f8b108c5a71ad310859ca2189ccee9"
+    },
+    {
+      "path": "templates/blogs/reports.html",
+      "sha256": "0b781269e74e7066311f00bd82d62f39dd46db2729710c8620987f23c244a715"
+    },
+    {
+      "path": "templates/blogs/unavailable.html",
+      "sha256": "d13dee1161e70f8cec7d326ccba2538734b32f4590cf065f8c2ae5b772b7153b"
+    },
+    {
+      "path": "templates/brand_models.html",
+      "sha256": "570468b5108c7090d4ef30663b27a8183bbb9d5d3a46533ca13490efd5910e92"
+    },
+    {
+      "path": "templates/canonical_diagnosis_result.html",
+      "sha256": "5cb71fe2dc68a5afbbc64651968b7297531fd97d6a1fe34739d40952b49efe00"
+    },
+    {
+      "path": "templates/canonical_garage.html",
+      "sha256": "3c901a9053d8d51f1ec4620144bfe6e3b2b7887e94a45191548391719e49c29c"
+    },
+    {
+      "path": "templates/car_recommendation.html",
+      "sha256": "47ea318d08af362c579421176b162e94e80e9e54053e16af49e1fa33a5936252"
+    },
+    {
+      "path": "templates/community.html",
+      "sha256": "1e95c8ecbf7bcdbddddecf2585eff968c9007036026cfc8b62413221b46171ab"
+    },
+    {
+      "path": "templates/components/ampyan_app_cta.html",
+      "sha256": "d0313eaa6b29f45cef73083459fbc82f8abbbd171d9ccb2c1dfacae052eb4b1e"
+    },
+    {
+      "path": "templates/components/car_health_dashboard.html",
+      "sha256": "90fb83a008d2ff59bdfb2cc1607b8d1eafc1506ec28b6c772684195b128668a3"
+    },
+    {
+      "path": "templates/confirm_email.html",
+      "sha256": "49714befbdeebab2f2c1c7812dc0840afa6c8ee9f000ec149f8e61f38633a768"
+    },
+    {
+      "path": "templates/contact.html",
+      "sha256": "3adaf848c904c6f422c8f822ee459f525d21a57e850e5b3a0eb79d25fb55cbd2"
+    },
+    {
+      "path": "templates/cookies.html",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "templates/create.html",
+      "sha256": "33741bfe994c2b45208fd8ebcbf2abde3945674a4ef7c2cf29dab31580b37d5f"
+    },
+    {
+      "path": "templates/create_news.html",
+      "sha256": "6446549f8b22dbd92ae430f7df8e42a1270f3606268a309b54656557756e811d"
+    },
+    {
+      "path": "templates/create_post.html",
+      "sha256": "c7437bfe091967df6aed1e1c24053fbb179ab13b4c9be86c56de21958785735e"
+    },
+    {
+      "path": "templates/depreciation_calculator.html",
+      "sha256": "a13392ee0eccd3c75fd4c6bc57c3ef1ec6a63275046434ad322cf27ad773c7f9"
+    },
+    {
+      "path": "templates/diagnosis_result.html",
+      "sha256": "33e626a67768d26c5d0fe2c73ea2f5cb509ca8ccd75ab3d4a7d2a2339fb5dd1f"
+    },
+    {
+      "path": "templates/disclaimer.html",
+      "sha256": "7325c374d114efb8be1785b5cad211124e6635620f53a906c0ee5380d1f0d99f"
+    },
+    {
+      "path": "templates/discussion.html",
+      "sha256": "08f21b24591eb8c43514326d53bc11cef994ccf69a86b135407070ae71a59cf2"
+    },
+    {
+      "path": "templates/edit_car.html",
+      "sha256": "f557371980386e4d6e853d3d1bd29956f867c20defe25092b051564f7bf2609d"
+    },
+    {
+      "path": "templates/edit_comment.html",
+      "sha256": "294f9a049c471db6faa1b72180ddd2ce9fb10bba8c7b852899ef0a2eeb657bd0"
+    },
+    {
+      "path": "templates/edit_news.html",
+      "sha256": "1992f364ecd39bd5605328e683d280ddd55e0fe8b8b5d44e4aa069924c9a3180"
+    },
+    {
+      "path": "templates/edit_post.html",
+      "sha256": "97fdc1e285735df77d5854c3e1ba337c2104539f3de201f6c69076db759cfc4a"
+    },
+    {
+      "path": "templates/edit_video.html",
+      "sha256": "a52d78412f515a2895f9bbf54df8a9646b0832ff38944aa4ef19c5abb669e19f"
+    },
+    {
+      "path": "templates/emi_calculator.html",
+      "sha256": "1de25afa767ee65a75988337af7aa46ff3e71a76f2da44ce40f93d92acaf6178"
+    },
+    {
+      "path": "templates/error.html",
+      "sha256": "ffba50773878cb86af15eb3d174633ce889cab187aafb56388667ffe4cede087"
+    },
+    {
+      "path": "templates/forgot_password.html",
+      "sha256": "0839aee2016a7a0b33c04325783c77f8e775671789ece40dc625bcca6829eff0"
+    },
+    {
+      "path": "templates/fuel_cost.html",
+      "sha256": "0e1efde9c8053d1ff5eabd956e8039fd1c7c27a579747ac2007c28e7753ce604"
+    },
+    {
+      "path": "templates/future_automated_account_deletion.html",
+      "sha256": "bc5f692a7a9dd9e73540273d975c1339c32910a020cff67ed0761b4c91c77f12"
+    },
+    {
+      "path": "templates/future_automated_account_deletion_admin.html",
+      "sha256": "15549dcd34436f38a3a471129dee9c6fa0764a61654a1972057336c0444f5644"
+    },
+    {
+      "path": "templates/future_automated_account_deletion_tasks.html",
+      "sha256": "74f1400bbe0cfacac307d1e8a65ae3c6dc48d8d57308a4a68ad767ebce03d71e"
+    },
+    {
+      "path": "templates/garage.html",
+      "sha256": "f557371980386e4d6e853d3d1bd29956f867c20defe25092b051564f7bf2609d"
+    },
+    {
+      "path": "templates/garage_dashboard.html",
+      "sha256": "f557371980386e4d6e853d3d1bd29956f867c20defe25092b051564f7bf2609d"
+    },
+    {
+      "path": "templates/garage_network.html",
+      "sha256": "b2b6f16d2d5bc7e90622fb6fe63c9093b335bd0446b5ab830fc7b6e8f2f19e1d"
+    },
+    {
+      "path": "templates/garage_profile.html",
+      "sha256": "8463b1c52422e7e4862244951443cfc3cad82ad39e97c8df0da946e4727ecb76"
+    },
+    {
+      "path": "templates/handbook.html",
+      "sha256": "3438a0a1c904651f584c13a1b51b16ae8c53e5f3f6f7620a204ddbd0a01e9ac0"
+    },
+    {
+      "path": "templates/help.html",
+      "sha256": "a2cdc9e32fc5f47aff76e42232cb0ba13a3b706b6df2b2e610aee8e760785de1"
+    },
+    {
+      "path": "templates/home.html",
+      "sha256": "34cbe7ff1709a908a946ac25415dba3f8103f5352b74719cd7cf2ae6de684481"
+    },
+    {
+      "path": "templates/leaderboard.html",
+      "sha256": "fcd69454248a952134d0e2dd8bb090cc08c35f1fb2399ec75d295688e8a0e353"
+    },
+    {
+      "path": "templates/legacy_profile_cars.html",
+      "sha256": "f557371980386e4d6e853d3d1bd29956f867c20defe25092b051564f7bf2609d"
+    },
+    {
+      "path": "templates/login.html",
+      "sha256": "a3ef9cf9740dc4c89ef0c161e961548a2c1769408f978ce7fb26cb71c78e3bc7"
+    },
+    {
+      "path": "templates/maintenance_cost.html",
+      "sha256": "8c6186c209669e35fe3fb42f30d19135e9acaf2adff545ddcc89c9c970413644"
+    },
+    {
+      "path": "templates/marketplace.html",
+      "sha256": "2e0635690ec9338718b08cc48bdc2e185073244da0b58dd3620d8074cdd1831b"
+    },
+    {
+      "path": "templates/marketplace_create.html",
+      "sha256": "41056f7db78f8d231fd02258faff9d50db67488864a84b2bdf06978212e61e37"
+    },
+    {
+      "path": "templates/marketplace_detail.html",
+      "sha256": "4b926cb17a3e7e3daceace21a00d5f20ea0206223d7063cef378b8e9205fa97b"
+    },
+    {
+      "path": "templates/marketplace_inbox.html",
+      "sha256": "f0c6b4ff80072ce0a0b70be1425bc3d22b3746fa93378b0709ef181784cd0d08"
+    },
+    {
+      "path": "templates/mechanic_dashboard.html",
+      "sha256": "a5901fd853db41d75d3f09addc1af9b26822115e4f7fea446d4fb2a830750bda"
+    },
+    {
+      "path": "templates/models_topics.html",
+      "sha256": "38c21b73aaa9a3e66d82fe758139a056a3b205fb5a07ac0a2483fab4a50d76d5"
+    },
+    {
+      "path": "templates/news.html",
+      "sha256": "48d5d24e34068bbacd100070e16e003c6fd5f9f39380b33f48a76cdbd01da732"
+    },
+    {
+      "path": "templates/news_detail.html",
+      "sha256": "0cb062f3f7bfd4a3897188562e3daa7e2637811962bbcfb971e2cae2766b5f7c"
+    },
+    {
+      "path": "templates/platform.html",
+      "sha256": "84b769404e43f1851dfa2733ceb80a856b7b32859a2b2e80cbfe0fc04948e71a"
+    },
+    {
+      "path": "templates/post_detail.html",
+      "sha256": "e56a8031150e5cb2354c6580f53476b935068daa998f458730b64a17f6393777"
+    },
+    {
+      "path": "templates/privacy.html",
+      "sha256": "851e98becdecb24424242923239482ff9090ae47037da470814562b287c5dce7"
+    },
+    {
+      "path": "templates/profile.html",
+      "sha256": "84ddd5f28ab9c38f2021b32e77e3ce292ad1245bdaf291d39e386ac6864594f6"
+    },
+    {
+      "path": "templates/register.html",
+      "sha256": "654f81553f3e6fc7700c9273c023a0ce27a1e51b7a85cfd4c734753d30cbc2c0"
+    },
+    {
+      "path": "templates/register_garage.html",
+      "sha256": "be30607b100fad3d3fb92f214ca23be41f97588ad70961ae85844e547b7b2090"
+    },
+    {
+      "path": "templates/reset_password.html",
+      "sha256": "c9e32093fae17a28a55f08b870b345dae5313b76c92d2b873d5f3f4369382058"
+    },
+    {
+      "path": "templates/speed16.html",
+      "sha256": "399bfbf2c573ebcb3f832907a806531c26772404152f976e10976d6251dc44a9"
+    },
+    {
+      "path": "templates/start.html",
+      "sha256": "ed1f053b27b6541bffe2095a3d2f77152ca8f308cd033676919516541c17f110"
+    },
+    {
+      "path": "templates/terms.html",
+      "sha256": "5f47dfef3f0d7c3474a9d2127009f5a367bd91f8754cb8673d2b6148c7d01a2f"
+    },
+    {
+      "path": "templates/tools.html",
+      "sha256": "4afb8c8b0c5bea42aafb2db7172fac65d016c8e3ed732d8c9239da1ed77f7fa5"
+    },
+    {
+      "path": "templates/topic_articles.html",
+      "sha256": "fa433b33d0fbcd2a15670fc1dea93a8436ca9b8f0354a933c3e067a0cea1a500"
+    },
+    {
+      "path": "templates/verify_email.html",
+      "sha256": "d8d021ee56d34b4bdb5b037b84426206ed4567a2914ef77cfbebe1bb55e564a4"
+    },
+    {
+      "path": "templates/videos.html",
+      "sha256": "e02a645e1c5fac9f8d84727f1716fad08f01276105f824fa503ed3f714bd3302"
+    },
+    {
+      "path": "templates/vision.html",
+      "sha256": "85c4ba8ca8323e886bd0e0b5cd2427f628629d73b476d233b1b860b372ca635e"
+    },
+    {
+      "path": "templates/yaanix.html",
+      "sha256": "d9592d18bbe733d71a715ca47800aa59dc6a1f6c97a504b18cc3c1731f4850b2"
+    },
+    {
+      "path": "tests/__init__.py",
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "tests/backend_contract_server.py",
+      "sha256": "48f779423b307f81be8230c09f270b862f6deac7ce33354c3af86f784f8d8d66"
+    },
+    {
+      "path": "tests/conftest.py",
+      "sha256": "fa17c077225c07be6de9dd84b2399dfee075afac7a6bb2c6d22bf8822273a096"
+    },
+    {
+      "path": "tests/csrf_helpers.py",
+      "sha256": "c09f42573fc931f80aa38e951352efc67ed0f7a215047201ffd393c829a9d39e"
+    },
+    {
+      "path": "tests/csrf_source_checker.py",
+      "sha256": "d762aba7f827c6944a5aa029580d0b1062372ef9cd12401ba017614c5c8b8908"
+    },
+    {
+      "path": "tests/dedupe_process_worker.py",
+      "sha256": "ec18132813526cecbf9c271912ab17cd554c10ee61b720a1bc2758acb7c38d99"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_browser.py",
+      "sha256": "3da4e3789268efa7d9b6f073001a7f998339ed2114cfed0f7f5eec03557e570b"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_continuation.py",
+      "sha256": "362eada4549aca851189f7e2e54105591bb917384f935955b945c4528b448af4"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_contrast_audit.py",
+      "sha256": "f06be440316a698aac2a1566a64b1d815b19089ad2ad29942203331d76a4adac"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_csrf_matrix.py",
+      "sha256": "7e58a758343b03ce5ec48dcfcaa4e473d055a0c8ce629153e40e7d23bfabc887"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_disabled_process.py",
+      "sha256": "197b1d6b3b832e1515e10c6939ba41aa58f718c4449eb3a7e56371b67fe34951"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_failure_injection_matrix.py",
+      "sha256": "980a8cda0fdeec56317c491b5dc8c61b4c1bcdfe393860701524abf118ce0fd8"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_final_gates.py",
+      "sha256": "2f26e9516cab7d3948f06e462dd236acccbf16e632af0994caba8217528bc8d7"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_fixture_bootstrap.py",
+      "sha256": "98c44cd2039524fa9aa8a2d15860df12d09c94e01508608f758c17e18d211c93"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_identity_matrix.py",
+      "sha256": "b51c5c71af9d28de73c8dfd44eeaab067db42306ac83ab900d7f143ff450db94"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_keyboard_workflows.py",
+      "sha256": "26523f45ae522f0e02eaaa21944c5f37e93ee716537145c20d17b6c3186d8983"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_payload_matrix.py",
+      "sha256": "64a5e708455d80507e6f69c37a0423199e1b4acd51c38f5baf97a9e0f7491b7e"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_performance_baseline.py",
+      "sha256": "144af0d29a51353b4bdd856c522485e9c5cc1a4851bc5b7806d36fdad0954411"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_record_visual_reviews.py",
+      "sha256": "1df850312b3877645b7698010e65d76928f57e7b3ef0ae757a5293df9e6fb796"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_review_sheets.py",
+      "sha256": "087c75aa0f777724fc59b8eb2ebd22aa07cbc1f80052759e04a5cfadb1df4d09"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_runtime_metadata.py",
+      "sha256": "5e1490643abb84319300512b728ec75e9f3a3ac9438c1e67b73207e1d7f968ed"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_visual_manifest.py",
+      "sha256": "54e9071f3e26fea66f2d463563fc1bef1541feba6b0df93f8c6b03291ffb0ea9"
+    },
+    {
+      "path": "tests/e2e/blog/phase1d_visual_matrix.py",
+      "sha256": "be985d49fe79de90431dd46dc3098f251819275e156db6e439e6d1fef6d5a3fa"
+    },
+    {
+      "path": "tests/fixtures/diagnosis_53_contract_responses.json",
+      "sha256": "515debdcaf4e96d3e735e4eaebf6b82314f3b508ca0488a34fc61173d6583f85"
+    },
+    {
+      "path": "tests/local_analytics_e2e.py",
+      "sha256": "55d0c2fd37730bbb40333fc9330837eaf63f37ae5d33a202c200677ee78e7ea3"
+    },
+    {
+      "path": "tests/news_test_context.py",
+      "sha256": "c5791f83fb8da177fd1c5f8e4a85a520cece06834b13422a1bd4f0f2036a11c8"
+    },
+    {
+      "path": "tests/test_account_deletion_discovery.py",
+      "sha256": "3025dd60152af6b43cba937186bda5cf5a7c4ab7b70d823cdcdc69ad329a4bb6"
+    },
+    {
+      "path": "tests/test_account_deletion_public.py",
+      "sha256": "111adcd406cb5bb7c71f6cdea973b22f8abd7654ffcbac74f2cbf9224efc8c05"
+    },
+    {
+      "path": "tests/test_account_deletion_request.py",
+      "sha256": "d798ae5a657dfe6313953508df7438a701ec01f90a911456bcbc11bd53238e8a"
+    },
+    {
+      "path": "tests/test_analytics_foundation.py",
+      "sha256": "7a7757ab26b2b392389953a4021c7f069d1782f01e36c1b900dd41ef9900eb29"
+    },
+    {
+      "path": "tests/test_avatar_boolean_diagnostics.py",
+      "sha256": "b3e245c0226e8db876df6dc745bd834b83eeae64bf395b217eb61588ba1ac57c"
+    },
+    {
+      "path": "tests/test_blog_api_client.py",
+      "sha256": "908a7f2b2a1a98bd9065050bbfe9314197c8f567b7abef0a077daebefb65bce9"
+    },
+    {
+      "path": "tests/test_blog_seo.py",
+      "sha256": "ec0a711bcc07e78ba065fcf94f1f06522f1db8291576c5c64cccdcb54918aeaa"
+    },
+    {
+      "path": "tests/test_blog_seo_p1.py",
+      "sha256": "9e8f7682fefdeb6bea3923f42154f00697dfbe7f9dbdf701f5021ddafafae120"
+    },
+    {
+      "path": "tests/test_blog_website.py",
+      "sha256": "bf1f8ecfb101083197c04752b910ed43561ec7f867b014932305f4ca89b78baf"
+    },
+    {
+      "path": "tests/test_canonical_diagnosis_client.py",
+      "sha256": "119769fe94cb30a791b243ab4b15797ff5ff4061dd2ab4f2a3a5367663788474"
+    },
+    {
+      "path": "tests/test_canonical_diagnosis_route.py",
+      "sha256": "9c0d67d877919e14a2c7863164d82cb5e758270ee3a01d75411c62f8e599f54f"
+    },
+    {
+      "path": "tests/test_canonical_garage.py",
+      "sha256": "1a44ea976ae4aee759c9c5eeba5c2957956d2d73a60c8f5d5f557cc98abb12e1"
+    },
+    {
+      "path": "tests/test_capability_roles.py",
+      "sha256": "e79a9514ac20d81aef7d4ce1da1b302bb95797cb32f0d540458d64278a084c82"
+    },
+    {
+      "path": "tests/test_car_health_premium_ui.py",
+      "sha256": "40c60d122ce003651b9558196b74d449d3eb2fba2bc05b5ce0d097e27cd1e7bb"
+    },
+    {
+      "path": "tests/test_csrf_rendered_audit.py",
+      "sha256": "513408f0023cef03463d4326ba64f70f5606a496274b2cbfa726507d1f941a24"
+    },
+    {
+      "path": "tests/test_csrf_security.py",
+      "sha256": "4c736ca37e2e6fb2eb91db6308aaca168f9e33a0c5d62abe213710dd2d0a8996"
+    },
+    {
+      "path": "tests/test_csrf_source_checker.py",
+      "sha256": "a323ce732bb08dd6a9a6f63ac72daea50061a09125b6fc25ddb7e15a0c51ee7c"
+    },
+    {
+      "path": "tests/test_google_profile_picture.py",
+      "sha256": "72b8b45319357026b9570b368495d0c179ff0275c15c6532211c5db070296ca5"
+    },
+    {
+      "path": "tests/test_manual_deletion_admin.py",
+      "sha256": "9d0dfe4ff0a0bf03f49b78db042497879c8625173568c2903c724c1cd1d55653"
+    },
+    {
+      "path": "tests/test_news_content.py",
+      "sha256": "9cf2e4be213da9a97cf3c276835cc4910a9abbc74f80c79ae1dcf5c3d41f84db"
+    },
+    {
+      "path": "tests/test_news_gate_website.py",
+      "sha256": "c2da9808f8fdfe4c7312f651581c9b8f399feba689c3e56a961448dc5f6b4294"
+    },
+    {
+      "path": "tests/test_news_longform_pipeline.py",
+      "sha256": "93a900f3c0f66a5f47876125cecc6f623786851502c2e21c3a50030e171f18e5"
+    },
+    {
+      "path": "tests/test_traffic_quality.py",
+      "sha256": "9f76a1b464269586100f057e2c612abdcb88c4eb3f151154837b28cd2ef7e25e"
+    },
+    {
+      "path": "tests/test_traffic_quality_postgres.py",
+      "sha256": "20f9fc07d7e86bf68832b61c162286e57e9e4694a55cf154923bf9211c981a6d"
+    },
+    {
+      "path": "tests/test_vehicle_configuration.py",
+      "sha256": "a07bcb0c308aef0a986c006d54a79c4b8eeec03f9dadd49dfc69ba89a618f1a6"
+    },
+    {
+      "path": "tests/test_website_micro_hotfix.py",
+      "sha256": "876c49e8866ffce5143f6561787fdb24077e771cdb7c0c314b190298f731d854"
+    },
+    {
+      "path": "tools/validate_website_rc.py",
+      "sha256": "f2723db102130a4572381026a66b16478f45abee68f6a526a15f135c32b760ae"
+    }
+  ]
+}

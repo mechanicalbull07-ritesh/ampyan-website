@@ -1,0 +1,3854 @@
+import logging
+import os
+import sys
+import json
+import hashlib
+import requests
+
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    stream=sys.stdout,
+)
+logger = logging.getLogger("ampyan")
+
+print("STEP 1 START", flush=True)
+logger.info("AMPYAN import started")
+
+# ================= ENV LOAD =================
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+    print("ENV loaded")
+except Exception:
+    print("ENV load skipped")
+
+# ================= DIAGNOSTIC ENGINE =================
+# from ai_engine.diagnostic_engine import diagnose_vehicle
+print("Diagnostic engine loaded")
+
+# ================= FAILURE DATABASE =================
+from failure_database import FAILURE_DATABASE
+print("Failure database loaded")
+
+# ================= FLASK =================
+from flask import Flask, Response, g, render_template, request, redirect, flash, url_for, jsonify, send_file, send_from_directory, abort
+from sqlalchemy import func, inspect, text
+from sqlalchemy.orm import selectinload
+print("Flask core loaded")
+
+# ================= MODELS =================
+from models.models import db, User, Post, Comment, Vote, News, NewsReply, Video, VideoReply, DiagnosticLearning, HelpReport, Car, CarCommunity, WebsiteVisit, WebsiteEvent, MechanicProfile
+print("Models loaded")
+
+# ================= SECURITY =================
+from werkzeug.security import generate_password_hash, check_password_hash
+from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
+from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+from flask_wtf.csrf import CSRFError, CSRFProtect
+from werkzeug.utils import secure_filename
+print("Security modules loaded")
+
+# ================= ROUTES =================
+from routes.auth_routes import auth_bp
+print("Auth routes loaded")
+
+from routes.community_routes import community_bp
+print("Community routes loaded")
+
+from routes.ai_routes import ai_bp
+print("AI routes loaded")
+
+from routes.admin_routes import admin_bp
+print("Admin routes loaded")
+from routes.blog_routes import (
+    BlogApiError,
+    blog_bp,
+    blog_canonical_url,
+    blog_enabled,
+    published_sitemap_blogs,
+)
+
+# ================= SERVICES =================
+from services.email_service import send_email
+print("Email service loaded")
+from services.app_api_sync import delete_news_from_app, sync_news_to_app
+from services.news_content import blocks_plain_text, content_blocks_limit_error, normalize_content_blocks
+
+# ================= OTHER IMPORTS =================
+from flask import session
+from PIL import Image, ImageDraw, ImageFont, ImageOps
+from collections import defaultdict, deque
+import re
+import threading
+import time
+from datetime import datetime, timedelta
+from urllib.parse import parse_qs, urlparse
+from io import BytesIO
+import textwrap
+from authlib.integrations.flask_client import OAuth
+from services.google_profile_picture import current_user_picture, log_authenticated_avatar_state
+from routes.main_routes import main_bp
+from routes.canonical_garage_routes import garage_bp
+from routes.tools_routes import tools_bp
+from routes.user_routes import user_bp
+from routes.auth_routes import ADMIN_EMAILS, ADMIN_EMAIL_SET
+from ai_engine.response_formatter import enrich_diagnosis_results
+from services.diagnosis_safety import safe_diagnose_vehicle
+from services.dashboard_light_intake import dashboard_light_context
+from services.analytics_service import (
+    ALLOWED_EVENT_TYPES,
+    analytics_enabled,
+    ensure_analytics_schema,
+    safe_track_api_request,
+    safe_track_event,
+    safe_track_page_visit,
+    start_worker,
+)
+from services.traffic_quality import count_response as count_traffic_quality_response
+
+print("All imports completed")
+
+
+
+import secrets
+
+def ai_diagnose(problem, car):
+
+    problem = problem.lower()
+
+    results = []
+
+    # Brake vibration
+    if "vibration" in problem and "brake" in problem:
+
+        results.append({
+            "issue": "Brake Disc Warp",
+            "confidence": 78,
+            "reason": "Vibration during braking often indicates warped brake discs."
+        })
+
+        results.append({
+            "issue": "Brake Pad Wear",
+            "confidence": 52,
+            "reason": "Uneven brake pad wear can cause vibration."
+        })
+
+        results.append({
+            "issue": "Wheel Balancing",
+            "confidence": 31,
+            "reason": "Improper wheel balance may create vibration."
+        })
+
+    # Engine vibration
+    elif "vibration" in problem:
+
+        results.append({
+            "issue": "Engine Mount Damage",
+            "confidence": 70,
+            "reason": "Engine mounts absorb vibration."
+        })
+
+        results.append({
+            "issue": "Wheel Balancing",
+            "confidence": 45,
+            "reason": "Wheel imbalance can cause vibration."
+        })
+
+    # Noise issues
+    elif "noise" in problem or "sound" in problem:
+
+        results.append({
+            "issue": "Suspension Wear",
+            "confidence": 65,
+            "reason": "Suspension components often produce noise."
+        })
+
+        results.append({
+            "issue": "Bearing Damage",
+            "confidence": 50,
+            "reason": "Wheel bearings may create humming noise."
+        })
+
+    # Overheating
+    elif "overheat" in problem or "temperature" in problem:
+
+        results.append({
+            "issue": "Low Coolant",
+            "confidence": 75,
+            "reason": "Low coolant commonly causes overheating."
+        })
+
+        results.append({
+            "issue": "Radiator Blockage",
+            "confidence": 40,
+            "reason": "Blocked radiator reduces cooling."
+        })
+
+    else:
+
+        results.append({
+            "issue": "Unknown Issue",
+            "confidence": 20,
+            "reason": "Problem needs manual inspection."
+        })
+
+    return results
+
+app = Flask(__name__)
+csrf = CSRFProtect()
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
+IS_PRODUCTION = os.environ.get("ENV", "").lower() == "production" or os.environ.get("RENDER", "").lower() == "true"
+
+app.register_blueprint(auth_bp)
+app.register_blueprint(community_bp)
+app.register_blueprint(ai_bp)
+app.register_blueprint(admin_bp)
+app.register_blueprint(main_bp)
+app.register_blueprint(garage_bp)
+app.register_blueprint(tools_bp)
+app.register_blueprint(user_bp)
+app.register_blueprint(blog_bp)
+
+print("Motrnoix AMPYAN server booting...")
+logger.info(
+    "Flask app object created: module=app object=app production=%s port=%s",
+    IS_PRODUCTION,
+    os.environ.get("PORT", "10000"),
+)
+
+def create_app():
+    return app
+
+# ================= FILE SIZE LIMIT =================
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
+# Flask 3.1 otherwise applies a hidden 500,000-byte aggregate limit to
+# non-file multipart fields. News forms intentionally share the explicit
+# request ceiling so long-form text is not rejected before route validation.
+app.config["MAX_FORM_MEMORY_SIZE"] = app.config["MAX_CONTENT_LENGTH"]
+
+# ================= ALLOWED IMAGE TYPES =================
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+IMAGE_FORMATS = {
+    "jpg": "JPEG",
+    "jpeg": "JPEG",
+    "png": "PNG",
+    "webp": "WEBP",
+}
+DEFAULT_NEWS_IMAGE_FILENAME = "AMPYAN_-_Powering_Intelligent_Mobility.png"
+DEFAULT_NEWS_IMAGE_PATH = f"news_images/{DEFAULT_NEWS_IMAGE_FILENAME}"
+DEFAULT_PLACEHOLDER_IMAGE_PATH = "images/logo.png"
+MAX_NEWS_IMAGE_UPLOAD_BYTES = 8 * 1024 * 1024
+MAX_NEWS_IMAGE_PIXELS = 24_000_000
+NEWS_IMAGE_MAX_WIDTH = 1200
+NEWS_IMAGE_TARGET_BYTES = 500 * 1024
+NEWS_THUMBNAIL_WIDTH = 640
+NEWS_THUMBNAIL_TARGET_BYTES = 120 * 1024
+NEWS_PAGE_SIZE = 18
+NEWS_MAX_PAGE_SIZE = 30
+
+
+def is_external_image_url(value):
+    parsed = urlparse(value or "")
+    return parsed.scheme in {"http", "https"} and bool(parsed.netloc)
+
+
+def _webp_bytes(image, quality=76):
+    output = BytesIO()
+    image.save(output, format="WEBP", quality=quality, method=4)
+    return output.getvalue()
+
+
+def _resize_news_image(image, width):
+    if image.width <= width:
+        return image.copy()
+    ratio = width / float(image.width)
+    height = max(1, int(image.height * ratio))
+    return image.resize((width, height), Image.Resampling.LANCZOS)
+
+
+def _center_crop_ratio(image, ratio_width=16, ratio_height=9):
+    target_ratio = ratio_width / float(ratio_height)
+    image_ratio = image.width / float(image.height or 1)
+    if image_ratio > target_ratio:
+        crop_width = int(image.height * target_ratio)
+        left = max(0, (image.width - crop_width) // 2)
+        return image.crop((left, 0, left + crop_width, image.height))
+    crop_height = int(image.width / target_ratio)
+    top = max(0, (image.height - crop_height) // 2)
+    return image.crop((0, top, image.width, top + crop_height))
+
+
+def _bounded_page_number(raw_value):
+    try:
+        return max(1, int(raw_value or 1))
+    except (TypeError, ValueError):
+        return 1
+
+
+def _bounded_page_size(raw_value):
+    try:
+        requested = int(raw_value or NEWS_PAGE_SIZE)
+    except (TypeError, ValueError):
+        requested = NEWS_PAGE_SIZE
+    return min(NEWS_MAX_PAGE_SIZE, max(6, requested))
+
+
+def news_thumbnail_filename(filename):
+    if not filename or is_external_image_url(filename):
+        return None
+    safe_filename = secure_filename(filename)
+    stem, extension = os.path.splitext(safe_filename)
+    if not stem or not extension:
+        return None
+    return f"{stem}_thumb{extension}"
+
+
+def cloudinary_settings():
+    cloudinary_url = os.environ.get("CLOUDINARY_URL")
+    if cloudinary_url:
+        parsed = urlparse(cloudinary_url)
+        if parsed.scheme == "cloudinary" and parsed.hostname and parsed.username and parsed.password:
+            return {
+                "cloud_name": parsed.hostname,
+                "api_key": parsed.username,
+                "api_secret": parsed.password,
+            }
+
+    cloud_name = os.environ.get("CLOUDINARY_CLOUD_NAME")
+    api_key = os.environ.get("CLOUDINARY_API_KEY")
+    api_secret = os.environ.get("CLOUDINARY_API_SECRET")
+    if cloud_name and api_key and api_secret:
+        return {
+            "cloud_name": cloud_name,
+            "api_key": api_key,
+            "api_secret": api_secret,
+        }
+    return None
+
+
+def cloudinary_configured():
+    return cloudinary_settings() is not None
+
+
+def upload_image_to_cloudinary(image_bytes, filename, settings=None):
+    settings = settings or cloudinary_settings()
+    if not settings:
+        return {"ok": False, "url": None, "reason": "config_missing"}
+
+    app.logger.info("cloudinary_upload_started")
+    timestamp = str(int(time.time()))
+    folder = os.environ.get("CLOUDINARY_NEWS_FOLDER", "ampyan/news")
+    signature_payload = f"folder={folder}&timestamp={timestamp}{settings['api_secret']}"
+    signature = hashlib.sha1(signature_payload.encode("utf-8")).hexdigest()
+    upload_url = f"https://api.cloudinary.com/v1_1/{settings['cloud_name']}/image/upload"
+
+    try:
+        response = requests.post(
+            upload_url,
+            data={
+                "api_key": settings["api_key"],
+                "timestamp": timestamp,
+                "folder": folder,
+                "signature": signature,
+            },
+            files={"file": (filename, image_bytes, "image/webp")},
+            timeout=6,
+        )
+        response.raise_for_status()
+        secure_url = (response.json() or {}).get("secure_url")
+        if secure_url:
+            app.logger.info("cloudinary_upload_success")
+            return {"ok": True, "url": secure_url, "reason": None}
+        app.logger.warning("cloudinary_upload_failed reason=missing_secure_url")
+        return {"ok": False, "url": None, "reason": "missing_secure_url"}
+    except Exception as exc:
+        app.logger.warning("cloudinary_upload_failed reason=%s", exc.__class__.__name__)
+        return {"ok": False, "url": None, "reason": exc.__class__.__name__}
+
+
+def compress_news_image_to_bytes(image_file):
+    original_filename = secure_filename(image_file.filename or "")
+    if not original_filename:
+        app.logger.warning("image_validation_failed reason=missing_filename")
+        return None, "missing_filename"
+    if not allowed_file(original_filename):
+        app.logger.warning("image_validation_failed reason=invalid_extension")
+        return None, "invalid_extension"
+
+    image_file.stream.seek(0, os.SEEK_END)
+    original_size = image_file.stream.tell()
+    image_file.stream.seek(0)
+    if original_size <= 0:
+        app.logger.warning("image_validation_failed reason=empty_file")
+        return None, "empty_file"
+    if original_size > MAX_NEWS_IMAGE_UPLOAD_BYTES:
+        app.logger.warning("image_validation_failed reason=file_too_large")
+        return None, "file_too_large"
+
+    raw_bytes = image_file.read()
+    image_file.stream.seek(0)
+
+    try:
+        with Image.open(BytesIO(raw_bytes)) as check_img:
+            check_img.verify()
+        with Image.open(BytesIO(raw_bytes)) as img:
+            if (img.format or "").lower() not in {"jpeg", "png", "webp"}:
+                app.logger.warning("image_validation_failed reason=invalid_image_format")
+                return None, "invalid_image_format"
+            if img.width * img.height > MAX_NEWS_IMAGE_PIXELS:
+                app.logger.warning("image_validation_failed reason=image_dimensions_too_large")
+                return None, "image_dimensions_too_large"
+
+            app.logger.info("image_compression_started")
+            img = ImageOps.exif_transpose(img)
+            img = _resize_news_image(img, NEWS_IMAGE_MAX_WIDTH)
+
+            has_alpha = img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info)
+            if has_alpha:
+                output_image = img.convert("RGBA")
+                output_format = "WEBP"
+                extension = "webp"
+            else:
+                output_image = img.convert("RGB")
+                output_format = "WEBP"
+                extension = "webp"
+
+            final_bytes = None
+            for quality in (82, 76, 70, 64):
+                candidate = _webp_bytes(output_image, quality=quality)
+                final_bytes = candidate
+                if len(candidate) <= NEWS_IMAGE_TARGET_BYTES:
+                    break
+
+            thumbnail_image = _resize_news_image(
+                _center_crop_ratio(output_image),
+                NEWS_THUMBNAIL_WIDTH,
+            )
+            thumbnail_bytes = None
+            for quality in (78, 72, 66, 60):
+                candidate = _webp_bytes(thumbnail_image, quality=quality)
+                thumbnail_bytes = candidate
+                if len(candidate) <= NEWS_THUMBNAIL_TARGET_BYTES:
+                    break
+
+            app.logger.info(
+                "image_compression_success original_size=%s final_size=%s thumbnail_size=%s",
+                original_size,
+                len(final_bytes or b""),
+                len(thumbnail_bytes or b""),
+            )
+            return {
+                "bytes": final_bytes,
+                "thumbnail_bytes": thumbnail_bytes,
+                "extension": extension,
+                "original_filename": original_filename,
+                "original_size": original_size,
+                "final_size": len(final_bytes or b""),
+                "thumbnail_size": len(thumbnail_bytes or b""),
+            }, None
+    except Exception as exc:
+        app.logger.warning("image_validation_failed reason=%s", exc.__class__.__name__)
+        return None, exc.__class__.__name__
+
+
+def store_news_image(image_file, prefix):
+    app.logger.info("news_image_upload_started")
+    try:
+        compressed, reason = compress_news_image_to_bytes(image_file)
+        if not compressed:
+            app.logger.warning("news_image_upload_failed reason=%s", reason or "validation_failed")
+            return {"ok": False, "filename": None, "reason": reason or "validation_failed"}
+
+        filename = f"{secure_filename(prefix)}_{secrets.token_hex(8)}.{compressed['extension']}"
+        settings = cloudinary_settings()
+        if settings:
+            app.logger.info("cloudinary_config_detected")
+            cloudinary_result = upload_image_to_cloudinary(compressed["bytes"], filename, settings=settings)
+            if not cloudinary_result.get("ok"):
+                return {
+                    "ok": False,
+                    "filename": None,
+                    "reason": cloudinary_result.get("reason") or "cloudinary_upload_failed",
+                }
+            app.logger.info("news_image_upload_success")
+            return {"ok": True, "filename": cloudinary_result.get("url"), "reason": None}
+
+        app.logger.info("cloudinary_config_missing")
+
+        upload_folder = app.config.get("UPLOAD_FOLDER") or "static/news_images"
+        os.makedirs(upload_folder, exist_ok=True)
+        upload_path = os.path.join(upload_folder, filename)
+        with open(upload_path, "wb") as output:
+            output.write(compressed["bytes"])
+        thumbnail_filename = news_thumbnail_filename(filename)
+        if thumbnail_filename and compressed.get("thumbnail_bytes"):
+            thumbnail_path = os.path.join(upload_folder, thumbnail_filename)
+            with open(thumbnail_path, "wb") as output:
+                output.write(compressed["thumbnail_bytes"])
+
+        app.logger.warning("local_image_fallback_used")
+        app.logger.warning("image_storage_persistent=false")
+        app.logger.info("news_image_upload_success")
+        return {
+            "ok": True,
+            "filename": filename,
+            "reason": None,
+            "warning": "Image storage is local and may not persist after deploy.",
+        }
+    except Exception as exc:
+        app.logger.warning("news_image_upload_failed reason=%s", exc.__class__.__name__)
+        return {"ok": False, "filename": None, "reason": exc.__class__.__name__}
+
+def compress_image(image_path):
+
+    try:
+
+        with Image.open(image_path) as img:
+            image_format = IMAGE_FORMATS.get(image_path.rsplit(".", 1)[-1].lower(), img.format)
+            if image_format == "JPEG":
+                img = img.convert("RGB")
+            elif image_format == "PNG" and img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGBA")
+
+            img.thumbnail((1600, 1600), Image.Resampling.LANCZOS)
+
+            save_options = {"optimize": True}
+            if image_format in {"JPEG", "WEBP"}:
+                save_options["quality"] = 78
+
+            img.save(image_path, format=image_format, **save_options)
+
+    except Exception as e:
+        app.logger.warning("Image compression failed: %s", e.__class__.__name__)
+
+def safe_image_check(file_path):
+
+    try:
+        img = Image.open(file_path)
+        img.verify()
+
+        if img.format.lower() not in ["jpeg","png","webp"]:
+            return False
+
+        return True
+
+    except:
+        return False
+
+def save_uploaded_image(image_file, folder, prefix):
+    if not image_file or image_file.filename == "":
+        return None
+
+    original_filename = secure_filename(image_file.filename)
+    if not allowed_file(original_filename):
+        return None
+
+    extension = original_filename.rsplit(".", 1)[1].lower()
+    filename = f"{prefix}_{secrets.token_hex(8)}.{extension}"
+    upload_path = os.path.join(folder, filename)
+    image_file.save(upload_path)
+
+    if not safe_image_check(upload_path):
+        try:
+            os.remove(upload_path)
+        except OSError:
+            pass
+        return None
+
+    compress_image(upload_path)
+    return filename
+@app.context_processor
+def inject_admin_emails():
+    return dict(
+        ADMIN_EMAILS=ADMIN_EMAILS,
+        analytics_enabled=analytics_enabled(),
+        ga4_measurement_id=os.environ.get("GA4_MEASUREMENT_ID", ""),
+        clarity_project_id=os.environ.get("CLARITY_PROJECT_ID", ""),
+        google_site_verification=os.environ.get("GOOGLE_SITE_VERIFICATION", ""),
+    )
+
+def static_image_url_if_exists(folder, filename, fallback=None):
+    if is_external_image_url(filename):
+        return filename
+
+    if not filename and fallback:
+        filename = fallback
+    if not filename:
+        return None
+
+    candidates = []
+    for candidate in (filename, secure_filename(filename)):
+        if candidate and candidate not in candidates:
+            candidates.append(candidate)
+
+    for candidate in candidates:
+        if folder == "news_images":
+            upload_folder = app.config.get("UPLOAD_FOLDER")
+            if upload_folder and os.path.isabs(upload_folder):
+                upload_path = os.path.join(upload_folder, candidate)
+                if os.path.isfile(upload_path):
+                    return url_for("uploaded_news_image", filename=candidate)
+
+        relative_path = os.path.join(folder, candidate)
+        absolute_path = os.path.join(app.static_folder, relative_path)
+        if os.path.isfile(absolute_path):
+            return url_for("static", filename=relative_path.replace(os.sep, "/"))
+
+    if folder == "news_images" and fallback:
+        return url_for("static", filename=DEFAULT_NEWS_IMAGE_PATH)
+    if folder in {"profile_images", "post_images"}:
+        return url_for("static", filename=DEFAULT_PLACEHOLDER_IMAGE_PATH)
+
+    return None
+
+
+def cloudinary_transformed_url(image_url, width=640):
+    if not is_external_image_url(image_url):
+        return image_url
+    parsed = urlparse(image_url)
+    if "cloudinary.com" not in (parsed.netloc or "") or "/upload/" not in parsed.path:
+        return image_url
+    transform = f"f_auto,q_auto:good,w_{int(width)},c_fill,ar_16:9"
+    path = parsed.path.replace("/upload/", f"/upload/{transform}/", 1)
+    return parsed._replace(path=path).geturl()
+
+
+def news_card_image_url(filename):
+    if is_external_image_url(filename):
+        return cloudinary_transformed_url(filename, width=640)
+    thumbnail = news_thumbnail_filename(filename)
+    if thumbnail:
+        thumbnail_url = static_image_url_if_exists("news_images", thumbnail, fallback=None)
+        if thumbnail_url:
+            return thumbnail_url
+    return static_image_url_if_exists(
+        "news_images",
+        filename,
+        fallback=DEFAULT_NEWS_IMAGE_FILENAME,
+    )
+
+
+def news_summary(text, limit=150):
+    cleaned = re.sub(r"\s+", " ", (text or "")).strip()
+    if not cleaned:
+        return "Read the latest AMPYAN automotive update."
+    return cleaned[: limit - 1].rstrip() + "..." if len(cleaned) > limit else cleaned
+
+
+def news_read_time(text):
+    words = len(re.findall(r"\w+", text or ""))
+    return max(1, round(words / 220.0))
+
+
+def news_render_blocks(news):
+    return normalize_content_blocks(getattr(news, "content_blocks", None))
+
+def social_preview_text(text, fallback="AMPYAN automotive update"):
+    cleaned = re.sub(r"\s+", " ", (text or "")).strip()
+    if not cleaned:
+        cleaned = fallback
+    return cleaned[:157] + "..." if len(cleaned) > 160 else cleaned
+
+def story_font(size, bold=False):
+    candidates = [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf",
+        "/Library/Fonts/Arial Bold.ttf" if bold else "/Library/Fonts/Arial.ttf",
+    ]
+    for path in candidates:
+        if path and os.path.exists(path):
+            return ImageFont.truetype(path, size)
+    return ImageFont.load_default()
+
+def draw_wrapped_text(draw, text, xy, font, fill, max_width, max_lines, line_spacing=12):
+    words = re.sub(r"\s+", " ", (text or "")).strip().split()
+    lines = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if draw.textbbox((0, 0), candidate, font=font)[2] <= max_width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+        if len(lines) >= max_lines:
+            break
+    if current and len(lines) < max_lines:
+        lines.append(current)
+    if len(lines) == max_lines and len(" ".join(words)) > len(" ".join(lines)):
+        lines[-1] = lines[-1].rstrip(".") + "..."
+
+    x, y = xy
+    for line in lines:
+        draw.text((x, y), line, font=font, fill=fill)
+        y += draw.textbbox((0, 0), line, font=font)[3] + line_spacing
+    return y
+
+def story_response(title, subtitle, body, footer="Read full on AMPYAN", source_url=None, accent=(255, 82, 46), kind="AMPYAN"):
+    width, height = 1080, 1920
+    image = Image.new("RGB", (width, height), (7, 9, 16))
+    draw = ImageDraw.Draw(image)
+
+    for y in range(height):
+        blend = y / height
+        r = int(9 + (30 * blend))
+        g = int(11 + (12 * blend))
+        b = int(20 + (4 * blend))
+        draw.line((0, y, width, y), fill=(r, g, b))
+
+    draw.rounded_rectangle((58, 58, 1022, 1862), radius=58, fill=(13, 17, 29), outline=(54, 60, 78), width=3)
+    draw.rounded_rectangle((58, 58, 1022, 350), radius=58, fill=(30, 19, 24))
+    draw.rectangle((58, 225, 1022, 350), fill=(30, 19, 24))
+    draw.ellipse((760, -120, 1190, 310), fill=(accent[0] // 3, accent[1] // 3, accent[2] // 3))
+    draw.ellipse((-170, 120, 280, 570), fill=(70, 28, 22))
+
+    brand_font = story_font(46, bold=True)
+    kicker_font = story_font(30, bold=True)
+    title_font = story_font(74, bold=True)
+    subtitle_font = story_font(38, bold=True)
+    body_font = story_font(34)
+    small_font = story_font(27, bold=True)
+
+    draw.text((104, 110), "AMPYAN", font=brand_font, fill=(255, 255, 255))
+    draw.text((104, 176), kind.upper(), font=kicker_font, fill=(255, 178, 116))
+    draw.rounded_rectangle((104, 252, 520, 302), radius=25, fill=accent)
+    draw.text((130, 260), "SHARE STORY", font=small_font, fill=(255, 255, 255))
+
+    y = 430
+    y = draw_wrapped_text(draw, title, (104, y), title_font, (255, 255, 255), 872, 5, line_spacing=18)
+    y += 18
+    if subtitle:
+        draw.rounded_rectangle((104, y, 976, y + 92), radius=26, fill=(23, 28, 42), outline=(54, 64, 86), width=2)
+        draw_wrapped_text(draw, subtitle, (132, y + 22), subtitle_font, (255, 216, 168), 816, 1, line_spacing=8)
+        y += 128
+
+    draw.rounded_rectangle((104, y, 976, 1510), radius=34, fill=(15, 20, 32), outline=(52, 59, 78), width=2)
+    draw_wrapped_text(draw, body, (140, y + 42), body_font, (225, 231, 242), 800, 13, line_spacing=18)
+
+    draw.rounded_rectangle((104, 1560, 976, 1765), radius=34, fill=(24, 30, 44), outline=(accent[0], accent[1], accent[2]), width=2)
+    draw.text((140, 1600), footer, font=subtitle_font, fill=(255, 255, 255))
+    if source_url:
+        draw_wrapped_text(draw, source_url, (140, 1664), story_font(28), (190, 203, 225), 780, 2, line_spacing=10)
+    else:
+        draw.text((140, 1664), "Open AMPYAN and share this result.", font=story_font(28), fill=(190, 203, 225))
+
+    draw.text((104, 1812), "ampyan.com", font=story_font(30, bold=True), fill=(255, 178, 116))
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    output.seek(0)
+    return send_file(output, mimetype="image/png", as_attachment=False, download_name="ampyan-story.png")
+
+def _validated_news_story_cover(news):
+    value = (getattr(news, "image", None) or "").strip()
+    try:
+        if is_external_image_url(value):
+            parsed = urlparse(value)
+            if parsed.scheme != "https" or (parsed.hostname or "").lower() not in {
+                "res.cloudinary.com", "ampyan.com", "www.ampyan.com",
+            }:
+                return None
+            response = requests.get(value, timeout=5, stream=True)
+            response.raise_for_status()
+            payload = bytearray()
+            for chunk in response.iter_content(64 * 1024):
+                payload.extend(chunk)
+                if len(payload) > MAX_NEWS_IMAGE_UPLOAD_BYTES:
+                    return None
+            source = BytesIO(payload)
+        else:
+            filename = os.path.basename(value) if value else DEFAULT_NEWS_IMAGE_FILENAME
+            path = os.path.join(app.static_folder, "news_images", filename)
+            if not os.path.isfile(path):
+                return None
+            source = path
+        with Image.open(source) as image:
+            if image.width * image.height > MAX_NEWS_IMAGE_PIXELS:
+                return None
+            return image.convert("RGB")
+    except (OSError, requests.RequestException, ValueError):
+        return None
+
+def build_news_story_image(news, cover_image=None):
+    width, height = 1080, 1920
+    canvas = Image.new("RGB", (width, height), (7, 10, 18))
+    draw = ImageDraw.Draw(canvas)
+    cover_box = (60, 60, 1020, 900)
+    cover = cover_image.convert("RGB") if cover_image is not None else None
+    if cover is not None:
+        fitted = ImageOps.fit(cover, (960, 840), method=Image.Resampling.LANCZOS)
+        canvas.paste(fitted, cover_box[:2])
+    else:
+        for y in range(cover_box[1], cover_box[3]):
+            blend = (y - cover_box[1]) / (cover_box[3] - cover_box[1])
+            color = (int(25 + 40 * blend), int(38 + 8 * blend), int(58 + 20 * blend))
+            draw.line((cover_box[0], y, cover_box[2], y), fill=color)
+        draw.text((390, 390), "AMPYAN", font=story_font(62, bold=True), fill=(255, 255, 255))
+    overlay = Image.new("RGBA", (960, 840), (0, 0, 0, 0))
+    overlay_draw = ImageDraw.Draw(overlay)
+    for y in range(840):
+        alpha = int(22 + 190 * (y / 840) ** 2)
+        overlay_draw.line((0, y, 960, y), fill=(0, 0, 0, alpha))
+    canvas.paste(overlay, cover_box[:2], overlay)
+    draw.rounded_rectangle(cover_box, radius=34, outline=(78, 85, 102), width=3)
+
+    draw.text((100, 104), "AMPYAN", font=story_font(48, bold=True), fill=(255, 255, 255))
+    draw.text((100, 164), "AUTOMOTIVE NEWS", font=story_font(25, bold=True), fill=(255, 178, 116))
+
+    category = news_category_label(effective_news_category(news))
+    published = news.created_at.strftime("%d %B %Y") if news.created_at else "AMPYAN News"
+    draw.rounded_rectangle((88, 928, 992, 1004), radius=28, fill=(28, 34, 48))
+    draw.text((120, 949), f"{category}  •  {published}", font=story_font(27, bold=True), fill=(255, 208, 180))
+
+    draw_wrapped_text(
+        draw, news.title or "AMPYAN Automotive Update", (88, 1052),
+        story_font(70, bold=True), (255, 255, 255), 904, 5, line_spacing=15,
+    )
+    canonical_url = f"https://ampyan.com/news/{news.id}"
+    draw.rounded_rectangle((88, 1580, 992, 1810), radius=34, fill=(27, 32, 46), outline=(255, 89, 44), width=3)
+    draw.text((126, 1624), "Read full news", font=story_font(43, bold=True), fill=(255, 255, 255))
+    draw_wrapped_text(draw, canonical_url, (126, 1694), story_font(28), (190, 203, 225), 820, 2, line_spacing=8)
+    draw.text((88, 1844), "ampyan.com", font=story_font(28, bold=True), fill=(255, 178, 116))
+    return canvas
+
+def news_story_response(news):
+    image = build_news_story_image(news, _validated_news_story_cover(news))
+    output = BytesIO()
+    image.save(output, format="PNG", optimize=True)
+    output.seek(0)
+    return send_file(
+        output, mimetype="image/png", as_attachment=False,
+        download_name=f"ampyan-news-{news.id}-story.png",
+    )
+
+@app.context_processor
+def inject_image_helpers():
+    return dict(
+        news_image_url=lambda filename: static_image_url_if_exists(
+            "news_images",
+            filename,
+            fallback=DEFAULT_NEWS_IMAGE_FILENAME,
+        ),
+        news_card_image_url=news_card_image_url,
+        news_summary=news_summary,
+        news_read_time=news_read_time,
+        news_render_blocks=news_render_blocks,
+        profile_image_url=lambda filename: static_image_url_if_exists("profile_images", filename),
+        current_user_profile_image_url=lambda: current_user_picture(current_user, lambda filename: static_image_url_if_exists("profile_images", filename)),
+        news_category_label=news_category_label,
+        effective_news_category=effective_news_category,
+    )
+    
+from flask_mail import Mail, Message
+
+app.config['MAIL_SERVER'] = 'smtp-relay.brevo.com'
+app.config['MAIL_PORT'] = 2525
+app.config['MAIL_USE_TLS'] = True
+app.config['MAIL_USE_SSL'] = False
+app.config['MAIL_USERNAME'] = os.environ.get("MAIL_USERNAME")
+app.config['MAIL_PASSWORD'] = os.environ.get("MAIL_PASSWORD")
+app.config['MAIL_DEFAULT_SENDER'] = ("Motrnoix AMPYAN", os.environ.get("MAIL_FROM"))
+
+mail = Mail(app)
+
+# ===============================
+# DATABASE CONFIG (LOCAL + PROD)
+# ===============================
+@app.route("/test-email", methods=["POST"])
+def test_email():
+    if IS_PRODUCTION:
+        return "Not found", 404
+
+    send_email(
+        mail,
+        "YOUR_EMAIL@gmail.com",
+        "Motrnoix AMPYAN Test Email",
+        "SMTP working!"
+    )
+
+    return "Email sent"
+database_url = os.environ.get("DATABASE_URL")
+
+# Render PostgreSQL compatibility fix
+if database_url and database_url.startswith("postgres://"):
+    database_url = database_url.replace("postgres://", "postgresql://", 1)
+
+secret_key = os.environ.get("SECRET_KEY")
+if IS_PRODUCTION and not secret_key:
+    raise RuntimeError("SECRET_KEY is required in production")
+
+app.secret_key = secret_key or "local-dev-secret"
+app.config["SECRET_KEY"] = app.secret_key
+app.config["PREFERRED_URL_SCHEME"] = "https" if IS_PRODUCTION else "http"
+app.config["DEBUG"] = False
+app.config["PROPAGATE_EXCEPTIONS"] = False
+app.config["COMMUNITY_BLOG_ENABLED"] = os.environ.get("COMMUNITY_BLOG_ENABLED", "false")
+app.config["BLOG_WEBSITE_SERVICE_TOKEN"] = os.environ.get("BLOG_WEBSITE_SERVICE_TOKEN", "")
+app.config["AMPYAN_API_BASE_URL"] = os.environ.get("AMPYAN_API_BASE_URL")
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION
+app.config["REMEMBER_COOKIE_HTTPONLY"] = True
+app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
+app.config["REMEMBER_COOKIE_SECURE"] = IS_PRODUCTION
+csrf.init_app(app)
+
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(_error):
+    message = (
+        "Your session form token is missing or expired. "
+        "Refresh the page and try again."
+    )
+    if request.is_json or request.accept_mimetypes.best == "application/json":
+        return jsonify({
+            "success": False,
+            "error": {
+                "code": "CSRF_VALIDATION_FAILED",
+                "message": message,
+            },
+        }), 400
+    return render_template(
+        "error.html",
+        title="Form session expired",
+        message=message,
+        action_url="/",
+        action_label="Return home and try again",
+    ), 400
+
+app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///database.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+engine_options = {"pool_pre_ping": True}
+if database_url and database_url.startswith("postgresql://"):
+    engine_options["pool_recycle"] = int(os.environ.get("DB_POOL_RECYCLE", "280"))
+    engine_options["pool_timeout"] = int(os.environ.get("DB_POOL_TIMEOUT", "2"))
+    engine_options["pool_size"] = int(os.environ.get("DB_POOL_SIZE", "2"))
+    engine_options["max_overflow"] = int(os.environ.get("DB_MAX_OVERFLOW", "0"))
+    engine_options["connect_args"] = {
+        "connect_timeout": int(os.environ.get("DB_CONNECT_TIMEOUT", "2")),
+        "options": " ".join(
+            [
+                f"-c statement_timeout={int(os.environ.get('DB_STATEMENT_TIMEOUT_MS', '2000'))}",
+                f"-c lock_timeout={int(os.environ.get('DB_LOCK_TIMEOUT_MS', '1000'))}",
+                f"-c idle_in_transaction_session_timeout={int(os.environ.get('DB_IDLE_TX_TIMEOUT_MS', '5000'))}",
+            ]
+        ),
+    }
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
+db.init_app(app)
+logger.info(
+    "Database configured: backend=%s pool_pre_ping=%s",
+    "postgresql" if database_url else "sqlite",
+    engine_options["pool_pre_ping"],
+)
+
+# 🔐 Production Security Settings
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["REMEMBER_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["REMEMBER_COOKIE_SAMESITE"] = "Lax"
+if IS_PRODUCTION:
+    app.config["SESSION_COOKIE_SECURE"] = True
+    app.config["REMEMBER_COOKIE_SECURE"] = True
+
+oauth = OAuth(app)
+GOOGLE_PRODUCTION_REDIRECT_URI = "https://ampyan.com/google/callback"
+google = oauth.register(
+    name='google',
+    client_id=os.environ.get("GOOGLE_CLIENT_ID"),
+    client_secret=os.environ.get("GOOGLE_CLIENT_SECRET"),
+    server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
+    client_kwargs={
+        'scope': 'openid email profile'
+    }
+)
+
+
+UPLOAD_FOLDER = os.environ.get("NEWS_IMAGE_UPLOAD_DIR") or "static/news_images"
+app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+
+# POST IMAGE UPLOAD FOLDER
+
+POST_IMAGE_UPLOAD = "static/post_images"
+app.config["POST_IMAGE_UPLOAD"] = POST_IMAGE_UPLOAD
+
+
+
+if not os.path.exists(POST_IMAGE_UPLOAD):
+    os.makedirs(POST_IMAGE_UPLOAD)
+
+
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "webp"}
+
+def allowed_file(filename):
+
+    return "." in filename and \
+    filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+if not os.path.exists(POST_IMAGE_UPLOAD):
+    os.makedirs(POST_IMAGE_UPLOAD)
+
+PROFILE_UPLOAD = "static/profile_images"
+app.config["PROFILE_UPLOAD"] = PROFILE_UPLOAD
+
+if not os.path.exists(PROFILE_UPLOAD):
+    os.makedirs(PROFILE_UPLOAD)
+
+
+if not os.path.exists(UPLOAD_FOLDER):
+    os.makedirs(UPLOAD_FOLDER)
+
+@app.route("/static/news_images/<path:filename>")
+def static_news_image(filename):
+    safe_filename = secure_filename(os.path.basename(filename))
+    default_filename = DEFAULT_NEWS_IMAGE_FILENAME
+    if safe_filename:
+        static_news_folder = os.path.join(app.static_folder, "news_images")
+        static_path = os.path.join(static_news_folder, safe_filename)
+        if os.path.isfile(static_path):
+            return send_from_directory(static_news_folder, safe_filename)
+
+        upload_folder = app.config.get("UPLOAD_FOLDER")
+        if upload_folder and os.path.isabs(upload_folder):
+            upload_path = os.path.join(upload_folder, safe_filename)
+            if os.path.isfile(upload_path):
+                return send_from_directory(upload_folder, safe_filename)
+
+    app.logger.info("news_image_fallback filename=%s", safe_filename or filename)
+    return send_from_directory(os.path.join(app.static_folder, "news_images"), default_filename)
+
+@app.route("/uploads/news/<path:filename>")
+def uploaded_news_image(filename):
+    upload_folder = app.config.get("UPLOAD_FOLDER")
+
+    safe_filename = secure_filename(os.path.basename(filename))
+    if not safe_filename:
+        abort(404)
+
+    if not upload_folder or not os.path.isabs(upload_folder):
+        return send_from_directory(
+            os.path.join(app.static_folder, "news_images"),
+            DEFAULT_NEWS_IMAGE_FILENAME,
+        )
+
+    return send_from_directory(upload_folder, safe_filename)
+
+
+@app.route("/static/profile_images/<path:filename>")
+def static_profile_image(filename):
+    safe_filename = secure_filename(os.path.basename(filename))
+    profile_folder = os.path.join(app.static_folder, "profile_images")
+    if safe_filename:
+        profile_path = os.path.join(profile_folder, safe_filename)
+        if os.path.isfile(profile_path):
+            return send_from_directory(profile_folder, safe_filename)
+    app.logger.info("profile_image_fallback filename=%s", safe_filename or filename)
+    return send_from_directory(os.path.join(app.static_folder, "images"), "logo.png")
+
+
+@app.route("/static/post_images/<path:filename>")
+def static_post_image(filename):
+    safe_filename = secure_filename(os.path.basename(filename))
+    post_folder = os.path.join(app.static_folder, "post_images")
+    if safe_filename:
+        post_path = os.path.join(post_folder, safe_filename)
+        if os.path.isfile(post_path):
+            return send_from_directory(post_folder, safe_filename)
+    app.logger.info("post_image_fallback filename=%s", safe_filename or filename)
+    return send_from_directory(os.path.join(app.static_folder, "images"), "logo.png")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    return send_from_directory(
+        os.path.join(app.root_path, "static", "images"),
+        "favicon.png",
+        mimetype="image/png",
+    )
+
+conversation_memory = defaultdict(list)
+database_init_lock = threading.Lock()
+database_initialized = False
+database_init_thread_started = False
+app.config["DATABASE_READY"] = False
+app.config["DATABASE_READY_ERROR"] = None
+app.config["MANAGED_PERSONA_MIGRATION_COMPLETE"] = False
+
+
+def database_ready_for_queries():
+    if app.config.get("DATABASE_READY", False):
+        return True
+
+    for attempt in range(1, 3):
+        try:
+            db.session.execute(text("SELECT 1"))
+            app.config["DATABASE_READY"] = True
+            app.config["DATABASE_READY_ERROR"] = None
+            return True
+        except Exception as exc:
+            db.session.rollback()
+            db.session.remove()
+            app.config["DATABASE_READY"] = False
+            app.config["DATABASE_READY_ERROR"] = exc.__class__.__name__
+            app.logger.warning(
+                "database_ready_check_failed attempt=%s error=%s detail=%s database_url_configured=%s",
+                attempt,
+                exc.__class__.__name__,
+                str(exc)[:300],
+                bool(os.environ.get("DATABASE_URL")),
+            )
+    return False
+
+
+def run_managed_persona_migration_once():
+    try:
+        if db.engine.dialect.name != "postgresql":
+            app.config["MANAGED_PERSONA_MIGRATION_COMPLETE"] = True
+            app.logger.info("managed_persona_migration_skipped dialect=%s", db.engine.dialect.name)
+            return True
+
+        db.session.execute(text("SET LOCAL lock_timeout = '1000ms'"))
+        db.session.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS is_managed_persona BOOLEAN DEFAULT FALSE'))
+        db.session.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS managed_by_admin_id INTEGER'))
+        db.session.execute(text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS managed_note TEXT'))
+        db.session.commit()
+        app.config["MANAGED_PERSONA_MIGRATION_COMPLETE"] = True
+        app.logger.info("managed_persona_migration_completed")
+        return True
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("managed_persona_migration_deferred error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
+        return False
+
+
+def start_managed_persona_migration():
+    if os.environ.get("ENABLE_MANAGED_PERSONA_MIGRATION", "").lower() != "true":
+        app.config["MANAGED_PERSONA_MIGRATION_COMPLETE"] = True
+        app.logger.info("managed_persona_migration_disabled")
+        return
+
+    def runner():
+        with app.app_context():
+            max_attempts = int(os.environ.get("MANAGED_PERSONA_MIGRATION_ATTEMPTS", "30"))
+            retry_seconds = int(os.environ.get("MANAGED_PERSONA_MIGRATION_RETRY_SECONDS", "10"))
+            for attempt in range(1, max_attempts + 1):
+                if run_managed_persona_migration_once():
+                    return
+                app.logger.warning("managed_persona_migration_retry attempt=%s", attempt)
+                time.sleep(retry_seconds)
+
+    threading.Thread(target=runner, daemon=True, name="managed-persona-migration").start()
+
+
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = "auth.login"
+
+from email.header import Header
+
+# ================= VIDEOS =================
+
+def get_youtube_embed_url(youtube_url):
+    parsed_url = urlparse(youtube_url.strip())
+    host = parsed_url.netloc.lower().replace("www.", "")
+    path_parts = [part for part in parsed_url.path.split("/") if part]
+
+    video_id = None
+
+    if host == "youtu.be" and path_parts:
+        video_id = path_parts[0]
+    elif host in {"youtube.com", "m.youtube.com"}:
+        if parsed_url.path == "/watch":
+            video_id = parse_qs(parsed_url.query).get("v", [None])[0]
+        elif path_parts and path_parts[0] in {"shorts", "embed"} and len(path_parts) > 1:
+            video_id = path_parts[1]
+
+    if not video_id or not re.fullmatch(r"[A-Za-z0-9_-]{6,20}", video_id):
+        return None
+
+    return f"https://www.youtube.com/embed/{video_id}"
+
+@app.route("/videos", methods=["GET", "POST"])
+def videos():
+    is_admin = current_user.is_authenticated and current_user.role == "admin"
+
+    if request.method == "POST":
+        if not is_admin:
+            flash("Only admin can add videos.", "error")
+            return redirect(url_for("videos"))
+
+        title = request.form.get("title", "").strip()
+        youtube_url = request.form.get("youtube_url", "").strip()
+        embed_url = get_youtube_embed_url(youtube_url)
+
+        if not title or not youtube_url:
+            flash("Please enter both video title and YouTube link.", "error")
+            return redirect(url_for("videos"))
+
+        if not embed_url:
+            flash("Please enter a valid YouTube video link.", "error")
+            return redirect(url_for("videos"))
+
+        video = Video(title=title, youtube_url=youtube_url, embed_url=embed_url)
+        db.session.add(video)
+        db.session.commit()
+        flash("Video added successfully.", "success")
+        return redirect(url_for("videos"))
+
+    videos = Video.query.order_by(Video.created_at.desc()).limit(50).all()
+    for video in videos:
+        video.reply_threads = [reply for reply in video.replies if reply.parent_id is None]
+        video.reply_count = len(video.replies)
+
+    return render_template(
+        "videos.html",
+        videos=videos,
+        is_admin=is_admin
+    )
+
+
+@app.route("/videos/<int:video_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_video(video_id):
+    if current_user.role != "admin":
+        return "Access Denied"
+
+    video = Video.query.get_or_404(video_id)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        youtube_url = request.form.get("youtube_url", "").strip()
+        embed_url = get_youtube_embed_url(youtube_url)
+
+        if not title or not youtube_url:
+            flash("Please enter both video title and YouTube link.", "error")
+            return redirect(url_for("edit_video", video_id=video.id))
+
+        if not embed_url:
+            flash("Please enter a valid YouTube video link.", "error")
+            return redirect(url_for("edit_video", video_id=video.id))
+
+        video.title = title
+        video.youtube_url = youtube_url
+        video.embed_url = embed_url
+        db.session.commit()
+        flash("Video updated successfully.", "success")
+        return redirect(url_for("videos"))
+
+    return render_template("edit_video.html", video=video)
+
+
+@app.route("/videos/<int:video_id>/delete", methods=["POST"])
+@login_required
+def delete_video(video_id):
+    if current_user.role != "admin":
+        return "Access Denied"
+
+    video = Video.query.get_or_404(video_id)
+    db.session.delete(video)
+    db.session.commit()
+    flash("Video deleted successfully.", "success")
+    return redirect(url_for("videos"))
+
+
+@app.route("/videos/<int:video_id>/reply", methods=["POST"])
+@login_required
+def add_video_reply(video_id):
+    video = Video.query.get_or_404(video_id)
+    content = (request.form.get("content") or "").strip()
+    parent_id = request.form.get("parent_id") or None
+
+    if content:
+        if parent_id and not VideoReply.query.filter_by(id=parent_id, video_id=video.id).first():
+            parent_id = None
+        db.session.add(
+            VideoReply(
+                content=content,
+                user_id=current_user.id,
+                video_id=video.id,
+                parent_id=parent_id,
+            )
+        )
+        db.session.commit()
+
+    return redirect(f"{url_for('videos')}#video-{video.id}")
+
+
+@app.route("/videos/reply/<int:reply_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_video_reply(reply_id):
+    reply = VideoReply.query.get_or_404(reply_id)
+    if reply.user_id != current_user.id and not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"platform.admin"):
+        return "Unauthorized"
+
+    if request.method == "POST":
+        reply.content = (request.form.get("content") or "").strip()
+        db.session.commit()
+        return redirect(f"{url_for('videos')}#video-{reply.video_id}")
+
+    return render_template("edit_comment.html", comment=reply)
+
+
+@app.route("/videos/reply/<int:reply_id>/delete", methods=["POST"])
+@login_required
+def delete_video_reply(reply_id):
+    reply = VideoReply.query.get_or_404(reply_id)
+    if reply.user_id != current_user.id and not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"platform.admin"):
+        return "Unauthorized"
+
+    video_id = reply.video_id
+    db.session.delete(reply)
+    db.session.commit()
+    return redirect(f"{url_for('videos')}#video-{video_id}")
+
+
+# ================= AUTOHIVE KNOWLEDGE BASE =================
+
+KNOWLEDGE_BASE = {
+
+    "buying": {
+        "city": "For city driving choose compact car, light steering, good visibility and automatic transmission.",
+        "highway": "For highway choose stable chassis, strong braking, minimum 4-star safety and refined engine.",
+        "default": "Choose car based on usage: City → Hatchback, Highway → Sedan, Bad roads → Compact SUV. Always check service cost and resale."
+    },
+
+    "service": {
+        "default": "Service warning ⚠️ Always ask for old parts back. Avoid unnecessary throttle cleaning and early brake replacement."
+    },
+
+    "gear": {
+        "morning": "Morning hard gear shift usually happens due to cold transmission oil. If it improves after 5–10 min, it's normal.",
+        "default": "Hard gear shift can be due to clutch wear or low transmission oil. Avoid half-clutch driving."
+    },
+
+    "engine": {
+        "vibration": "Engine vibration may indicate mounting issue, misfire or fuel quality problem. Do not ignore.",
+        "default": "Engine noise can be due to low oil, timing belt wear or tappet issue."
+    },
+
+    "ev": {
+        "default": "EV is best for city usage. Check 8-year battery warranty and charging availability in your area."
+    }
+
+}
+
+# ================= REPUTATION SYSTEM =================
+
+def update_user_reputation(user):
+
+    user.reputation = user.posts_count * 5 + user.helpful_answers * 10
+
+    if user.reputation >= 1000:
+        user.badge = "Master Mechanic"
+
+    elif user.reputation >= 500:
+        user.badge = "Car Expert"
+
+    elif user.reputation >= 200:
+        user.badge = "Car Enthusiast"
+
+    elif user.reputation >= 50:
+        user.badge = "Contributor"
+
+    else:
+        user.badge = "Member"
+
+
+def build_unique_username(base_username):
+
+    candidate = re.sub(r"[^a-zA-Z0-9_]", "", (base_username or "").strip()) or "user"
+    suffix = 1
+    unique_candidate = candidate
+
+    while User.query.filter_by(username=unique_candidate).first():
+        suffix += 1
+        unique_candidate = f"{candidate}{suffix}"
+
+    return unique_candidate
+
+
+def commit_new_user_with_id_fallback(user):
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("Google user insert needed id fallback: %s", exc.__class__.__name__)
+        message = str(exc).lower()
+        if "null value" not in message or "id" not in message:
+            raise
+
+        next_id = (db.session.query(func.max(User.id)).scalar() or 0) + 1
+        user.id = next_id
+        db.session.add(user)
+        db.session.commit()
+
+
+def is_safe_local_redirect(target):
+    if not target:
+        return False
+    parsed = urlparse(target)
+    return not parsed.netloc and parsed.path.startswith("/") and not parsed.path.startswith("//")
+
+
+def remember_login_next(target):
+    if is_safe_local_redirect(target):
+        session["login_next"] = target
+
+
+# ================= LOGIN =================
+
+@login_manager.user_loader
+def load_user(user_id):
+    try:
+        user = db.session.get(User, int(user_id))
+        if user and not user.is_banned:
+            return user
+        # A confirmed missing/fenced account cannot retain browser identity caches.
+        for key in ('_user_id', '_fresh', '_id', 'garage_credentials', 'garage_selected', 'google_profile_picture'):
+            session.pop(key, None)
+        session['_remember'] = 'clear'
+    except Exception as exc:
+        db.session.rollback()
+        app.config["DATABASE_READY"] = False
+        app.logger.warning("user_loader_failed error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
+    return None
+
+# ================= ROUTES =================
+
+@app.route("/login/google")
+def google_login():
+    remember_login_next(request.args.get("next"))
+
+    missing_env = [
+        key for key in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "SECRET_KEY")
+        if not os.environ.get(key)
+    ]
+    if missing_env:
+        app.logger.error("google_login_config_missing missing_env=%s", ",".join(missing_env))
+        flash("Google login is not configured yet. Please check server configuration.")
+        return redirect(url_for("auth.login"))
+
+    redirect_uri = GOOGLE_PRODUCTION_REDIRECT_URI
+
+    try:
+        return google.authorize_redirect(redirect_uri)
+    except Exception as e:
+        app.logger.warning("Google login redirect failed: %s", e.__class__.__name__)
+        flash("Google login could not start. Please check Google OAuth redirect settings.")
+        return redirect(url_for("auth.login"))
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+@app.route("/vision")
+def vision():
+    return render_template("vision.html")
+
+@app.route("/speed16")
+def speed16():
+    return render_template("speed16.html")
+
+
+@app.route("/yaanix")
+def yaanix():
+    return render_template("yaanix.html")
+
+@app.route("/platform")
+def platform():
+    return render_template("platform.html")
+ 
+
+@app.route("/google/callback")
+def google_callback():
+    avatar_helper_called = False
+    try:
+        token = google.authorize_access_token()
+
+        user_info = token.get("userinfo") if isinstance(token, dict) else None
+
+        userinfo_fallback_attempted = not bool(user_info)
+        app.logger.info(
+            'avatar_diagnostic stage=google_userinfo google_userinfo_fallback_attempted=%s',
+            userinfo_fallback_attempted,
+        )
+        if not user_info:
+            user_info = google.get("userinfo").json()
+
+        if not user_info:
+            app.logger.warning("Google callback missing user profile data")
+            flash("Google login failed. Please try again.")
+            return redirect(url_for("auth.login"))
+
+        email = (user_info.get("email") or "").strip().lower()
+
+        if not email:
+            app.logger.warning("Google callback missing email field")
+            flash("Google login failed. Please try again.")
+            return redirect(url_for("auth.login"))
+
+        if not database_ready_for_queries():
+            app.logger.warning(
+                "google_callback_storage_unavailable database_ready=%s "
+                "database_initialized=%s db_init_thread_started=%s "
+                "managed_persona_migration_complete=%s analytics_enabled=%s "
+                "database_url_configured=%s",
+                app.config.get("DATABASE_READY", False),
+                database_initialized,
+                database_init_thread_started,
+                app.config.get("MANAGED_PERSONA_MIGRATION_COMPLETE", False),
+                analytics_enabled(),
+                bool(os.environ.get("DATABASE_URL")),
+            )
+            flash("Google login is temporarily unavailable. Please try again shortly.")
+            return redirect(url_for("auth.login"))
+
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            user = User(
+                username=build_unique_username(email.split("@")[0]),
+                mobile="",
+                email=email,
+                password=generate_password_hash(secrets.token_urlsafe(16)),
+                role="user",
+                is_banned=False,
+                email_verified=True,
+                reputation=0,
+                posts_count=0,
+                helpful_answers=0,
+                contributor_score=0,
+                badge="New Member",
+            )
+            commit_new_user_with_id_fallback(user)
+
+        # Admin assignment after user exists: one explicit email only.
+        if email in ADMIN_EMAIL_SET:
+            user.role = "admin"
+            db.session.commit()
+        elif user.role == "admin":
+            user.role = "user"
+            db.session.commit()
+
+        login_user(user)
+        from services.google_profile_picture import remember_google_picture
+        avatar_helper_called = True
+        remember_google_picture(user.get_id(), user_info,
+                                userinfo_fallback_attempted=userinfo_fallback_attempted)
+        from services.canonical_garage_client import connect, clear_credentials, GarageError
+        clear_credentials()
+        if isinstance(token, dict) and token.get('id_token'):
+            try:
+                connect(id_token=token['id_token'])
+            except GarageError:
+                flash('Website signed in. Garage sign-in needs attention; no account was linked automatically.')
+
+        next_page = session.pop("login_next", None)
+        if is_safe_local_redirect(next_page):
+            return redirect(next_page)
+        return redirect("/community")
+    except Exception as e:
+        db.session.rollback()
+        app.logger.warning("Google callback failed: %s detail=%s", e.__class__.__name__, str(e)[:300])
+        flash("Google login failed. Please try again.")
+        return redirect(url_for("auth.login"))
+
+    finally:
+        app.logger.info(
+            'avatar_diagnostic stage=google_callback_exit avatar_helper_called=%s',
+            avatar_helper_called,
+        )
+
+
+@app.after_request
+def avatar_boolean_diagnostics(response):
+    if request.endpoint != 'google_callback':
+        log_authenticated_avatar_state(current_user)
+    return response
+
+
+# ================= SECURITY BASICS =================
+
+SENSITIVE_PATHS = {
+    "/.env",
+    "/.git",
+    "/.git/config",
+    "/config",
+    "/phpinfo",
+    "/_environment",
+    "/webroot",
+    "/debug",
+    "/console",
+    "/server-status",
+    "/wp-admin",
+    "/wp-login.php",
+    "/vendor",
+    "/composer.json",
+    "/package.json",
+    "/node_modules",
+}
+
+RATE_LIMIT_RULES = {
+    "/login": (20, 60),
+    "/garage/connect": (20, 60),
+    "/register": (12, 60),
+    "/forgot-password": (8, 60),
+    "/login/google": (20, 60),
+    "/google/callback": (30, 60),
+    "/tools/ai-diagnosis": (30, 60),
+    "/tools/ai-diagnosis-followup": (30, 60),
+    "/api/help-report": (12, 60),
+    "/submit_feedback": (20, 60),
+}
+rate_limit_hits = defaultdict(deque)
+rate_limit_lock = threading.Lock()
+
+
+def client_ip():
+    return request.headers.get("X-Forwarded-For", request.remote_addr or "").split(",")[0].strip()
+
+
+def wants_json_response():
+    return request.path.startswith("/api") or "application/json" in request.headers.get("Accept", "")
+
+
+def security_path_matches(path):
+    normalized = (path or "").rstrip("/") or "/"
+    return normalized in SENSITIVE_PATHS or any(normalized.startswith(f"{prefix}/") for prefix in ("/.git", "/vendor", "/node_modules"))
+
+
+def sanitize_event_text(value, max_length=160):
+    cleaned = re.sub(r"\s+", " ", (value or "").strip())
+    return cleaned[:max_length]
+
+
+def normalize_event_url(value):
+    parsed = urlparse((value or "").strip())
+    if parsed.netloc and parsed.netloc not in {"ampyan.com", "www.ampyan.com"}:
+        return parsed.netloc[:500]
+    path = parsed.path or "/"
+    return path[:500]
+
+
+def record_website_event(event_type, label="", target_url="", severity="info", path=None):
+    if os.environ.get("ENABLE_WEBSITE_EVENTS", "").lower() != "true":
+        return
+
+    try:
+        if not database_ready_for_queries():
+            return
+        from services.analytics_service import safe_path, safe_referrer
+        event = WebsiteEvent(
+            event_type=sanitize_event_text(event_type, 40),
+            label=sanitize_event_text(label, 160),
+            path=safe_path(path or request.path),
+            target_url=normalize_event_url(target_url),
+            visitor_id=None,
+            user_id=current_user.id if current_user.is_authenticated else None,
+            ip_address=client_ip()[:50],
+            referrer=safe_referrer(request.referrer),
+            user_agent=(request.headers.get("User-Agent", "") or "")[:500],
+            device_type=detect_device_type(request.headers.get("User-Agent", "")),
+            is_authenticated=current_user.is_authenticated,
+            severity=sanitize_event_text(severity, 20) or "info",
+        )
+        db.session.add(event)
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+
+def rate_limited(path):
+    rule = RATE_LIMIT_RULES.get(path)
+    if not rule:
+        return False
+    max_hits, window_seconds = rule
+    key = (client_ip(), path)
+    now = time.time()
+    with rate_limit_lock:
+        hits = rate_limit_hits[key]
+        while hits and now - hits[0] > window_seconds:
+            hits.popleft()
+        if len(hits) >= max_hits:
+            return True
+        hits.append(now)
+    return False
+
+
+@app.before_request
+def security_guard():
+    g.request_start_time = time.perf_counter()
+    g.request_start_utc = datetime.utcnow()
+
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", request.scheme)
+    if (
+        IS_PRODUCTION
+        and forwarded_proto == "http"
+        and request.host in {"ampyan.com", "www.ampyan.com"}
+    ):
+        return redirect(f"https://ampyan.com{request.full_path.rstrip('?')}", code=301)
+
+    if IS_PRODUCTION and request.host == "www.ampyan.com":
+        return redirect(f"https://ampyan.com{request.full_path.rstrip('?')}", code=301)
+
+    if security_path_matches(request.path):
+        record_website_event(
+            "security",
+            label="Blocked sensitive path",
+            target_url=request.path,
+            severity="high",
+            path=request.path,
+        )
+        return "Not found", 404
+
+    content_length = request.content_length or 0
+    if content_length > app.config["MAX_CONTENT_LENGTH"]:
+        if request.path == "/api/track-event":
+            return jsonify({"status": "rejected", "reason": "payload_too_large"}), 413
+        if request.path == "/admin/news/create":
+            flash("Image upload failed because the file is too large. The news form is still available.", "warning")
+            return redirect(url_for("create_news"))
+        if request.path.startswith("/admin/news/edit/"):
+            flash("Image upload failed because the file is too large. The existing image was kept.", "warning")
+            return redirect(request.path)
+        return jsonify({"status": "error", "message": "Request too large"}), 413
+
+    if rate_limited(request.path):
+        record_website_event(
+            "security",
+            label="Rate limit triggered",
+            target_url=request.path,
+            severity="medium",
+            path=request.path,
+        )
+        if wants_json_response():
+            return jsonify({"status": "error", "message": "Too many requests. Please try again soon."}), 429
+        return "Too many requests. Please try again soon.", 429
+
+
+@app.before_request
+def restore_whitelisted_admin_role():
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        # Fail closed for stale admin roles without changing account rows on a view.
+        if request.path.startswith('/admin') and current_user.is_authenticated:
+            if current_user.role == 'admin' and (current_user.email or '').strip().lower() not in ADMIN_EMAIL_SET:
+                abort(403)
+        return
+    if request.endpoint in {"favicon", "health", "healthz", "ready", "version"} or request.path in {"/favicon.ico", "/health", "/healthz", "/ready", "/version"}:
+        return
+    if request.path.startswith("/static"):
+        return
+    try:
+        if not current_user.is_authenticated:
+            return
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("admin_role_restore_user_load_skipped error=%s", exc.__class__.__name__)
+        return
+
+    email = (current_user.email or "").strip().lower()
+    if email not in ADMIN_EMAIL_SET:
+        if current_user.role == "admin":
+            try:
+                current_user.role = "user"
+                db.session.commit()
+                app.logger.warning("Removed admin role from non-whitelisted email: %s", email)
+            except Exception as exc:
+                db.session.rollback()
+                app.logger.warning("Non-whitelisted admin cleanup skipped: %s", exc.__class__.__name__)
+        return
+
+    if current_user.role == "admin":
+        return
+
+    try:
+        current_user.role = "admin"
+        db.session.commit()
+        app.logger.info("Restored admin role for whitelisted email: %s", email)
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("Admin role restore skipped: %s", exc.__class__.__name__)
+
+# ================= WEBSITE VISIT TRACKER =================
+
+def should_track_page_visit():
+    if request.method != "GET":
+        return False
+
+    excluded_prefixes = (
+        "/static",
+        "/api",
+        "/admin",
+        "/login",
+        "/logout",
+        "/register",
+        "/google",
+        "/health",
+        "/healthz",
+        "/ready",
+        "/version",
+        "/symptom-suggest",
+        "/favicon",
+    )
+
+    if request.path.startswith(excluded_prefixes):
+        return False
+
+    if "." in request.path.rsplit("/", 1)[-1]:
+        return False
+
+    return True
+
+
+def detect_device_type(user_agent):
+    ua = (user_agent or "").lower()
+    if any(token in ua for token in ["iphone", "android", "mobile"]):
+        return "mobile"
+    if any(token in ua for token in ["ipad", "tablet"]):
+        return "tablet"
+    return "desktop"
+
+
+@app.before_request
+def track_visit():
+    if not analytics_enabled() or request.cookies.get("ampyan_analytics_consent") != "granted":
+        return
+
+    try:
+
+        from zoneinfo import ZoneInfo
+        day = datetime.now(ZoneInfo("Asia/Kolkata")).strftime("%Y%m%d")
+        now = int(time.time())
+        raw = request.cookies.get("ampyan_analytics_session", "")
+        parts = raw.split(".")
+        if (len(parts) == 3 and re.fullmatch(r"[0-9a-f]{32}", parts[0])
+                and parts[1] == day and parts[2].isdigit()
+                and 0 <= now - int(parts[2]) <= 1800):
+            session_id = parts[0]
+        else:
+            session_id = secrets.token_hex(16)
+        g.analytics_session_id = session_id
+        g.analytics_session_cookie = f"{session_id}.{day}.{now}"
+        if any(key in request.args for key in ("utm_source", "utm_medium", "utm_campaign")):
+            from services.analytics_service import _attribution
+            attribution = ".".join(_attribution(request.args.get(key, "")) for key in ("utm_source", "utm_medium", "utm_campaign"))
+            if attribution != "..":
+                g.analytics_attribution_cookie = attribution
+                if not request.cookies.get("ampyan_analytics_first_attribution"):
+                    g.analytics_first_attribution_cookie = attribution
+
+        if not should_track_page_visit():
+            return
+
+        safe_track_page_visit()
+
+    except Exception as e:
+
+        pass
+
+
+@app.after_request
+def track_traffic_quality(response):
+    return count_traffic_quality_response(response)
+
+
+@app.after_request
+def attach_visitor_cookie(response):
+    elapsed = None
+    if hasattr(g, "request_start_time"):
+        elapsed = time.perf_counter() - g.request_start_time
+        safe_track_api_request(request.path, request.method, response.status_code, elapsed * 1000)
+        log_message = (
+            "route=%s method=%s path=%s status=%s start=%s end=%s duration=%.3fs"
+        )
+        log_args = (
+            request.endpoint or "unknown",
+            request.method,
+            request.path,
+            response.status_code,
+            getattr(g, "request_start_utc", datetime.utcnow()).isoformat(),
+            datetime.utcnow().isoformat(),
+            elapsed,
+        )
+        if elapsed >= float(os.environ.get("SLOW_ROUTE_WARNING_SECONDS", "2.0")):
+            app.logger.warning("slow_request " + log_message, *log_args)
+        else:
+            app.logger.info("request " + log_message, *log_args)
+
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault(
+        "Permissions-Policy",
+        "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()",
+    )
+    response.headers.setdefault(
+        "Content-Security-Policy",
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://www.instagram.com https://www.googletagmanager.com https://www.clarity.ms https://*.clarity.ms; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdnjs.cloudflare.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com data:; "
+        "img-src 'self' data: https:; "
+        "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://www.instagram.com; "
+        "connect-src 'self' https://ampyan-api.onrender.com https://api.ampyan.com https://www.google-analytics.com https://*.google-analytics.com https://www.clarity.ms https://*.clarity.ms; "
+        "object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'",
+    )
+
+    if request.cookies.get("ampyan_analytics_consent") != "granted":
+        for name in ("ampyan_analytics_session", "ampyan_analytics_attribution", "ampyan_analytics_first_attribution", "ampyan_visitor_id"):
+            if request.cookies.get(name):
+                response.delete_cookie(name, samesite="Lax", secure=request.is_secure)
+
+    analytics_session_cookie = getattr(g, "analytics_session_cookie", None)
+    if analytics_session_cookie:
+        response.set_cookie(
+            "ampyan_analytics_session", analytics_session_cookie,
+            samesite="Lax", secure=request.is_secure,
+        )
+    attribution_cookie = getattr(g, "analytics_attribution_cookie", None)
+    if attribution_cookie:
+        response.set_cookie("ampyan_analytics_attribution", attribution_cookie,
+                            samesite="Lax", secure=request.is_secure)
+    first_attribution_cookie = getattr(g, "analytics_first_attribution_cookie", None)
+    if first_attribution_cookie:
+        response.set_cookie("ampyan_analytics_first_attribution", first_attribution_cookie,
+                            max_age=60 * 60 * 24 * 365, samesite="Lax", secure=request.is_secure)
+    return response
+
+@app.before_request
+def reset_ai_usage():
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
+
+    if request.endpoint in {"favicon", "health", "healthz", "ready", "version"} or request.path in {"/favicon.ico", "/health", "/healthz", "/ready", "/version"}:
+        return
+    if request.path.startswith("/static"):
+        return
+    try:
+        if not current_user.is_authenticated:
+            return
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("ai_usage_user_load_skipped error=%s", exc.__class__.__name__)
+        return
+
+    today = datetime.utcnow().date()
+
+    if not current_user.ai_last_reset or current_user.ai_last_reset.date() != today:
+
+        current_user.ai_uses_today = 0
+        current_user.ai_last_reset = datetime.utcnow()
+
+        try:
+            db.session.commit()
+        except:
+            db.session.rollback()
+
+
+# ================= AI DIAGNOSE =================
+
+@app.route("/tools/ai-diagnosis", methods=["GET","POST"])
+def diagnose():
+
+    # ===== Load cars =====
+    if current_user.is_authenticated:
+        cars = Car.query.filter_by(owner_id=current_user.id).all()
+        default_car = next((c for c in cars if c.is_default), None)
+    else:
+        cars = []
+        default_car = None
+
+    # ===== POST =====
+    if request.method == "POST":
+
+        problem = request.form.get("problem", "")
+        extra_context = dashboard_light_context(request.files, request.form)
+        if extra_context:
+            problem = f"{problem} {extra_context}".strip()
+        car_id = request.form.get("car_id")
+
+        car = Car.query.get(car_id)
+
+        if not car:
+            flash("Please select a car.")
+            return redirect("/tools/ai-diagnosis")
+
+        # ✅ AI ENGINE
+        results, questions = safe_diagnose_vehicle(problem, car=car, route_name="app_ai_diagnosis")
+
+        app.logger.info("AI diagnosis completed with %s result(s)", len(results or []))
+
+        # ✅ SAVE
+        if results:
+            learning = DiagnosticLearning(
+                user_id=current_user.id if current_user.is_authenticated else None,
+                problem_text=problem,
+                predicted_issue=results[0]["issue"],
+                confidence=results[0]["confidence"]
+            )
+            db.session.add(learning)
+            db.session.commit()
+
+        # ✅ FINAL OUTPUT PAGE
+        diagnosis_view = enrich_diagnosis_results(results, problem)
+        return render_template(
+            "diagnosis_result.html",
+            results=diagnosis_view["results"],
+            ui_text=diagnosis_view["ui_text"],
+            response_language=diagnosis_view["language_code"],
+            response_language_name=diagnosis_view["language_name"],
+            questions=questions,
+            problem=problem,
+            car=car
+        )
+
+    # ===== GET =====
+    return render_template(
+        "ai_diagnosis.html",
+        cars=cars,
+        default_car=default_car
+    )
+
+    # ================= MAIN AI ENGINE =================
+
+
+    # ================= SAVE =================
+
+    if results:
+
+        learning = DiagnosticLearning(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            problem_text=problem,
+            predicted_issue=results[0]["issue"],
+            confidence=results[0]["confidence"]
+        )
+
+        db.session.add(learning)
+        db.session.commit()
+
+    return render_template(
+    "diagnosis_result.html",
+    results=results,
+    questions=questions,
+    problem=problem,
+    car=car
+)
+
+    # ===== Guest limit =====
+    if not current_user.is_authenticated:
+
+        guest_uses = session.get("guest_uses", 0)
+
+        if guest_uses >= 1:
+            flash("Please login to continue diagnosing your car.")
+            return redirect("/login")
+
+        session["guest_uses"] = guest_uses + 1
+
+    # ===== Load cars =====
+    if current_user.is_authenticated:
+        cars = Car.query.filter_by(owner_id=current_user.id).all()
+    else:
+        cars = []
+
+    # ===== Form submit =====
+    if request.method == "POST":
+
+        problem = request.form.get("problem")
+        car_id = request.form.get("car_id")
+
+        car = Car.query.get(car_id)
+
+        if not car:
+            flash("Please select a car.")
+            return redirect("/tools/ai-diagnosis")
+
+
+
+        # ===== Save diagnosis history =====
+        if results:
+
+            learning = DiagnosticLearning(
+                user_id=current_user.id if current_user.is_authenticated else None,
+                problem_text=problem,
+                predicted_issue=results[0]["issue"],
+                confidence=results[0]["confidence"]
+            )
+
+            db.session.add(learning)
+            db.session.commit()
+
+        return render_template(
+    "ai_diagnosis.html",
+    results=results,
+    questions=questions,
+    problem=problem,
+    car=car,
+    cars=cars,
+    default_car=default_car
+)
+@app.route("/tools/ai-diagnosis-followup", methods=["POST"])
+def diagnosis_followup():
+
+    problem = request.form.get("problem")
+    car_id = request.form.get("car_id")
+
+    answers = dict(request.form)
+
+    # Basic refinement logic
+    final_results = []
+
+    if answers.get("steering_vibration") == "yes":
+        final_results.append({
+            "issue": "Brake Disc Warp",
+            "confidence": 90,
+            "reason": "Steering vibration strongly indicates disc warp."
+        })
+
+    else:
+        final_results.append({
+            "issue": "Brake Pad Wear",
+            "confidence": 65,
+            "reason": "Less likely disc warp, more likely pad wear."
+        })
+
+    car = Car.query.get(car_id)
+
+    diagnosis_view = enrich_diagnosis_results(final_results, problem)
+
+    return render_template(
+        "diagnosis_result.html",
+        results=diagnosis_view["results"],
+        ui_text=diagnosis_view["ui_text"],
+        response_language=diagnosis_view["language_code"],
+        response_language_name=diagnosis_view["language_name"],
+        questions=[],
+        problem=problem,
+        car=car
+    )
+
+
+@app.route("/api/diagnosis", methods=["POST"])
+def api_diagnosis():
+    data = request.get_json(silent=True) or {}
+    if not data and request.form:
+        data = request.form.to_dict()
+    problem = (data.get("problem") or data.get("message") or data.get("symptoms") or "").strip()
+    extra_context = dashboard_light_context(request.files, request.form, data)
+    if extra_context:
+        problem = f"{problem} {extra_context}".strip()
+    answers = data.get("answers") or {}
+
+    if not problem:
+        return jsonify({
+            "status": "error",
+            "message": "problem is required"
+        }), 400
+
+    car = None
+    car_id = data.get("car_id")
+    if car_id:
+        car = Car.query.get(car_id)
+
+    results, questions = safe_diagnose_vehicle(
+        problem,
+        answers=answers if isinstance(answers, dict) else {},
+        car=car,
+        route_name="api_diagnosis",
+    )
+    diagnosis_view = enrich_diagnosis_results(results, problem)
+
+    api_results = []
+    for item in diagnosis_view["results"]:
+        api_results.append({
+            "problem": item.get("problem") or item.get("issue"),
+            "issue": item.get("issue"),
+            "system": item.get("system"),
+            "component": item.get("component"),
+            "severity": item.get("severity"),
+            "urgency": item.get("urgency"),
+            "probability_score": item.get("probability_score"),
+            "confidence_percent": item.get("confidence_percent", item.get("confidence")),
+            "evidence_level": item.get("evidence_level"),
+            "needs_more_info": item.get("needs_more_info", False),
+            "top_matched_symptoms": item.get("top_matched_symptoms", []),
+            "questions": item.get("questions", []),
+            "user_checks": item.get("user_checks", []),
+            "repair_cost": item.get("repair_cost"),
+            "safety_message": item.get("safety_message", ""),
+            "disclaimer": item.get("disclaimer", ""),
+            "group_id": item.get("group_id"),
+            "aliases": item.get("aliases", []),
+            "is_generic": item.get("is_generic", False),
+            "use_as_router_only": item.get("use_as_router_only", False),
+        })
+
+    if current_user.is_authenticated and api_results:
+        try:
+            learning = DiagnosticLearning(
+                user_id=current_user.id,
+                problem=problem[:255],
+                answers=json.dumps(answers if isinstance(answers, dict) else {}, ensure_ascii=True),
+                final_issue=(api_results[0].get("issue") or api_results[0].get("problem") or "Unknown")[:255],
+            )
+            db.session.add(learning)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            app.logger.warning("Diagnosis history save skipped: %s", exc.__class__.__name__)
+
+    return jsonify({
+        "status": "success",
+        "problem": problem,
+        "results": api_results,
+        "questions": questions,
+        "disclaimer": api_results[0]["disclaimer"] if api_results else ""
+    })
+
+
+def serialize_diagnosis_history(item):
+    answers = {}
+    if item.answers:
+        try:
+            answers = json.loads(item.answers)
+        except Exception:
+            answers = {}
+
+    return {
+        "id": item.id,
+        "problem": item.problem,
+        "answers": answers,
+        "final_issue": item.final_issue,
+        "created_at": item.created_at.isoformat() if hasattr(item.created_at, "isoformat") else item.created_at,
+    }
+
+
+@app.route("/api/diagnosis/history")
+def api_diagnosis_history():
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "authentication required"}), 401
+
+    limit = min(max(request.args.get("limit", default=20, type=int) or 20, 1), 100)
+    items = (
+        DiagnosticLearning.query
+        .filter_by(user_id=current_user.id)
+        .order_by(DiagnosticLearning.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return jsonify({
+        "status": "success",
+        "diagnoses": [serialize_diagnosis_history(item) for item in items],
+    })
+
+
+@app.route("/api/diagnosis/history/<int:diagnosis_id>")
+def api_diagnosis_history_detail(diagnosis_id):
+    if not current_user.is_authenticated:
+        return jsonify({"status": "error", "message": "authentication required"}), 401
+
+    item = DiagnosticLearning.query.get_or_404(diagnosis_id)
+    if item.user_id != current_user.id:
+        return jsonify({"status": "error", "message": "diagnosis not found"}), 404
+
+    return jsonify({"status": "success", "diagnosis": serialize_diagnosis_history(item)})
+
+
+
+
+
+# ================= CREATE POST =================
+
+@app.route("/create", methods=["GET", "POST"])
+@login_required
+def create():
+
+    if request.method == "POST":
+
+        post = Post(
+            title=request.form["title"],
+            content=request.form["content"],
+            user_id=current_user.id
+        )
+
+        db.session.add(post)
+
+        current_user.posts_count += 1
+        current_user.reputation += 5
+        update_user_reputation(current_user)
+
+        db.session.commit()
+
+        return redirect("/community")
+
+    return render_template("create.html")
+
+
+# ================= SYMPTOM SUGGESTION =================
+
+@app.route("/symptom-suggest")
+def symptom_suggest():
+
+    query = request.args.get("q","").lower().strip()
+
+    if not query:
+        return jsonify({"suggestions":[]})
+
+    suggestions = []
+
+    for failure in FAILURE_DATABASE:
+
+        # problem match
+        problem = failure.get("problem","").lower()
+
+        if query in problem:
+            suggestions.append(problem)
+
+        # match individual words
+        for word in problem.split():
+
+            if query in word:
+                suggestions.append(problem)
+
+        # search symptoms
+        for symptom in failure.get("symptoms",[]):
+
+            s = symptom.lower()
+
+            if query in s:
+                suggestions.append(s)
+
+            for w in s.split():
+
+                if query in w:
+                    suggestions.append(s)
+
+    # remove duplicates
+    suggestions = list(set(suggestions))
+
+    # limit suggestions
+    suggestions = suggestions[:10]
+
+    return jsonify({"suggestions":suggestions})
+
+# ================= NEWS =================
+
+NEWS_CATEGORIES = [
+    ("auto-news", "Auto News"),
+    ("car-review", "Car Review"),
+    ("tips-and-tricks", "Tips and Tricks"),
+]
+NEWS_CATEGORY_LABELS = dict(NEWS_CATEGORIES)
+NEWS_CATEGORY_KEYS = set(NEWS_CATEGORY_LABELS)
+
+
+def normalize_news_category(value):
+    normalized = (value or "").strip().lower().replace("_", "-")
+    aliases = {
+        "auto": "auto-news",
+        "automotive": "auto-news",
+        "automotive-news": "auto-news",
+        "news": "auto-news",
+        "review": "car-review",
+        "car-reviews": "car-review",
+        "reviews": "car-review",
+        "tips": "tips-and-tricks",
+        "tips-tricks": "tips-and-tricks",
+        "tips-and-trick": "tips-and-tricks",
+        "tips-and-tricks": "tips-and-tricks",
+    }
+    normalized = aliases.get(normalized, normalized)
+    if normalized not in NEWS_CATEGORY_LABELS:
+        return "auto-news"
+    return normalized
+
+
+def resolve_news_category(raw_value, previous_category=None, context="save"):
+    raw_value = (raw_value or "").strip()
+    app.logger.info("news_category_received context=%s value=%s", context, raw_value or "missing")
+
+    if not raw_value:
+        fallback = normalize_news_category(previous_category) if previous_category else "auto-news"
+        app.logger.warning(
+            "news_category_fallback_used context=%s reason=missing fallback=%s",
+            context,
+            fallback,
+        )
+        return fallback
+
+    normalized = raw_value.lower().replace("_", "-")
+    if normalized in NEWS_CATEGORY_KEYS:
+        return normalized
+
+    fallback = normalize_news_category(previous_category) if previous_category else "auto-news"
+    app.logger.warning(
+        "news_category_fallback_used context=%s reason=invalid value=%s fallback=%s",
+        context,
+        raw_value,
+        fallback,
+    )
+    return fallback
+
+
+def news_category_label(value):
+    return NEWS_CATEGORY_LABELS.get(normalize_news_category(value), "Auto News")
+
+
+def infer_news_category(news):
+    text_value = f"{getattr(news, 'title', '')} {getattr(news, 'content', '')}".lower()
+    if any(keyword in text_value for keyword in ("review", "road test", "test drive", "pros and cons", "ownership review")):
+        return "car-review"
+    if any(keyword in text_value for keyword in ("tip", "tips", "trick", "guide", "checklist", "how to", "maintenance", "mileage", "save petrol", "fuel bills", "cooling")):
+        return "tips-and-tricks"
+    return "auto-news"
+
+
+def effective_news_category(news):
+    return normalize_news_category(getattr(news, "category", None))
+
+
+@app.route("/news")
+def news_list():
+    active_category = normalize_news_category(request.args.get("category")) if request.args.get("category") else ""
+    page = _bounded_page_number(request.args.get("page"))
+    per_page = _bounded_page_size(request.args.get("per_page"))
+    has_next = False
+    has_prev = page > 1
+    total_count = None
+    news_items = []
+    if database_ready_for_queries():
+        try:
+            if active_category:
+                if active_category == "auto-news":
+                    category_filter = db.or_(News.category == active_category, News.category.is_(None), News.category == "")
+                else:
+                    category_filter = News.category == active_category
+                query = News.query.filter(category_filter)
+            else:
+                query = News.query
+
+            query = query.order_by(News.id.desc())
+            news_items = query.offset((page - 1) * per_page).limit(per_page + 1).all()
+            has_next = len(news_items) > per_page
+            news_items = news_items[:per_page]
+        except Exception as exc:
+            db.session.rollback()
+            app.logger.warning("news_section_error=list error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])
+    else:
+        app.logger.warning("news_section_error=list error=database_unavailable")
+    return render_template(
+        "news.html",
+        news_items=news_items,
+        news_categories=NEWS_CATEGORIES,
+        active_category=active_category,
+        page=page,
+        per_page=per_page,
+        has_next=has_next,
+        has_prev=has_prev,
+        total_count=total_count,
+        db_available=database_ready_for_queries(),
+    )
+
+
+@app.route("/news/<int:news_id>")
+def news_detail(news_id):
+    if not database_ready_for_queries():
+        app.logger.warning("news_section_error=detail error=database_unavailable news_id=%s", news_id)
+        abort(503)
+    try:
+        news = (
+            News.query.options(
+                selectinload(News.replies).selectinload(NewsReply.user),
+                selectinload(News.replies).selectinload(NewsReply.replies),
+            )
+            .filter(News.id == news_id)
+            .first()
+        )
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("news_section_error=detail error=%s news_id=%s", exc.__class__.__name__, news_id)
+        abort(503)
+    if not news:
+        abort(404)
+    replies = sorted(news.replies, key=lambda reply: reply.id)
+    news.reply_threads = [reply for reply in replies if reply.parent_id is None]
+    news.reply_count = len(replies)
+    image_url = static_image_url_if_exists(
+        "news_images",
+        news.image,
+        fallback=DEFAULT_NEWS_IMAGE_FILENAME,
+    )
+    if is_external_image_url(image_url):
+        meta_image = image_url
+    elif image_url and image_url.startswith("/static/"):
+        meta_image = url_for("static", filename=image_url.replace("/static/", "", 1), _external=True)
+    else:
+        meta_image = url_for("static", filename=DEFAULT_NEWS_IMAGE_PATH, _external=True)
+    return render_template(
+        "news_detail.html",
+        news=news,
+        meta_title=news.title or "AMPYAN Automotive Update",
+        meta_description=social_preview_text(news.content, "Read this AMPYAN automotive news update."),
+        meta_url=url_for("news_detail", news_id=news.id, _external=True),
+        meta_image=meta_image,
+        meta_type="article",
+        rich_content=news_render_blocks(news),
+    )
+
+
+@app.route("/story/news/<int:news_id>")
+def news_story(news_id):
+    news = News.query.get_or_404(news_id)
+    return news_story_response(news)
+
+
+@app.route("/story/post/<int:post_id>")
+def post_story(post_id):
+    post = Post.query.get_or_404(post_id)
+    author = post.author.username if post.author else "AMPYAN Member"
+    community_name = post.car_community.name if post.car_community else "General Community"
+    return story_response(
+        title=post.title,
+        subtitle=f"{community_name} - {author}",
+        body=post.content,
+        footer="Read full community post on AMPYAN",
+        source_url=url_for("community.post_detail", post_id=post.id, _external=True),
+        accent=(255, 71, 51),
+        kind="Community Post",
+    )
+
+
+@app.route("/story/diagnosis", methods=["POST"])
+def diagnosis_story():
+    issue = (request.form.get("issue") or "Vehicle Intelligence Report").strip()
+    problem = (request.form.get("problem") or "Car diagnosis result").strip()
+    car_label = (request.form.get("car_label") or "Vehicle").strip()
+    confidence = (request.form.get("confidence") or "").strip()
+    severity = (request.form.get("severity") or "").strip()
+    urgency = (request.form.get("urgency") or "").strip()
+    summary_parts = [
+        f"Problem: {problem}",
+        f"Detected issue: {issue}",
+    ]
+    if confidence:
+        summary_parts.append(f"Confidence: {confidence}%")
+    if severity:
+        summary_parts.append(f"Severity: {severity}")
+    if urgency:
+        summary_parts.append(f"Urgency: {urgency}")
+
+    return story_response(
+        title=issue,
+        subtitle=car_label,
+        body=". ".join(summary_parts),
+        footer="Vehicle check powered by AMPYAN",
+        source_url=url_for("diagnose", _external=True),
+        accent=(255, 96, 54),
+        kind="Vehicle Diagnosis",
+    )
+
+
+@app.route("/news/<int:news_id>/reply", methods=["POST"])
+@login_required
+def add_news_reply(news_id):
+    news = News.query.get_or_404(news_id)
+    content = (request.form.get("content") or "").strip()
+    parent_id = None
+    raw_parent_id = (request.form.get("parent_id") or "").strip()
+    if raw_parent_id:
+        try:
+            parent_id = int(raw_parent_id)
+        except ValueError:
+            parent_id = None
+
+    if content:
+        if parent_id and not NewsReply.query.filter_by(id=parent_id, news_id=news.id).first():
+            parent_id = None
+        db.session.add(
+            NewsReply(
+                content=content,
+                user_id=current_user.id,
+                news_id=news.id,
+                parent_id=parent_id,
+            )
+        )
+        db.session.commit()
+
+    return redirect(url_for("news_detail", news_id=news.id))
+
+
+@app.route("/news/reply/<int:reply_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_news_reply(reply_id):
+    reply = NewsReply.query.get_or_404(reply_id)
+    if reply.user_id != current_user.id and not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"platform.admin"):
+        return "Unauthorized"
+
+    if request.method == "POST":
+        reply.content = (request.form.get("content") or "").strip()
+        db.session.commit()
+        return redirect(url_for("news_detail", news_id=reply.news_id))
+
+    return render_template("edit_comment.html", comment=reply)
+
+
+@app.route("/news/reply/<int:reply_id>/delete", methods=["POST"])
+@login_required
+def delete_news_reply(reply_id):
+    reply = NewsReply.query.get_or_404(reply_id)
+    if reply.user_id != current_user.id and not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"platform.admin"):
+        return "Unauthorized"
+
+    news_id = reply.news_id
+    db.session.delete(reply)
+    db.session.commit()
+    return redirect(url_for("news_detail", news_id=news_id))
+
+
+@app.route("/admin/news/create", methods=["GET", "POST"])
+@login_required
+def create_news():
+    if not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"news.create"):
+        return "Access Denied"
+
+    if request.method == "POST":
+
+        image_file = request.files.get("image")
+        filename = None
+        title = (request.form.get("title") or "").strip()
+        content = (request.form.get("content") or "").strip()
+        selected_category = resolve_news_category(request.form.get("category"), context="create")
+        raw_content_blocks = (request.form.get("content_blocks") or "").strip()
+        if len(title) > 200:
+            flash("Headline must be 200 characters or fewer.", "warning")
+            return render_template(
+                "create_news.html", news_categories=NEWS_CATEGORIES,
+                selected_category=selected_category, form_title=title,
+                form_content=content, form_content_blocks=raw_content_blocks,
+            ), 400
+        content_blocks = None
+        if raw_content_blocks:
+            try:
+                parsed_content_blocks = json.loads(raw_content_blocks)
+                limit_error = content_blocks_limit_error(parsed_content_blocks)
+                if limit_error:
+                    flash(limit_error, "warning")
+                    return render_template(
+                        "create_news.html",
+                        news_categories=NEWS_CATEGORIES,
+                        selected_category=selected_category,
+                        form_title=title,
+                        form_content=content,
+                        form_content_blocks=raw_content_blocks,
+                    ), 400
+                content_blocks = normalize_content_blocks(parsed_content_blocks)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                content_blocks = None
+            if content_blocks is None:
+                flash("Rich article blocks were invalid. Review the article and try again.", "warning")
+                return render_template(
+                    "create_news.html",
+                    news_categories=NEWS_CATEGORIES,
+                    selected_category=selected_category,
+                    form_title=title,
+                    form_content=content,
+                    form_content_blocks=raw_content_blocks,
+                ), 400
+        if not content and content_blocks:
+            content = blocks_plain_text(content_blocks)
+        if not title or not content:
+            flash("Title and story body are required.", "warning")
+            return render_template(
+                "create_news.html",
+                news_categories=NEWS_CATEGORIES,
+                selected_category=selected_category,
+                form_title=title,
+                form_content=content,
+                form_content_blocks=raw_content_blocks,
+            ), 400
+
+        if image_file and image_file.filename != "":
+            upload_result = store_news_image(image_file, "news")
+            if upload_result.get("ok"):
+                filename = upload_result.get("filename")
+                if upload_result.get("warning"):
+                    flash(upload_result["warning"], "warning")
+            else:
+                flash("Image upload failed, so the news was saved with the default image.", "warning")
+
+        news = News(
+            title=title,
+            content=content,
+            content_blocks=content_blocks,
+            category=selected_category,
+            image=filename
+        )
+
+        db.session.add(news)
+        db.session.commit()
+        app.logger.info("news_category_saved category=%s news_id=%s", news.category, news.id)
+        if filename:
+            app.logger.info("news_saved_with_image")
+        else:
+            app.logger.info("news_saved_without_image")
+        if not sync_news_to_app(news):
+            flash(
+                "News was saved on the website, but app sync failed. "
+                "Retry the update after the API is available.",
+                "warning",
+            )
+
+        return redirect("/news")
+
+    return render_template(
+        "create_news.html",
+        news_categories=NEWS_CATEGORIES,
+        selected_category="auto-news",
+    )
+
+
+# ================= EDIT NEWS =================
+
+@app.route("/admin/news/edit/<int:news_id>", methods=["GET","POST"])
+@login_required
+def edit_news(news_id):
+
+    if not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"news.edit"):
+        return "Access Denied"
+
+    news = News.query.get_or_404(news_id)
+
+    if request.method == "POST":
+
+        previous_category = normalize_news_category(getattr(news, "category", None))
+        selected_category = resolve_news_category(
+            request.form.get("category"),
+            previous_category=previous_category,
+            context="update",
+        )
+        title = (request.form.get("title") or "").strip()
+        content = (request.form.get("content") or "").strip()
+        raw_content_blocks = (request.form.get("content_blocks") or "").strip()
+        if len(title) > 200:
+            flash("Headline must be 200 characters or fewer. The existing article was not changed.", "warning")
+            return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES), 400
+        content_blocks = None
+        if raw_content_blocks:
+            try:
+                parsed_content_blocks = json.loads(raw_content_blocks)
+                limit_error = content_blocks_limit_error(parsed_content_blocks)
+                if limit_error:
+                    flash(limit_error, "warning")
+                    return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES), 400
+                content_blocks = normalize_content_blocks(parsed_content_blocks)
+            except (TypeError, ValueError, json.JSONDecodeError):
+                content_blocks = None
+            if content_blocks is None:
+                flash("Rich article blocks were invalid. The existing article was not changed.", "warning")
+                return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES), 400
+        if not content and content_blocks:
+            content = blocks_plain_text(content_blocks)
+        if not title or not content:
+            flash("Title and story body are required.", "warning")
+            news.category = selected_category
+            return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES), 400
+
+        news.title = title
+        news.content = content
+        news.content_blocks = content_blocks
+        news.category = selected_category
+
+        image_file = request.files.get("image")
+
+        if image_file and image_file.filename != "":
+            upload_result = store_news_image(image_file, f"news_{news.id}")
+            if upload_result.get("ok"):
+                news.image = upload_result.get("filename")
+                if upload_result.get("warning"):
+                    flash(upload_result["warning"], "warning")
+            else:
+                flash("Image upload failed, so the existing image was kept.", "warning")
+
+        db.session.commit()
+        if news.image:
+            app.logger.info("news_saved_with_image")
+        else:
+            app.logger.info("news_saved_without_image")
+        app.logger.info(
+            "news_category_updated previous=%s category=%s news_id=%s",
+            previous_category,
+            news.category,
+            news.id,
+        )
+        if not sync_news_to_app(news):
+            flash(
+                "News was updated on the website, but app sync failed. "
+                "Retry the update after the API is available.",
+                "warning",
+            )
+        app.logger.info("news_update_completed")
+
+        return redirect("/news")
+
+    news.category = normalize_news_category(getattr(news, "category", None))
+    return render_template("edit_news.html", news=news, news_categories=NEWS_CATEGORIES)
+
+
+@app.route("/admin/news/image-upload", methods=["POST"])
+@login_required
+def upload_news_body_image():
+    if not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"news.create"):
+        return jsonify({"success": False, "message": "Access denied."}), 403
+    if not cloudinary_configured():
+        return jsonify({
+            "success": False,
+            "message": "Durable article-image storage is not configured.",
+        }), 503
+    image_file = request.files.get("image")
+    if not image_file or not image_file.filename:
+        return jsonify({"success": False, "message": "Choose an image to upload."}), 400
+    result = store_news_image(image_file, "article")
+    if not result.get("ok") or not is_external_image_url(result.get("filename")):
+        return jsonify({"success": False, "message": "Image upload failed safely."}), 400
+    return jsonify({"success": True, "url": result["filename"]})
+# ================= DELETE NEWS =================
+
+@app.route("/admin/news/delete/<int:news_id>", methods=["POST"])
+@login_required
+def delete_news(news_id):
+
+    if not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"news.delete"):
+        return "Access Denied"
+
+    news = News.query.get_or_404(news_id)
+
+    db.session.delete(news)
+    db.session.commit()
+    delete_news_from_app(news_id)
+
+    return redirect("/news")
+# ================= LEGAL PAGES =================
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+@app.route("/disclaimer")
+def disclaimer():
+    return render_template("disclaimer.html")
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
+
+
+@app.before_request
+def account_deletion_write_fence():
+    if os.environ.get("ACCOUNT_DELETION_ENABLED", "").lower() != "true" or request.method in ("GET", "HEAD", "OPTIONS"):
+        return
+    if not current_user.is_authenticated:
+        return
+    if current_user.is_banned:
+        return "Account unavailable", 403
+    if db.engine.dialect.name == "postgresql":
+        from sqlalchemy import text as deletion_text
+        from flask import g
+        conn = db.engine.connect()
+        g.deletion_fence = conn
+        g.deletion_owner = current_user.id
+        conn.execute(deletion_text("SELECT pg_advisory_lock_shared(16603,:owner)"), {"owner": current_user.id})
+        flags = conn.execute(deletion_text('SELECT is_banned FROM "user" WHERE id=:owner'), {"owner": current_user.id}).first()
+        if not flags or flags[0]:
+            return "Account unavailable", 403
+
+@app.teardown_request
+def account_deletion_unlock(_):
+    from flask import g
+    from sqlalchemy import text as deletion_text
+    conn = getattr(g, "deletion_fence", None)
+    if conn is not None:
+        try:conn.execute(deletion_text("SELECT pg_advisory_unlock_shared(16603,:owner)"), {"owner": g.deletion_owner})
+        finally:conn.close()
+
+@app.after_request
+def deletion_private_response(response):
+    if request.path.startswith('/account-deletion') or request.path.startswith('/admin/account-deletion'):
+        response.headers['Cache-Control'] = 'no-store'
+        response.headers['Referrer-Policy'] = 'no-referrer'
+    return response
+
+@app.route("/account-deletion", methods=["GET", "POST"])
+def account_deletion_request():
+    from services.manual_deletion import context
+    if request.method == "POST":
+        return "Automatic email/challenge intake is unavailable. Use the manual support instructions.", 405
+    details = context()
+    return render_template("account_deletion.html", **details), 200 if details['support_email'] else 503
+
+@app.route("/account-deletion/request", methods=["GET", "POST"])
+@login_required
+def manual_deletion_request():
+    from services.canonical_garage_client import call, GarageError
+    from services.manual_deletion import context
+    details = context()
+    if not details['support_email']:return "Deletion support is unavailable.", 503
+    if request.method == "POST":
+        if request.form.get("confirm") != "yes":abort(400)
+        try:
+            # Bearer identity established by the existing Garage authentication boundary.
+            # No claimed Website ID or account email is forwarded.
+            row = call("/api/account-deletion/requests", "POST", {"confirm": True})
+            if row.get("workflow") != "MANUAL_1_0_5":return "Manual deletion service unavailable.", 503
+            return render_template("account_deletion_owner.html", receipt_created=True, **details)
+        except GarageError:
+            return render_template("account_deletion_owner.html", connection_required=True, **details), 503
+    return render_template("account_deletion_owner.html", **details)
+
+@app.route("/admin/account-deletion", methods=["GET", "POST"])
+@login_required
+def deletion_admin_queue():
+    from services.account_deletion_client import admin_call
+    from services.canonical_garage_client import GarageError
+    if not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"platform.admin"):abort(403)
+    try:
+        if request.method == "POST":
+            rid = request.form.get("request_id", "")
+            if not re.fullmatch(r"[0-9a-f]{32}", rid):abort(400)
+            action = request.form.get("action", "")
+            if action not in ("process", "complete", "reject"):abort(400)
+            result = admin_call("/api/admin/account-deletion/" + rid + "/" + action, "POST", {"confirm": True})
+            if action == "complete":
+                if result.get("status") != "COMPLETED":return "Completion not verified. Do not reply confirming completion.", 503
+                flash("Backend confirms COMPLETED. Manually reply to the original support-email thread; no automatic email was sent.")
+        rows = admin_call("/api/admin/account-deletion").get("requests", [])
+    except GarageError:
+        return "Connect an authorized administrator Garage session. No completion is confirmed.", 503
+    return render_template("account_deletion_admin.html", requests=rows)
+
+@app.route("/admin/account-deletion/<rid>", methods=["GET", "POST"])
+@login_required
+def deletion_admin_tasks(rid):
+    from services.account_deletion_client import admin_call
+    from services.canonical_garage_client import GarageError
+    if not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"platform.admin"):abort(403)
+    if not re.fullmatch(r"[0-9a-f]{32}", rid):abort(400)
+    try:
+        if request.method == "POST":
+            if request.form.get("action") == "verify-manual":
+                admin_call("/api/admin/account-deletion/" + rid + "/verify-manual", "POST", {
+                    "sender_email": request.form.get("sender_email", ""),
+                    "email_received": request.form.get("email_received") == "yes",
+                    "evidence_hash": request.form.get("evidence_hash", "")})
+            else:
+                tid = request.form.get("task_id", "")
+                if not re.fullmatch(r"[0-9a-f]{32}", tid) or request.form.get("confirm") != "yes":abort(400)
+                admin_call("/api/admin/account-deletion/" + rid + "/tasks/" + tid + "/review", "POST", {"confirm": True, "evidence_hash": request.form.get("evidence_hash", "")})
+        review = admin_call("/api/admin/account-deletion/" + rid + "/review")
+        rows = admin_call("/api/admin/account-deletion/" + rid + "/tasks").get("tasks", [])
+        for row in rows:
+            if row["kind"] not in ("COMPLETION_EMAIL", "VERIFICATION_EMAIL"):
+                row["review"] = admin_call("/api/admin/account-deletion/" + rid + "/tasks/" + row["id"]).get("review", {})
+    except GarageError:return "Ownership or cleanup remains unverified. No completion confirmed.", 503
+    return render_template("account_deletion_tasks.html", tasks=rows, review=review)
+
+
+@app.route("/help", methods=["GET", "POST"])
+def help_center():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        email = request.form.get("email", "").strip()
+        category = request.form.get("category", "").strip()
+        page_url = request.form.get("page_url", "").strip()
+        message = request.form.get("message", "").strip()
+
+        if category == 'Account Deletion':
+            return redirect('/account-deletion', code=303)
+
+        if not category or not message:
+            flash("Please select a category and describe the issue.")
+            return redirect("/help")
+
+        report = HelpReport(
+            user_id=current_user.id if current_user.is_authenticated else None,
+            name=name or (current_user.username if current_user.is_authenticated else None),
+            email=email or (current_user.email if current_user.is_authenticated else None),
+            category=category,
+            page_url=page_url,
+            message=message,
+        )
+        db.session.add(report)
+        db.session.commit()
+        flash("Thanks. Your report has been submitted to AMPYAN support.")
+        return redirect("/help")
+
+    return render_template("help.html")
+
+
+@app.route("/api/help-report", methods=["POST"])
+def api_help_report():
+    payload = request.get_json(silent=True) or request.form
+    category = (payload.get("category") or "").strip()
+    message = (payload.get("message") or "").strip()
+    email = (payload.get("email") or "").strip()
+
+    # Legacy generic report clients use the dedicated deletion navigation flow.
+    # Redirect before validation/persistence; never create a competing HelpReport.
+    if category == "Account Deletion":
+        return redirect("/account-deletion", code=303)
+
+    if not category or not message:
+        return jsonify({"status": "error", "message": "category and message are required"}), 400
+    if len(message) > 2000:
+        return jsonify({"status": "error", "message": "message is too long"}), 400
+    if email and not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+        return jsonify({"status": "error", "message": "valid email is required"}), 400
+
+    report = HelpReport(
+        user_id=current_user.id if current_user.is_authenticated else None,
+        name=(payload.get("name") or "").strip() or (current_user.username if current_user.is_authenticated else None),
+        email=email or (current_user.email if current_user.is_authenticated else None),
+        category=category,
+        page_url=(payload.get("page_url") or payload.get("screen") or "").strip(),
+        message=message,
+    )
+    db.session.add(report)
+    db.session.commit()
+    return jsonify({"status": "success", "report_id": report.id})
+
+
+@app.route("/api/track-event", methods=["POST"])
+def api_track_event():
+    try:
+        if (request.content_length or 0) > 32 * 1024:
+            return jsonify({"status": "rejected", "reason": "payload_too_large"}), 413
+        payload = request.get_json(silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"status": "rejected", "reason": "invalid_json"}), 400
+        from services.analytics_service import validate_event, InvalidAnalyticsEvent
+        event_type = payload.get("event_type")
+        try:
+            validate_event(event_type, payload)
+        except InvalidAnalyticsEvent as exc:
+            return jsonify({"status": "rejected", "reason": str(exc)}), 422
+        traffic_type = "app" if payload.get("traffic_type") == "app" else "web"
+        if traffic_type == "web" and request.cookies.get("ampyan_analytics_consent") != "granted":
+            return jsonify({"status": "rejected", "reason": "consent_required"}), 403
+        if safe_track_event(event_type, payload, traffic_type=traffic_type):
+            return jsonify({"status": "accepted"}), 202
+        return jsonify({"status": "failed", "reason": "storage_unavailable"}), 503
+    except Exception:
+        app.logger.exception("analytics_event_submission_failed")
+        return jsonify({"status": "failed", "reason": "internal_error"}), 500
+# ================= FORGOT PASSWORD =================
+
+@app.route("/forgot-password", methods=["GET", "POST"])
+def forgot_password():
+    if request.method == "POST":
+        email = (request.form.get("email") or "").strip().lower()
+
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            flash("Please enter a valid email address.")
+            return redirect(url_for("forgot_password"))
+
+        user = User.query.filter_by(email=email).first()
+
+        if user:
+            token = secrets.token_urlsafe(32)
+            expiry = datetime.utcnow() + timedelta(minutes=15)
+
+            user.reset_token = token
+            user.reset_token_expiry = expiry
+            db.session.commit()
+
+            reset_link = url_for("reset_password", token=token, _external=True)
+
+            send_email(
+    mail,
+    email,
+    "Reset your Motrnoix AMPYAN password",
+    f"Click this link to reset your password:\n\n{reset_link}"
+)
+
+            flash("Reset link sent to your email.")
+        else:
+            flash("Email not found.")
+
+    return render_template("forgot_password.html")
+
+
+
+# ================= EDIT COMMENT =================
+
+@app.route("/comment/<int:comment_id>/edit", methods=["GET", "POST"])
+@login_required
+def edit_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+
+    if comment.user_id != current_user.id and not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"platform.admin"):
+        return "Unauthorized"
+
+    if request.method == "POST":
+        comment.content = request.form["content"]
+        db.session.commit()
+        return redirect(url_for("post_detail", post_id=comment.post_id))
+
+    return render_template("edit_comment.html", comment=comment)
+
+
+# ================= DELETE COMMENT =================
+
+@app.route("/comment/<int:comment_id>/delete", methods=["POST"])
+@login_required
+def delete_comment(comment_id):
+    comment = Comment.query.get_or_404(comment_id)
+
+    if comment.user_id != current_user.id and not __import__("services.capability_security",fromlist=["has"]).has(db.engine,current_user,"platform.admin"):
+        return "Unauthorized"
+
+    post_id = comment.post_id
+    db.session.delete(comment)
+    db.session.commit()
+
+    return redirect(url_for("community.post_detail", post_id=post_id))
+
+# ================= EMAIL VERIFICATION =================
+
+@app.route("/verify-email/<token>", methods=["GET", "POST"])
+def verify_email(token):
+    if request.method == "GET":
+        return render_template("confirm_email.html")
+
+    user = User.query.filter_by(verification_token=token).first()
+
+    if not user:
+        return "Invalid or expired verification link."
+
+    if user.verification_token_expiry < datetime.utcnow():
+        return "Verification link expired."
+
+    if request.method == "GET":
+        return render_template("verify_email.html", token=token)
+
+    user.email_verified = True
+    user.verification_token = None
+    user.verification_token_expiry = None
+
+    db.session.commit()
+
+    flash("Email verified successfully. You can now login.")
+
+    return redirect(url_for("auth.login"))
+
+# ================= RESET PASSWORD =================
+
+@app.route("/reset-password/<token>", methods=["GET", "POST"])
+def reset_password(token):
+
+    user = User.query.filter_by(reset_token=token).first()
+
+    if not user:
+        return "Invalid or expired token."
+
+    if user.reset_token_expiry < datetime.utcnow():
+        return "Token expired."
+
+    if request.method == "POST":
+
+        new_password = request.form.get("password")
+
+        if not new_password or len(new_password) < 8:
+            flash("Password should be at least 8 characters.")
+            return redirect(request.url)
+
+        user.password = generate_password_hash(new_password)
+
+        user.reset_token = None
+        user.reset_token_expiry = None
+
+        db.session.commit()
+
+        flash("Password reset successful. Please login.")
+
+        return redirect(url_for("auth.login"))
+
+    return render_template("reset_password.html")
+
+# ================= CREATE DB TABLES =================
+
+def ensure_user_schema():
+    """Add auth/profile columns that older databases may be missing."""
+    inspector = inspect(db.engine)
+    if not inspector.has_table("user"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("user")}
+    dialect = db.engine.dialect.name
+    string_type = "VARCHAR"
+    datetime_type = "TIMESTAMP" if dialect == "postgresql" else "DATETIME"
+    bool_type = "BOOLEAN" if dialect == "postgresql" else "BOOLEAN"
+
+    column_definitions = {
+        "mobile": f"{string_type}(20)",
+        "role": f"{string_type}(20) DEFAULT 'user'",
+        "ai_uses_today": "INTEGER DEFAULT 0",
+        "ai_last_reset": datetime_type,
+        "email_verified": f"{bool_type} DEFAULT FALSE",
+        "is_banned": f"{bool_type} DEFAULT FALSE",
+        "reset_token": f"{string_type}(200)",
+        "reset_token_expiry": datetime_type,
+        "verification_token": f"{string_type}(200)",
+        "verification_token_expiry": datetime_type,
+        "profile_photo": f"{string_type}(200)",
+        "city": f"{string_type}(100)",
+        "state": f"{string_type}(100)",
+        "country": f"{string_type}(100)",
+        "pincode": f"{string_type}(20)",
+        "reputation": "INTEGER DEFAULT 0",
+        "posts_count": "INTEGER DEFAULT 0",
+        "helpful_answers": "INTEGER DEFAULT 0",
+        "contributor_score": "INTEGER DEFAULT 0",
+        "badge": f"{string_type}(50) DEFAULT 'New Member'",
+        "is_managed_persona": f"{bool_type} DEFAULT FALSE",
+        "managed_by_admin_id": "INTEGER",
+        "managed_note": f"{string_type}(255)",
+    }
+
+    for column_name, column_definition in column_definitions.items():
+        if column_name in existing_columns:
+            continue
+        db.session.execute(text(f'ALTER TABLE "user" ADD COLUMN {column_name} {column_definition}'))
+
+    if dialect == "postgresql":
+        required_user_columns = {"id", "username", "email", "password"}
+        for column in inspect(db.engine).get_columns("user"):
+            column_name = column["name"]
+            if column_name in required_user_columns or column.get("nullable", True):
+                continue
+            safe_column = column_name.replace('"', '""')
+            db.session.execute(text(f'ALTER TABLE "user" ALTER COLUMN "{safe_column}" DROP NOT NULL'))
+
+        db.session.execute(text('CREATE SEQUENCE IF NOT EXISTS user_id_seq OWNED BY "user".id'))
+        db.session.execute(text("SELECT setval('user_id_seq', COALESCE((SELECT MAX(id) FROM \"user\"), 0) + 1, false)"))
+        db.session.execute(text("ALTER TABLE \"user\" ALTER COLUMN id SET DEFAULT nextval('user_id_seq')"))
+
+    db.session.commit()
+
+
+def ensure_car_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("car"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("car")}
+    dialect = db.engine.dialect.name
+    date_type = "DATE"
+
+    column_definitions = {
+        "insurance_expiry": date_type,
+        "pollution_expiry": date_type,
+    }
+
+    for column_name, column_definition in column_definitions.items():
+        if column_name in existing_columns:
+            continue
+        db.session.execute(text(f"ALTER TABLE car ADD COLUMN {column_name} {column_definition}"))
+
+    db.session.commit()
+
+
+def ensure_mechanic_profile_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("mechanic_profile"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("mechanic_profile")}
+    dialect = db.engine.dialect.name
+    string_type = "VARCHAR"
+    float_type = "DOUBLE PRECISION" if dialect == "postgresql" else "FLOAT"
+
+    column_definitions = {
+        "area": f"{string_type}(120)",
+        "latitude": float_type,
+        "longitude": float_type,
+        "image_url": f"{string_type}(500)",
+        "listing_status": f"{string_type}(30) DEFAULT 'pending_review'",
+        "source": f"{string_type}(50)",
+    }
+
+    for column_name, column_definition in column_definitions.items():
+        if column_name in existing_columns:
+            continue
+        db.session.execute(text(f"ALTER TABLE mechanic_profile ADD COLUMN {column_name} {column_definition}"))
+
+    if dialect == "postgresql":
+        for column in inspect(db.engine).get_columns("mechanic_profile"):
+            if column["name"] == "owner_name" and not column.get("nullable", True):
+                db.session.execute(text("ALTER TABLE mechanic_profile ALTER COLUMN owner_name DROP NOT NULL"))
+                break
+
+    db.session.commit()
+
+
+def ensure_website_visit_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("website_visit"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("website_visit")}
+    dialect = db.engine.dialect.name
+    string_type = "VARCHAR"
+    bool_type = "BOOLEAN" if dialect == "postgresql" else "BOOLEAN"
+
+    column_definitions = {
+        "visitor_id": f"{string_type}(80)",
+        "user_id": "INTEGER",
+        "path": f"{string_type}(500)",
+        "method": f"{string_type}(10)",
+        "referrer": f"{string_type}(500)",
+        "user_agent": f"{string_type}(500)",
+        "device_type": f"{string_type}(30)",
+        "session_id": f"{string_type}(100)",
+        "source": f"{string_type}(120)",
+        "country": f"{string_type}(100)",
+        "city": f"{string_type}(120)",
+        "browser": f"{string_type}(80)",
+        "os_name": f"{string_type}(80)",
+        "is_bot": f"{bool_type} DEFAULT FALSE",
+        "is_internal": f"{bool_type} DEFAULT FALSE",
+        "is_admin": f"{bool_type} DEFAULT FALSE",
+        "traffic_type": f"{string_type}(30) DEFAULT 'web'",
+        "is_authenticated": f"{bool_type} DEFAULT FALSE",
+        "is_page_view": f"{bool_type} DEFAULT TRUE",
+    }
+
+    for column_name, column_definition in column_definitions.items():
+        if column_name in existing_columns:
+            continue
+        db.session.execute(text(f"ALTER TABLE website_visit ADD COLUMN {column_name} {column_definition}"))
+
+    for index_name, column_name in {
+        "ix_website_visit_visit_time": "visit_time",
+        "ix_website_visit_session_id": "session_id",
+        "ix_website_visit_source": "source",
+        "ix_website_visit_country": "country",
+        "ix_website_visit_is_bot": "is_bot",
+        "ix_website_visit_is_internal": "is_internal",
+    }.items():
+        db.session.execute(text(f"CREATE INDEX IF NOT EXISTS {index_name} ON website_visit ({column_name})"))
+
+    db.session.commit()
+
+
+def ensure_reply_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("comment"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("comment")}
+    if "parent_id" not in existing_columns:
+        db.session.execute(text("ALTER TABLE comment ADD COLUMN parent_id INTEGER"))
+
+    db.session.commit()
+
+
+def ensure_post_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("post"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("post")}
+    if "community_id" not in existing_columns:
+        db.session.execute(text("ALTER TABLE post ADD COLUMN community_id INTEGER"))
+
+    db.session.commit()
+
+
+def ensure_news_schema():
+    inspector = inspect(db.engine)
+    if not inspector.has_table("news"):
+        return
+
+    existing_columns = {column["name"] for column in inspector.get_columns("news")}
+    if "category" not in existing_columns:
+        db.session.execute(text("ALTER TABLE news ADD COLUMN category VARCHAR(40) DEFAULT 'auto-news'"))
+
+    db.session.execute(text("UPDATE news SET category = 'auto-news' WHERE category IS NULL OR category = ''"))
+    db.session.commit()
+
+
+def ensure_car_community_seed():
+    seed_communities = [
+        ("General Owners", "General car ownership questions, buying advice and everyday driving help."),
+        ("Swift Community", "Swift owners discussing mileage, service, parts and city use."),
+        ("Creta Community", "Creta owners comparing features, maintenance, tyres and road trips."),
+        ("Thar Community", "Thar owners sharing off-road, modification and service experience."),
+        ("Honda City Community", "Honda City owners discussing comfort, petrol CVT and long-term reliability."),
+        ("EV Owners India", "EV owners talking charging, range, batteries and daily use."),
+        ("Diesel Owners", "Diesel owners discussing DPF, mileage, turbo and service habits."),
+    ]
+
+    for name, description in seed_communities:
+        slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")
+        if not CarCommunity.query.filter_by(slug=slug).first():
+            db.session.add(CarCommunity(name=name, slug=slug, description=description))
+
+    db.session.commit()
+
+
+def ensure_demo_community_seed():
+    demo_authors = [
+        ("AmanService", "demo.aman.service@example.com", "Service Guide", 84),
+        ("CityDriver", "demo.city.driver@example.com", "Daily Driver", 62),
+        ("HighwayRaj", "demo.highway.raj@example.com", "Road Tripper", 71),
+        ("NehaAuto", "demo.neha.auto@example.com", "Helpful Member", 58),
+        ("RaviGarage", "demo.ravi.garage@example.com", "Garage Expert", 92),
+        ("MechVikas", "demo.mech.vikas@example.com", "Helpful Member", 56),
+        ("MileageManoj", "demo.mileage.manoj@example.com", "Mileage Tracker", 64),
+        ("BatteryBhai", "demo.battery.bhai@example.com", "Electrical Helper", 67),
+        ("TyreTalks", "demo.tyre.talks@example.com", "Tyre Advisor", 59),
+        ("FamilyCarNisha", "demo.family.nisha@example.com", "Family Driver", 61),
+        ("DieselDev", "demo.diesel.dev@example.com", "Diesel Owner", 69),
+        ("EVKaran", "demo.ev.karan@example.com", "EV Learner", 53),
+    ]
+
+    demo_posts = [
+        {
+            "user": ("AmanService", "demo.aman.service@example.com", "Service Guide", 84),
+            "title": "Morning start ke time engine thoda rough idle karta hai",
+            "content": "Petrol car cold start par 30-40 second RPM fluctuate karta hai. Warm hone ke baad normal ho jata hai. Kya injector cleaning karani chahiye?",
+            "replies": [
+                ("NehaAuto", "demo.neha.auto@example.com", "Pehle throttle body aur air filter check karao. Agar sirf cold start par hai to battery voltage aur spark plugs bhi scan me dekhna useful hoga."),
+                ("RaviGarage", "demo.ravi.garage@example.com", "Injector cleaning tabhi karana jab misfire code ya fuel trim abnormal aaye. Basic scan se start karo."),
+            ],
+        },
+        {
+            "user": ("CityDriver", "demo.city.driver@example.com", "Daily Driver", 62),
+            "title": "Mileage achanak 16 se 11 kmpl ho gaya",
+            "content": "Same route aur same fuel pump hai. Tyre pressure normal lag raha hai. Service 2 mahine pehle hui thi.",
+            "replies": [
+                ("AmanService", "demo.aman.service@example.com", "Tyre pressure gauge se verify karo, air filter box properly locked hai ya nahi dekho, aur brake drag test karao."),
+                ("MechVikas", "demo.mech.vikas@example.com", "Agar AC zyada use hua ya city traffic badha hai to drop normal ho sakta hai, but OBD fuel trim check best rahega."),
+            ],
+        },
+        {
+            "user": ("HighwayRaj", "demo.highway.raj@example.com", "Road Tripper", 71),
+            "title": "Long trip se pehle kya maintenance checklist follow karu?",
+            "content": "800 km highway run plan hai. Car 48,000 km par hai aur last service ko 6 months ho gaye.",
+            "replies": [
+                ("NehaAuto", "demo.neha.auto@example.com", "Engine oil level, coolant, brake fluid, spare tyre, jack, wiper blades aur all lights check karo."),
+                ("RaviGarage", "demo.ravi.garage@example.com", "48k par brake pads aur tyres ka visual inspection zaroor karao. Wheel alignment bhi highway trip se pehle helpful hota hai."),
+            ],
+        },
+    ]
+
+    topics = [
+        ("engine", "Engine light blink kar rahi hai aur pickup low lag raha hai", "Check engine light kabhi kabhi blink karti hai. Acceleration par car heavy feel hoti hai. Pehle scanner lagwana chahiye ya service center jana chahiye?"),
+        ("mileage", "City mileage suddenly drop ho gaya", "Same route par mileage kam aa raha hai. Fuel pump same hai aur tyre pressure normal hai. Common checks kya honge?"),
+        ("battery", "Battery morning me weak feel hoti hai", "Self start slow ho gaya hai, din me car normal start hoti hai. Battery test karwana better hai ya alternator check?"),
+        ("brake", "Brake dabane par halka vibration aa raha hai", "High speed braking par steering me vibration feel hota hai. Disc skimming, pad replacement ya wheel balancing me se kya pehle check karu?"),
+        ("tyre", "Tyre wear one side zyada ho raha hai", "Front tyre ka inner side zyada ghis raha hai. Alignment regular karata hu phir bhi issue repeat hota hai."),
+        ("ac", "AC cooling traffic me weak ho jati hai", "Highway par AC thik hai but traffic me cooling low ho jati hai. Fan, gas ya condenser cleaning kya check karna chahiye?"),
+        ("service", "Service bill me extra items add ho rahe hain", "Workshop throttle body cleaning, injector cleaning aur AC disinfectant add kar raha hai. Kaun se items avoid kar sakta hu?"),
+        ("suspension", "Bad road par khatak sound aa raha hai", "Left side se khatak khatak sound aata hai. Speed breaker par zyada clear hota hai. Link rod ya shocker issue ho sakta hai?"),
+        ("clutch", "Clutch pedal heavy ho gaya hai", "Traffic me clutch heavy lagta hai aur gear shift bhi thoda hard hai. Cable, hydraulic ya clutch plate ka sign hai?"),
+        ("buying", "Daily city use ke liye used car advice chahiye", "Budget limited hai aur daily 35 km city run hai. Petrol automatic lena sahi rahega ya CNG manual?"),
+    ]
+
+    reply_bank = [
+        "Basic scan se start karo. Error code milne ke baad unnecessary part replacement avoid ho jayega.",
+        "Pehle simple checks karo: fluid level, tyre pressure, battery voltage aur recent service history.",
+        "Agar issue safety related hai to long drive avoid karo aur trusted mechanic se inspection karao.",
+        "Same symptom ke multiple reasons ho sakte hain. Video ya exact condition mention karoge to diagnosis better hoga.",
+        "Workshop se old parts wapas maango aur estimate written me lo. Isse extra billing control hoti hai.",
+        "Agar warning light aa rahi hai to OBD scan ka screenshot community me share karo.",
+    ]
+
+    while len(demo_posts) < 100:
+        index = len(demo_posts)
+        topic, title, content = topics[index % len(topics)]
+        author = demo_authors[index % len(demo_authors)]
+        responder_one = demo_authors[(index + 3) % len(demo_authors)]
+        responder_two = demo_authors[(index + 5) % len(demo_authors)]
+        demo_posts.append(
+            {
+                "user": author,
+                "title": f"{title} #{index + 1}",
+                "content": f"{content} Context: {topic} issue, car daily use me hai aur owner practical advice chahta hai.",
+                "replies": [
+                    (responder_one[0], responder_one[1], reply_bank[index % len(reply_bank)]),
+                    (responder_two[0], responder_two[1], reply_bank[(index + 2) % len(reply_bank)]),
+                ],
+            }
+        )
+
+    created_users = {}
+    for post_data in demo_posts:
+        people = [post_data["user"]] + [(name, email, "Helpful Member", 50) for name, email, _ in post_data["replies"]]
+        for username, email, badge, reputation in people:
+            if email in created_users:
+                continue
+            user = User.query.filter_by(email=email).first()
+            if not user:
+                user = User(
+                    username=build_unique_username(username),
+                    email=email,
+                    password=generate_password_hash(secrets.token_urlsafe(16)),
+                    role="user",
+                    email_verified=True,
+                    badge=badge,
+                    reputation=reputation,
+                    posts_count=0,
+                )
+                db.session.add(user)
+                db.session.flush()
+            created_users[email] = user
+
+    for post_data in demo_posts:
+        _, author_email, _, _ = post_data["user"]
+        existing_post = Post.query.filter_by(title=post_data["title"]).first()
+        if existing_post:
+            continue
+
+        author = created_users[author_email]
+        post = Post(title=post_data["title"], content=post_data["content"], user_id=author.id)
+        db.session.add(post)
+        db.session.flush()
+
+        parent_comment = None
+        for index, reply_data in enumerate(post_data["replies"]):
+            _, reply_email, content = reply_data
+            comment = Comment(
+                content=content,
+                user_id=created_users[reply_email].id,
+                post_id=post.id,
+                parent_id=parent_comment.id if index == 1 and parent_comment else None,
+            )
+            db.session.add(comment)
+            db.session.flush()
+            if parent_comment is None:
+                parent_comment = comment
+
+    for user in created_users.values():
+        posts_count = Post.query.filter_by(user_id=user.id).count()
+        comments_count = Comment.query.filter_by(user_id=user.id).count()
+        user.posts_count = posts_count
+        user.reputation = max(user.reputation or 0, (posts_count * 5) + (comments_count * 2))
+
+    db.session.commit()
+
+
+def initialize_database():
+    global database_initialized
+    if database_initialized:
+        app.config["DATABASE_READY"] = True
+        return
+
+    if not database_init_lock.acquire(blocking=False):
+        app.logger.info("db_init_already_running")
+        return
+
+    try:
+        if database_initialized:
+            return
+
+        app.logger.info("db_init_started")
+        try:
+            db.create_all()
+            ensure_user_schema()
+            ensure_car_schema()
+            ensure_mechanic_profile_schema()
+            ensure_website_visit_schema()
+            ensure_analytics_schema()
+            ensure_reply_schema()
+            ensure_post_schema()
+            ensure_news_schema()
+            ensure_car_community_seed()
+            start_worker(app)
+        except Exception:
+            db.session.rollback()
+            app.logger.exception("db_init_failed")
+            raise
+
+        admin_users = User.query.filter(User.email.in_(ADMIN_EMAILS)).all()
+        non_admin_users = User.query.filter(
+            User.role == "admin",
+            ~User.email.in_(ADMIN_EMAILS),
+        ).all()
+        changed = False
+
+        for admin_user in admin_users:
+            if admin_user.role != "admin":
+                admin_user.role = "admin"
+                changed = True
+
+        for non_admin_user in non_admin_users:
+            non_admin_user.role = "user"
+            changed = True
+
+        if changed:
+            db.session.commit()
+
+        database_initialized = True
+        app.config["DATABASE_READY"] = True
+        app.logger.info("db_init_completed")
+    finally:
+        database_init_lock.release()
+
+
+def trigger_database_init_async(source="request"):
+    global database_init_thread_started
+    if database_initialized:
+        app.config["DATABASE_READY"] = True
+        return
+
+    if database_init_lock.locked():
+        return
+
+    if database_init_thread_started:
+        return
+
+    database_init_thread_started = True
+
+    def runner():
+        global database_init_thread_started
+        with app.app_context():
+            try:
+                app.logger.info("db_init_async_started source=%s", source)
+                initialize_database()
+            except Exception as e:
+                db.session.rollback()
+                app.logger.warning("db_init_async_failed source=%s error=%s", source, e.__class__.__name__)
+            finally:
+                database_init_thread_started = False
+
+    threading.Thread(target=runner, daemon=True, name="db-init").start()
+
+
+@app.before_request
+def ensure_database_ready():
+    if request.endpoint in {"health", "healthz", "ready", "version"} or request.path in {"/health", "/healthz", "/ready", "/version"}:
+        return
+    if request.path.startswith("/static") or "." in request.path.rsplit("/", 1)[-1]:
+        return
+    if os.environ.get("ENABLE_REQUEST_DB_INIT", "").lower() == "true":
+        trigger_database_init_async(source="before_request")
+    return None
+
+
+@app.errorhandler(404)
+def handle_not_found(error):
+    if wants_json_response():
+        return jsonify({"status": "error", "message": "Not found"}), 404
+    is_news_path = (request.path or "").startswith("/news")
+    return render_template(
+        "error.html",
+        eyebrow="AMPYAN News" if is_news_path else "AMPYAN",
+        title="Article not found" if is_news_path else "Page not found",
+        message=(
+            "This story may have been moved, deleted, or published under a different link."
+            if is_news_path
+            else "The page you requested could not be found."
+        ),
+        action_url=url_for("news_list") if is_news_path else "/",
+        action_label="Back to News" if is_news_path else "Back Home",
+        noindex=True,
+    ), 404
+
+
+@app.errorhandler(503)
+def handle_service_unavailable(error):
+    db.session.rollback()
+    if wants_json_response():
+        return jsonify({"status": "error", "message": "Service temporarily unavailable"}), 503
+    return render_template(
+        "error.html",
+        eyebrow="AMPYAN News",
+        title="News is temporarily unavailable",
+        message="We could not load this news page right now. Please retry in a moment.",
+        action_url=request.path,
+        action_label="Retry",
+    ), 503
+
+
+@app.errorhandler(500)
+def handle_server_error(error):
+    db.session.rollback()
+    if wants_json_response():
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+    return render_template(
+        "error.html",
+        title="Something went wrong",
+        message="The page could not be loaded safely. Please try again in a moment.",
+        action_url=url_for("news_list"),
+        action_label="Back to News",
+    ), 500
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(error):
+    if isinstance(error, HTTPException):
+        return error
+    db.session.rollback()
+    app.logger.exception(
+        "Unhandled server error on %s %s",
+        request.method,
+        request.path,
+    )
+    if wants_json_response():
+        return jsonify({"status": "error", "message": "Internal server error"}), 500
+    return render_template(
+        "error.html",
+        title="Something went wrong",
+        message="The page could not be loaded safely. Please try again in a moment.",
+        action_url=url_for("news_list"),
+        action_label="Back to News",
+    ), 500
+
+
+@app.route("/robots.txt")
+def robots_txt():
+    return Response(
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /admin\n"
+        "Disallow: /api/\n"
+        "Disallow: /login\n"
+        "Disallow: /register\n"
+        "Disallow: /garage-dashboard\n"
+        "Disallow: /my-car-health\n"
+        "Disallow: /add-car\n"
+        "Disallow: /edit-car/\n\n"
+        "Sitemap: https://ampyan.com/sitemap.xml\n",
+        mimetype="text/plain",
+    )
+
+
+@app.route("/sitemap.xml")
+def sitemap_xml():
+    from xml.etree.ElementTree import Element, SubElement, tostring
+
+    namespace = "http://www.sitemaps.org/schemas/sitemap/0.9"
+    urlset = Element("urlset", xmlns=namespace)
+
+    def add_url(location, last_modified=None):
+        node = SubElement(urlset, "url")
+        SubElement(node, "loc").text = location
+        if last_modified:
+            SubElement(node, "lastmod").text = str(last_modified)
+
+    public_paths = (
+        "/", "/about", "/tools", "/tools/ai-diagnosis", "/tools/fuel-cost",
+        "/tools/emi-calculator", "/tools/depreciation-calculator", "/tools/maintenance-cost",
+        "/community", "/news", "/garages", "/marketplace", "/videos",
+    )
+    for path in public_paths:
+        add_url("https://ampyan.com" + path)
+
+    if blog_enabled():
+        add_url(blog_canonical_url())
+        try:
+            for blog in published_sitemap_blogs():
+                add_url(
+                    blog_canonical_url(blog["slug"]),
+                    blog.get("updated_at") or blog.get("published_at"),
+                )
+        except BlogApiError:
+            app.logger.warning("Blog API unavailable while generating sitemap")
+
+    xml = tostring(urlset, encoding="utf-8", xml_declaration=True)
+    return Response(xml, mimetype="application/xml")
+
+
+@app.route("/diagnosis")
+def diagnosis_alias():
+    return redirect("/tools/ai-diagnosis", code=301)
+
+
+@app.route("/mygarage")
+def mygarage_alias():
+    return redirect("/my-car-health", code=301)
+
+
+@app.route("/health")
+def health():
+    return jsonify(
+        status="ok",
+        service="ampyan",
+        version=os.environ.get("RENDER_GIT_COMMIT", "local"),
+    )
+
+
+@app.route("/healthz")
+def healthz():
+    return "ok"
+
+
+@app.route("/ready")
+def ready():
+    database_ready = database_ready_for_queries()
+    migration_complete = app.config.get("MANAGED_PERSONA_MIGRATION_COMPLETE", False)
+    ready_status = database_ready and migration_complete
+    status_code = 200 if ready_status else 503
+    return jsonify(
+        status="ready" if ready_status else "starting",
+        database_ready=database_ready,
+        database_error=app.config.get("DATABASE_READY_ERROR"),
+        database_url_configured=bool(os.environ.get("DATABASE_URL")),
+        managed_persona_migration_complete=migration_complete,
+    ), status_code
+
+
+@app.route("/version")
+def version():
+    return os.environ.get("RENDER_GIT_COMMIT", "local")
+
+
+def start_background_database_init():
+    if not IS_PRODUCTION or os.environ.get("ENABLE_BACKGROUND_DB_INIT", "").lower() != "true":
+        app.logger.info(
+            "Background database initialization disabled: production=%s enabled=%s",
+            IS_PRODUCTION,
+            os.environ.get("ENABLE_BACKGROUND_DB_INIT", "false"),
+        )
+        return
+
+    trigger_database_init_async(source="startup")
+
+
+from services.news_write_guard import register as register_news_write_guard
+register_news_write_guard(app)
+
+start_background_database_init()
+start_managed_persona_migration()
+logger.info("AMPYAN import finished; WSGI app ready.")
+
+
+@app.context_processor
+def capability_display_context():
+    def can(cap):
+        if not current_user.is_authenticated:return False
+        if not hasattr(g,"display_capabilities"):g.display_capabilities={}
+        if cap not in g.display_capabilities:
+            from services.capability_security import has
+            g.display_capabilities[cap]=has(db.engine,current_user,cap)
+        return g.display_capabilities[cap]
+    return dict(can=can)
+
+# ================= START SERVER =================
+
+if __name__ == "__main__":
+
+    port = int(os.environ.get("PORT", 10000))
+
+    print("Starting Motrnoix AMPYAN server on port:", port)
+
+    app.run(host="0.0.0.0", port=port)

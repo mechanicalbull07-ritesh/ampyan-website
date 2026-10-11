@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block content %}
+{% macro render_video_reply(reply, video) %}
+<div class="simple-list-card reply-card {% if reply.parent_id %}nested-reply{% endif %}">
+<p class="body-copy-lg" style="margin-top:0;">{{ reply.content }}</p>
+<div class="post-actions">
+<small class="page-subtitle" style="margin:0;">{{ reply.user.username }} • {{ reply.created_at.strftime('%d %b %Y') }}</small>
+{% if current_user.is_authenticated and (current_user.id == reply.user_id or current_user.role == "admin") %}
+<div class="ui-button-row">
+<a href="{{ url_for('edit_video_reply', reply_id=reply.id) }}" class="ui-button-secondary">Edit</a>
+<form method="POST" action="{{ url_for('delete_video_reply', reply_id=reply.id) }}" class="inline-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="ui-button-danger" onclick="return confirm('Delete this reply?')">Delete</button>
+</form>
+</div>
+{% endif %}
+</div>
+
+{% if current_user.is_authenticated %}
+<form method="POST" action="{{ url_for('add_video_reply', video_id=video.id) }}" class="inline-reply-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="parent_id" value="{{ reply.id }}">
+<textarea name="content" placeholder="Reply to {{ reply.user.username }}..." required class="profile-input"></textarea>
+<button type="submit" class="ui-button-secondary">Reply</button>
+</form>
+{% endif %}
+
+{% for child in reply.replies|sort(attribute='id') %}
+{{ render_video_reply(child, video) }}
+{% endfor %}
+</div>
+{% endmacro %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">Videos</p>
+<h1 class="page-title">AMPYAN video hub for explainers, stories and automotive education.</h1>
+<p class="page-subtitle">Use this section for YouTube breakdowns, creator-led explainers and short-form community content.</p>
+</div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<div class="video-alert-stack">
+{% for category, message in messages %}
+<div class="video-alert {{ category }}">{{ message }}</div>
+{% endfor %}
+</div>
+{% endif %}
+{% endwith %}
+
+{% if is_admin %}
+<form action="/videos" method="POST" class="video-add-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<div class="video-form-grid">
+<div>
+<label class="form-label" for="video-title">Video Title</label>
+<input id="video-title" type="text" name="title" placeholder="Example: Engine overheating explained" required>
+</div>
+
+<div>
+<label class="form-label" for="youtube-url">YouTube Video Link</label>
+<input id="youtube-url" type="url" name="youtube_url" placeholder="https://www.youtube.com/watch?v=..." required>
+</div>
+</div>
+
+<button type="submit" class="auth-button video-submit-btn">Add YouTube Video</button>
+</form>
+{% endif %}
+
+{% if videos %}
+<div class="video-grid">
+{% for video in videos %}
+<div class="video-card" id="video-{{ video.id }}">
+<iframe class="video-frame"
+src="{{ video.embed_url }}"
+title="{{ video.title }}"
+allowfullscreen>
+</iframe>
+<h3>{{ video.title }}</h3>
+<p>{{ video.reply_count }} replies</p>
+
+<div class="ui-button-row">
+<button type="button" class="ui-button-secondary share-btn" data-share-url="{{ url_for('videos', _external=True) }}#video-{{ video.id }}" data-share-title="{{ video.title }}">Share</button>
+{% if is_admin %}
+<a href="{{ url_for('edit_video', video_id=video.id) }}" class="ui-button-secondary">Edit</a>
+<form method="POST" action="{{ url_for('delete_video', video_id=video.id) }}" class="inline-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="ui-button-danger" onclick="return confirm('Delete this video?')">Delete</button>
+</form>
+{% endif %}
+</div>
+
+{% if video.reply_threads %}
+<div class="video-reply-stack">
+{% for reply in video.reply_threads %}
+{{ render_video_reply(reply, video) }}
+{% endfor %}
+</div>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+<form method="POST" action="{{ url_for('add_video_reply', video_id=video.id) }}" class="inline-reply-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<textarea name="content" placeholder="Write your reply..." required class="profile-input"></textarea>
+<button type="submit" class="auth-button">Post Reply</button>
+</form>
+{% else %}
+<p>Please <a href="{{ url_for('auth.login') }}" style="color:#ff3b3b;">login</a> to reply.</p>
+{% endif %}
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No videos added yet. Admin can add YouTube videos from this page.</div>
+{% endif %}
+</section>
+
+{% endblock %}

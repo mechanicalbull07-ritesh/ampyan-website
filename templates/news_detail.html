@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block content %}
+{% macro render_news_reply(reply, news) %}
+<div class="simple-list-card reply-card {% if reply.parent_id %}nested-reply{% endif %}">
+<p class="body-copy-lg" style="margin-top:0;">{{ reply.content }}</p>
+<div class="post-actions">
+<small class="page-subtitle" style="margin:0;">{{ reply.user.username if reply.user else 'AMPYAN member' }} &middot; {{ reply.created_at.strftime('%d %b %Y') if reply.created_at else 'Recently' }}</small>
+{% if current_user.is_authenticated and (current_user.id == reply.user_id or can("news.delete")) %}
+<div class="ui-button-row">
+<a href="{{ url_for('edit_news_reply', reply_id=reply.id) }}" class="ui-button-secondary">Edit</a>
+<form method="POST" action="{{ url_for('delete_news_reply', reply_id=reply.id) }}" class="inline-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="ui-button-danger" onclick="return confirm('Delete this reply?')">Delete</button>
+</form>
+</div>
+{% endif %}
+</div>
+
+{% if current_user.is_authenticated %}
+<form method="POST" action="{{ url_for('add_news_reply', news_id=news.id) }}" class="inline-reply-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="parent_id" value="{{ reply.id }}">
+<textarea name="content" placeholder="Reply to {{ reply.user.username if reply.user else 'this member' }}..." required class="profile-input"></textarea>
+<button type="submit" class="ui-button-secondary">Reply</button>
+</form>
+{% endif %}
+
+{% for child in reply.replies|sort(attribute='id') %}
+{{ render_news_reply(child, news) }}
+{% endfor %}
+</div>
+{% endmacro %}
+
+{% set image_url = news_image_url(news.image) %}
+{% set fallback_image = news_image_url(None) %}
+{% set share_url = 'https://ampyan.com/news/' ~ news.id %}
+{% set article_title = news.title or 'AMPYAN Automotive Update' %}
+{% set article_body = news.content or 'Read the latest AMPYAN automotive update.' %}
+{% macro render_inline(runs) %}
+{% for run in runs %}
+{% if run.link %}<a href="{{ run.link }}" target="_blank" rel="noopener noreferrer">{% endif %}
+{% if run.bold %}<strong>{% endif %}{% if run.italic %}<em>{% endif %}{{ run.text }}{% if run.italic %}</em>{% endif %}{% if run.bold %}</strong>{% endif %}
+{% if run.link %}</a>{% endif %}
+{% endfor %}
+{% endmacro %}
+
+<article class="news-article-shell">
+<header class="news-article-header">
+<a href="{{ url_for('news_list') }}" class="news-back-link"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>News</span></a>
+<span class="news-category-badge">{{ news_category_label(effective_news_category(news)) }}</span>
+<h1>{{ article_title }}</h1>
+<div class="news-meta-row article-meta">
+<span>{{ news.created_at.strftime('%d %B %Y') if news.created_at else 'AMPYAN News' }}</span>
+<span>{{ news_read_time(news.content) }} min read</span>
+<span>{{ news.reply_count }} repl{{ 'y' if news.reply_count == 1 else 'ies' }}</span>
+</div>
+{% if current_user.is_authenticated and can("news.delete") %}
+<div class="ui-button-row">
+<a href="/admin/news/edit/{{ news.id }}" class="ui-button-secondary">Edit</a>
+<form method="POST" action="/admin/news/delete/{{ news.id }}" class="inline-form" onsubmit="return confirm('Delete this news?')">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="ui-button-danger">Delete this news</button>
+</form>
+</div>
+{% endif %}
+</header>
+
+<figure class="news-article-media">
+<img src="{{ image_url }}" alt="{{ article_title }}" loading="eager" fetchpriority="high" width="1200" height="675" onerror="this.onerror=null;this.src='{{ fallback_image }}';">
+</figure>
+
+<div class="social-share-panel news-share-panel" aria-label="Share this news">
+<span class="social-share-label">Share</span>
+<a class="social-share-action facebook-share" href="https://www.facebook.com/sharer/sharer.php?u={{ share_url|urlencode }}" target="_blank" rel="noopener" title="Share on Facebook"><i class="fa-brands fa-facebook-f"></i><span>Facebook</span></a>
+<a class="social-share-action whatsapp-share" href="https://wa.me/?text={{ (article_title ~ ' ' ~ share_url)|urlencode }}" target="_blank" rel="noopener" title="Share on WhatsApp"><i class="fa-brands fa-whatsapp"></i><span>WhatsApp</span></a>
+<a class="social-share-action x-share" href="https://twitter.com/intent/tweet?url={{ share_url|urlencode }}&text={{ article_title|urlencode }}" target="_blank" rel="noopener" title="Share on X"><i class="fa-brands fa-x-twitter"></i><span>X</span></a>
+<button type="button" class="social-share-action share-btn instagram-share" data-share-url="{{ share_url }}" data-share-title="{{ article_title }}" title="Share"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>
+<button type="button" class="social-share-action story-card-share story-share-btn" data-story-url="{{ url_for('news_story', news_id=news.id) }}" data-share-title="{{ article_title }}" data-share-url="{{ share_url }}" data-story-filename="ampyan-news-{{ news.id }}-story.png" title="Share a 9:16 story image"><i class="fa-solid fa-mobile-screen"></i><span>Share as Story</span></button>
+<button type="button" class="social-share-action copy-share-btn" data-share-url="{{ share_url }}" title="Copy link"><i class="fa-solid fa-link"></i><span>Copy</span></button>
+</div>
+
+<div class="news-article-body">
+{% if rich_content and rich_content.blocks %}
+{% for block in rich_content.blocks %}
+{% if block.type == 'paragraph' %}<p>{{ render_inline(block.content) }}</p>
+{% elif block.type == 'heading' %}<h2 class="news-block-heading level-{{ block.level }}">{{ block.text }}</h2>
+{% elif block.type == 'subheading' %}<p class="news-block-subheading">{{ block.text }}</p>
+{% elif block.type in ['bullet_list', 'numbered_list'] %}
+{% if block.type == 'bullet_list' %}<ul class="news-block-list">{% else %}<ol class="news-block-list">{% endif %}
+{% for item in block['items'] %}<li>{{ render_inline(item) }}</li>{% endfor %}
+{% if block.type == 'bullet_list' %}</ul>{% else %}</ol>{% endif %}
+{% elif block.type == 'image' %}
+<figure class="news-block-image"><button type="button" class="news-lightbox-trigger" data-image-url="{{ block.url }}" data-image-alt="{{ block.alt_text }}"><img src="{{ block.url }}" alt="{{ block.alt_text or block.caption or 'AMPYAN article image' }}" loading="lazy" decoding="async"></button>{% if block.caption %}<figcaption>{{ block.caption }}</figcaption>{% endif %}</figure>
+{% elif block.type == 'gallery' %}
+<div class="news-block-gallery" aria-label="Article image gallery">{% for image in block.images %}<figure><button type="button" class="news-lightbox-trigger" data-image-url="{{ image.url }}" data-image-alt="{{ image.alt_text }}"><img src="{{ image.url }}" alt="{{ image.alt_text or image.caption or 'AMPYAN gallery image' }}" loading="lazy" decoding="async"></button>{% if image.caption %}<figcaption>{{ image.caption }}</figcaption>{% endif %}</figure>{% endfor %}</div>
+{% elif block.type == 'quote' %}<blockquote class="news-block-quote">{{ render_inline(block.content) }}{% if block.cite %}<cite>{{ block.cite }}</cite>{% endif %}</blockquote>
+{% elif block.type == 'highlight' %}<aside class="news-block-highlight">{% if block.title %}<strong>{{ block.title }}</strong>{% endif %}<p>{{ render_inline(block.content) }}</p></aside>
+{% elif block.type == 'key_data' %}<dl class="news-key-data">{% for item in block['items'] %}<div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>{% endfor %}</dl>
+{% elif block.type == 'table' %}<div class="news-table-scroll" role="region" aria-label="Article data table" tabindex="0"><table><thead><tr>{% for header in block.headers %}<th scope="col">{{ header }}</th>{% endfor %}</tr></thead><tbody>{% for row in block.rows %}<tr>{% for cell in row %}<td>{{ cell }}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+{% elif block.type == 'divider' %}<hr class="news-block-divider">
+{% elif block.type == 'youtube' %}<section class="news-embed-block"><div class="news-video-frame"><iframe src="{{ block.embed_url }}" title="YouTube video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe></div><a href="{{ block.url }}" target="_blank" rel="noopener noreferrer">Watch on YouTube</a></section>
+{% elif block.type == 'instagram' %}<section class="news-embed-block news-instagram-block"><iframe src="{{ block.url }}embed/captioned/" title="Instagram post" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowtransparency="true"></iframe><a href="{{ block.url }}" target="_blank" rel="noopener noreferrer">View on Instagram</a></section>
+{% endif %}
+{% endfor %}
+{% else %}
+{% for paragraph in article_body.split('\n') %}
+{% if paragraph.strip() %}
+<p>{{ paragraph }}</p>
+{% endif %}
+{% endfor %}
+{% endif %}
+</div>
+</article>
+
+<dialog class="news-lightbox" id="newsLightbox"><button type="button" class="news-lightbox-close" aria-label="Close image preview">&times;</button><img alt=""></dialog>
+
+<section class="news-replies-shell">
+<h2 class="section-heading">Replies ({{ news.reply_count }})</h2>
+{% if news.reply_threads %}
+<div class="ui-grid">
+{% for reply in news.reply_threads %}
+{{ render_news_reply(reply, news) }}
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No replies yet.</div>
+{% endif %}
+
+{% if current_user.is_authenticated %}
+<div class="comment-form">
+<form method="POST" action="{{ url_for('add_news_reply', news_id=news.id) }}">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<textarea name="content" placeholder="Write your reply..." required class="profile-input" style="min-height:120px;resize:vertical;"></textarea>
+<button type="submit" class="auth-button">Post Reply</button>
+</form>
+</div>
+{% else %}
+<p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" style="color:#ff3b3b;">login</a> to reply.</p>
+{% endif %}
+</section>
+<script>
+(function(){
+var dialog=document.getElementById('newsLightbox');
+if(!dialog)return;
+var image=dialog.querySelector('img');
+document.addEventListener('click',function(event){
+var trigger=event.target.closest('.news-lightbox-trigger');
+if(trigger){image.src=trigger.dataset.imageUrl||'';image.alt=trigger.dataset.imageAlt||'Article image';dialog.showModal();return;}
+if(event.target.closest('.news-lightbox-close')||event.target===dialog){dialog.close();image.removeAttribute('src');}
+});
+})();
+</script>
+{% endblock %}

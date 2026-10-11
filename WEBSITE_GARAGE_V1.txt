@@ -1,0 +1,44 @@
+Canonical Garage integration
+
+Backend contract: df045fc46b89d0a56819c67d4279821a1f6f8466 (unchanged).
+Set AMPYAN_API_BASE_URL explicitly to the intended API environment. Production
+requires HTTPS. Only localhost/loopback HTTP is accepted for local testing.
+Keep SECRET_KEY private, stable, and strong; HTTPS cookies are secure in
+production. No backend signing secret is shared with this website.
+
+Website login remains a website session. Garage access additionally requires
+backend credentials: email/password, or a provider ID token from the existing
+Google callback. The backend must accept the configured Google OAuth audience.
+A backend-signed bearer token is bound to the authenticated website user in the
+HttpOnly signed session. Passwords are not persisted. Sign-out clears the token.
+Expired/missing tokens require sign-in; owner headers are never forwarded.
+New Garage registration requires explicit consent and the existing backend
+registration contract. Existing accounts cannot be claimed by matching email.
+
+Local legacy vehicle records and calculator source are retained. The active
+Garage routes and profile UI do not present their derived health or forecasts.
+No automatic data linking, import, baseline inference or bulk rewrite occurs.
+Transmission identity edits do not overwrite verified configuration evidence.
+Specific overlays require the backend's confirmed equipment/configuration
+contract. Conflicts fail closed. Historical services do not confirm current ODO.
+Initial OEM inspection evidence is not editable in the ordinary website form.
+
+Cookie mutations require CSRF. Administrative actions, logout, vehicle deletion
+and default selection are POST-only. Email verification uses a GET confirmation
+page and a CSRF-protected POST. Google callback is the OAuth state-validated
+protocol exception, not a cookie-authorized business mutation.
+Backend API bearer calls execute server-side and do not require website CSRF.
+Explicit website analytics remain separate from read-only backend health.
+
+Tests (all data synthetic; no existing DATABASE_URL is used):
+  AMPYAN_BACKEND_RC_PATH=<frozen-P4B-checkout> \
+  AMPYAN_BACKEND_TEST_PYTHON=<backend-environment-python> \
+  PYTHONDONTWRITEBYTECODE=1 python3 -m pytest -q \
+  --basetemp=<new-runtime-directory-under-/private/tmp>
+
+The integration server rejects non-disposable state paths. Test network access
+is restricted to loopback. Optional AMPYAN_WEBSITE_TEST_PG_META must identify a
+fresh disposable PostgreSQL cluster with TCP disabled, a private /tmp socket,
+and database ampyan_website_synthetic. The test server verifies its actual data
+directory and local-only connection before using the synthetic schema.
+Never point this harness at an existing database. Stop the cluster afterward.

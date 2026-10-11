@@ -1,0 +1,3 @@
+{% macro app_cta(variant='download') -%}
+<a class="app-cta action" data-app-cta="{{ variant }}" href="{{ ampyan_app_url }}" rel="noopener">{{ {'download':'Download AMPYAN App','open':'Open in AMPYAN App','setup':'Complete setup in App','service':'Add service in App','running':'Update running details in App'}.get(variant,'Download AMPYAN App') }}</a>
+{%- endmacro %}

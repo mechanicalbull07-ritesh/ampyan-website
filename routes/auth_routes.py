@@ -1,0 +1,309 @@
+from datetime import datetime, timedelta
+import json
+import os
+import secrets
+import re
+from urllib import request as urllib_request
+
+from flask import Blueprint, current_app, flash, jsonify, redirect, render_template, request, url_for
+from flask_login import login_user, logout_user
+from sqlalchemy import func
+from werkzeug.security import check_password_hash, generate_password_hash
+
+from models.models import User, db
+from services.analytics_service import safe_track_event, action_event_id
+from services.email_service import send_email
+from services.public_image_storage import public_image_url
+
+auth_bp = Blueprint("auth", __name__)
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+MIN_PASSWORD_LENGTH = 8
+
+ADMIN_EMAILS = [
+    "mechanicalbull07@gmail.com",
+]
+ADMIN_EMAIL_SET = {email.lower() for email in ADMIN_EMAILS}
+
+
+def _ampyan_api_base_url():
+    return (os.environ.get("AMPYAN_API_BASE_URL") or "https://api.ampyan.com").rstrip("/")
+
+
+def _email_verification_required():
+    return os.environ.get("REQUIRE_EMAIL_VERIFICATION", "").strip().lower() == "true"
+
+
+def _sync_profile(name, email, phone=""):
+    from flask_login import current_user
+    if not current_user.is_authenticated or str(current_user.email).lower() != str(email).lower():
+        return False
+    from services.canonical_garage_client import sync_profile, GarageError
+    try:
+        sync_profile(name, phone)
+        return True
+    except GarageError:
+        return False
+
+
+def _apply_admin_policy(user):
+    email = (user.email or "").strip().lower()
+    if email in ADMIN_EMAIL_SET:
+        user.role = "admin"
+        return True
+    if user.role == "admin":
+        user.role = "user"
+        return True
+    return False
+
+
+def _api_user_payload(user):
+    profile_url = public_image_url("profile_images", user.profile_photo) if user.profile_photo else ""
+    if profile_url and profile_url.startswith("/"):
+        profile_url = f"{request.url_root.rstrip('/')}{profile_url}"
+    return {
+        "id": user.id,
+        "username": user.username,
+        "email": user.email,
+        "mobile": user.mobile,
+        "role": user.role,
+        "city": user.city,
+        "state": user.state,
+        "country": user.country,
+        "pincode": user.pincode,
+        "badge": user.badge,
+        "reputation": user.reputation,
+        "posts_count": user.posts_count,
+        "email_verified": user.email_verified,
+        "profile_photo": user.profile_photo,
+        "profile_photo_url": profile_url,
+        "profile_image": profile_url,
+        "avatar_url": profile_url,
+    }
+
+
+def _commit_new_user_with_id_fallback(user):
+    try:
+        db.session.add(user)
+        db.session.commit()
+        return
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("User insert needed id fallback: %s", exc.__class__.__name__)
+        message = str(exc).lower()
+        if "null value" not in message or "id" not in message:
+            raise
+
+        next_id = (db.session.query(func.max(User.id)).scalar() or 0) + 1
+        user.id = next_id
+        db.session.add(user)
+        db.session.commit()
+
+
+@auth_bp.route("/register", methods=["GET", "POST"])
+def register():
+    if request.method == "POST":
+        try:
+            username = (request.form.get("username") or "").strip()
+            email = (request.form.get("email") or "").strip().lower()
+            password = request.form.get("password")
+
+            if not username or not email or not password:
+                flash("Username, email and password are required.")
+                return redirect(url_for("auth.register"))
+            if not EMAIL_RE.match(email):
+                flash("Please enter a valid email address.")
+                return redirect(url_for("auth.register"))
+            if len(password) < MIN_PASSWORD_LENGTH:
+                flash("Password should be at least 8 characters.")
+                return redirect(url_for("auth.register"))
+
+            existing_username = User.query.filter_by(username=username).first()
+            if existing_username:
+                flash("Username already exists.")
+                return redirect(url_for("auth.register"))
+
+            existing_email = User.query.filter_by(email=email).first()
+            if existing_email:
+                flash("Email already registered.")
+                return redirect(url_for("auth.register"))
+
+            hashed_password = generate_password_hash(password)
+            require_verification = _email_verification_required()
+            token = secrets.token_urlsafe(32) if require_verification else None
+            expiry = datetime.utcnow() + timedelta(minutes=30) if require_verification else None
+
+            new_user = User(
+                username=username,
+                mobile="",
+                email=email,
+                password=hashed_password,
+                role="user",
+                is_banned=False,
+                email_verified=not require_verification,
+                verification_token=token,
+                verification_token_expiry=expiry,
+                reputation=0,
+                posts_count=0,
+                helpful_answers=0,
+                contributor_score=0,
+                badge="New Member",
+            )
+
+            _commit_new_user_with_id_fallback(new_user)
+            sign_up_payload = {"method": "email"}
+            event_id = action_event_id(request.form.get("analytics_request_token"))
+            if event_id:
+                sign_up_payload["event_id"] = event_id
+            safe_track_event("sign_up", sign_up_payload)
+            _sync_profile(username, email, new_user.mobile or "")
+
+            if require_verification:
+                verification_link = url_for("verify_email", token=token, _external=True)
+                mail = current_app.extensions.get("mail")
+                send_email(
+                    mail,
+                    email,
+                    "Verify your Motrnoix AMPYAN account",
+                    f"Click this link to verify your account:\n\n{verification_link}",
+                )
+                flash("Account created. Please verify your email.")
+            else:
+                flash("Account created. You can login now.")
+            return redirect(url_for("auth.login"))
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning("Registration failed: %s", exc.__class__.__name__)
+            flash(f"Registration failed: {exc.__class__.__name__}")
+            return redirect(url_for("auth.register"))
+
+    return render_template("register.html")
+
+
+@auth_bp.route("/login", methods=["GET", "POST"])
+def login():
+    next_page = request.args.get("next")
+
+    if request.method == "POST":
+        username = (request.form.get("username") or "").strip()
+        password = request.form.get("password") or ""
+
+        if not username or not password:
+            safe_track_event("login_failure", {"reason": "missing_credentials"})
+            flash("Username/email and password are required.")
+            return redirect(url_for("auth.login"))
+
+        try:
+            user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
+        except Exception as exc:
+            db.session.rollback()
+            current_app.logger.warning("Login lookup failed: %s detail=%s", exc.__class__.__name__, str(exc)[:300])
+            flash("Login is temporarily unavailable. Please try again in a moment.")
+            return redirect(url_for("auth.login"))
+
+        if user and check_password_hash(user.password, password):
+            if getattr(user, "is_managed_persona", False):
+                flash("This account is managed by AMPYAN admin and cannot login directly.")
+                return redirect(url_for("auth.login"))
+
+            if _apply_admin_policy(user):
+                db.session.commit()
+
+            if user.is_banned:
+                flash("Your account has been banned.")
+                return redirect(url_for("auth.login"))
+
+            if _email_verification_required() and not user.email_verified:
+                flash("Please verify your email before logging in.")
+                return redirect(url_for("auth.login"))
+
+            login_user(user)
+            from services.canonical_garage_client import connect, GarageError
+            try:
+                connect(password=password)
+            except GarageError:
+                pass  # Website login remains valid; Garage explicitly requests reauthentication.
+            login_payload = {"method": "email"}
+            event_id = action_event_id(request.form.get("analytics_request_token"))
+            if event_id:
+                login_payload["event_id"] = event_id
+            safe_track_event("login", login_payload)
+            if os.environ.get("ENABLE_AUTH_PROFILE_SYNC", "").lower() == "true":
+                _sync_profile(user.username, user.email, user.mobile or "")
+
+            if next_page and next_page.startswith("/") and not next_page.startswith("//"):
+                return redirect(next_page)
+            return redirect("/community")
+
+        safe_track_event("login_failure", {"reason": "invalid_credentials"})
+        flash("Invalid credentials")
+
+    return render_template("auth.html")
+
+
+@auth_bp.route("/api/login", methods=["POST"])
+def api_login():
+    payload = request.get_json(silent=True) or request.form
+    username = (payload.get("username") or payload.get("email") or "").strip()
+    password = payload.get("password") or ""
+
+    if not username or not password:
+        safe_track_event("login_failure", {"reason": "missing_credentials"}, traffic_type="app")
+        return jsonify({"status": "error", "message": "username/email and password are required"}), 400
+
+    try:
+        user = User.query.filter((User.username == username) | (User.email == username.lower())).first()
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("API login lookup failed: %s detail=%s", exc.__class__.__name__, str(exc)[:300])
+        return jsonify({"status": "error", "message": "login temporarily unavailable"}), 503
+    if not user or not check_password_hash(user.password, password):
+        safe_track_event("login_failure", {"reason": "invalid_credentials"}, traffic_type="app")
+        return jsonify({"status": "error", "message": "invalid credentials"}), 401
+
+    if getattr(user, "is_managed_persona", False):
+        return jsonify({"status": "error", "message": "managed personas cannot login directly"}), 403
+
+    if _apply_admin_policy(user):
+        db.session.commit()
+
+    if user.is_banned:
+        return jsonify({"status": "error", "message": "account banned"}), 403
+
+    if _email_verification_required() and not user.email_verified:
+        return jsonify({"status": "error", "message": "email verification required"}), 403
+
+    login_user(user)
+    from services.canonical_garage_client import connect, GarageError
+    try:
+        connect(password=password)
+    except GarageError:
+        pass
+    # The Flutter client owns the canonical app login event after its response.
+    safe_track_event("login_success", {"method": "password"}, traffic_type="app")
+    _sync_profile(user.username, user.email, user.mobile or "")
+    return jsonify({
+        "status": "success",
+        "authenticated": True,
+        "user": _api_user_payload(user),
+    })
+
+
+@auth_bp.route("/api/logout", methods=["POST"])
+def api_logout():
+    from services.canonical_garage_client import clear_credentials
+    clear_credentials()
+    from services.google_profile_picture import clear_google_picture
+    clear_google_picture()
+    logout_user()
+    return jsonify({"status": "success", "authenticated": False})
+
+
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    from services.canonical_garage_client import clear_credentials
+    clear_credentials()
+    from services.google_profile_picture import clear_google_picture
+    clear_google_picture()
+    logout_user()
+    flash("You have been logged out.")
+    return redirect("/")
