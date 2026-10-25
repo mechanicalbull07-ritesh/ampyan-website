@@ -18,6 +18,7 @@ from services.service_schedule_engine import get_service_schedule
 from services.component_health_engine import get_component_health
 from services.garage_summary import enrich_car_for_garage, serialize_garage_car
 from services.public_image_storage import public_image_url, store_public_image
+from services.community_privacy_client import call as _privacy_call
 import os
 
 user_bp = Blueprint("user", __name__)
@@ -86,16 +87,13 @@ def _require_api_auth():
 
 
 def _load_remote_profile_posts():
-    payload = _remote_request("/community/export?include_replies=true")
+    payload = _privacy_call("/community/owner/posts?limit=40&include_replies=true&exclude_source=website", owner=True)
     if not payload:
-        return []
+        flash("App Community posts unavailable. Check your Garage connection and retry.")
+        return [], 0
 
     posts = []
     for post in payload.get("posts") or []:
-        user = post.get("user") or {}
-        email = (user.get("email") or "").strip().lower()
-        if email != (current_user.email or "").strip().lower():
-            continue
         if (post.get("source") or "").lower() == "website":
             continue
         text = post.get("text") or ""
@@ -108,7 +106,7 @@ def _load_remote_profile_posts():
                 detail_url=f"/community/remote/{post.get('id')}",
             )
         )
-    return posts
+    return posts, max(len(posts), _safe_int(payload.get("total_count"), len(posts)))
 
 
 def serialize_user(user):
@@ -150,7 +148,7 @@ def profile():
     # Legacy cars remain identity/history records; no local health is calculated.
 
     local_posts = Post.query.filter_by(user_id=current_user.id).order_by(Post.id.desc()).all()
-    remote_posts = _load_remote_profile_posts()
+    remote_posts, remote_posts_count = _load_remote_profile_posts()
     profile_posts = list(local_posts[:5]) + remote_posts[:5]
 
     return render_template(
@@ -159,7 +157,7 @@ def profile():
         posts=local_posts,
         profile_posts=profile_posts[:5],
         cars_count=len(cars),
-        posts_count=len(local_posts) + len(remote_posts),
+        posts_count=len(local_posts) + remote_posts_count,
         ai_used=current_user.ai_uses_today,
         reputation=current_user.reputation,
         badge=current_user.badge,

@@ -197,6 +197,8 @@ def ai_diagnose(problem, car):
     return results
 
 app = Flask(__name__)
+from services.community_read_only import install as install_community_read_only
+install_community_read_only(app)
 csrf = CSRFProtect()
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 IS_PRODUCTION = os.environ.get("ENV", "").lower() == "production" or os.environ.get("RENDER", "").lower() == "true"
@@ -1567,6 +1569,8 @@ def google_callback():
 
 @app.after_request
 def avatar_boolean_diagnostics(response):
+    if getattr(g, "community_read_only_rejected", False):
+        return response
     if request.endpoint != 'google_callback':
         log_authenticated_avatar_state(current_user)
     return response
@@ -1854,13 +1858,15 @@ def track_visit():
 
 @app.after_request
 def track_traffic_quality(response):
+    if getattr(g, "community_read_only_rejected", False):
+        return response
     return count_traffic_quality_response(response)
 
 
 @app.after_request
 def attach_visitor_cookie(response):
     elapsed = None
-    if hasattr(g, "request_start_time"):
+    if hasattr(g, "request_start_time") and not getattr(g, "community_read_only_rejected", False):
         elapsed = time.perf_counter() - g.request_start_time
         safe_track_api_request(request.path, request.method, response.status_code, elapsed * 1000)
         log_message = (

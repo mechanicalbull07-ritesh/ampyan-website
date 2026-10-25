@@ -77,9 +77,10 @@
 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
+<link rel="stylesheet" href="{{ url_for('static', filename='css/toon-v31.css') }}">
 </head>
 
-<body>
+<body class="toon-v31">
 
 <div class="particles"></div>
 <div class="mouse-light"></div>
@@ -264,6 +265,12 @@ Sign In
 <script>document.addEventListener("DOMContentLoaded",function(){var notice=document.querySelector("[data-flash-focus]");if(notice){notice.focus();}});</script>
 {% endif %}
 {% endwith %}
+{% set toon_art = none %}
+{% if request.path in ['/garage', '/my-car-health'] %}{% set toon_art = 'Car_Health_Garage_Background_Approved.png' %}
+{% elif request.path == '/tools/ai-diagnosis' %}{% set toon_art = 'ai_diagnosis_ambassador.png' %}
+{% elif request.path == '/tools' %}{% set toon_art = 'car_tools_ambassador.png' %}
+{% elif request.path == '/community' %}{% set toon_art = 'AMPYAN_Community_Megaphone.png' %}{% endif %}
+{% if toon_art %}<img class="toon-page-art" src="{{ url_for('static', filename='images/toon-v31/' ~ toon_art) }}" alt="" aria-hidden="true" width="240" height="160" loading="lazy" decoding="async">{% endif %}
 {% block content %}{% endblock %}
 </main>
 

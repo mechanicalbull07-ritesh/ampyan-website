@@ -6,7 +6,7 @@
 <div class="post-actions">
 <small class="page-subtitle" style="margin:0;">{{ comment.author_name }}</small>
 
-{% if comment.can_edit %}
+{% if not community_read_only and comment.can_edit %}
 <div class="ui-button-row">
 <a href="{{ comment.edit_url }}" class="community-icon-action" title="Edit reply"><i class="fa-solid fa-pen"></i><span>Edit</span></a>
 <form method="POST" action="{{ comment.delete_url }}" class="inline-form">
@@ -17,7 +17,7 @@
 {% endif %}
 </div>
 
-{% if current_user.is_authenticated and not post.is_remote %}
+{% if not community_read_only and current_user.is_authenticated and not post.is_remote %}
 <form method="POST" action="{{ post.reply_url }}" class="inline-reply-form">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 <input type="hidden" name="parent_id" value="{{ comment.id }}">
@@ -33,6 +33,7 @@
 {% endmacro %}
 
 <section class="page-shell">
+<p class="page-subtitle" role="status">{{ community_read_only_notice }}</p>
 
 <div class="ui-card narrow-card">
 <div class="page-header">
@@ -42,7 +43,7 @@
 </div>
 
 <div class="ui-button-row">
-{% if post.can_edit %}
+{% if not community_read_only and post.can_edit %}
 <a href="{{ post.edit_url }}" class="community-icon-action" title="Edit">
 <i class="fa-solid fa-pen"></i><span>Edit</span>
 </a>
@@ -110,7 +111,7 @@
 {% endif %}
 <p class="page-subtitle" id="comments-error" style="display:none;">Replies could not be refreshed right now.</p>
 
-{% if current_user.is_authenticated %}
+{% if not community_read_only and current_user.is_authenticated %}
 <div class="comment-form">
 <form method="POST" action="{{ post.reply_url }}">
 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -119,7 +120,7 @@
 </form>
 </div>
 {% else %}
-<p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" style="color:#ff3b3b;">login</a> to reply.</p>
+<p class="page-subtitle">Replies are temporarily read-only.</p>
 {% endif %}
 
 </div>
@@ -135,7 +136,7 @@ if(!list || !list.dataset.commentsUrl) return;
 const emptyState = document.getElementById("comments-empty-state");
 const errorState = document.getElementById("comments-error");
 const countNode = document.getElementById("reply-count");
-const canReply = {{ (current_user.is_authenticated and not post.is_remote)|tojson }};
+const canReply = {{ (not community_read_only and current_user.is_authenticated and not post.is_remote)|tojson }};
 const replyUrl = {{ post.reply_url|tojson }};
 function textValue(value) {
 return value == null ? "" : String(value);

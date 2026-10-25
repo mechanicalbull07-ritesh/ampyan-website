@@ -3,6 +3,7 @@
 {% block content %}
 
 <section class="page-shell">
+<p class="page-subtitle" role="status">{{ community_read_only_notice }}</p>
 
 <div class="page-header">
 <div class="page-header-copy">
@@ -11,7 +12,7 @@
 <p class="page-subtitle">Ask questions, share ownership experience and learn from real car owners across the platform.</p>
 </div>
 
-<a href="/create-post" class="create-btn"><i class="fa-solid fa-pen-to-square"></i> Create Post</a>
+<span class="create-btn" aria-disabled="true"><i class="fa-solid fa-pen-to-square"></i> Create Post</span>
 </div>
 
 <div class="community-interactive-grid card-spacer">
@@ -143,7 +144,7 @@ Community Member
 <div class="post-divider"></div>
 
 <div class="post-actions">
-{% if post.vote_url %}
+{% if not community_read_only and post.vote_url %}
 <a href="{{ post.vote_url }}" class="vote-btn ampyan-boost-btn {% if current_user.is_authenticated and not post.is_remote and post.votes|selectattr('user_id','equalto',current_user.id)|list|length > 0 %}voted{% endif %}" title="Boost helpful post">
 <i class="fa-solid fa-bolt-lightning"></i> {{ post.vote_count }}
 </a>
@@ -159,13 +160,13 @@ Community Member
 <i class="fa-solid fa-share-nodes"></i><span>Share</span>
 </button>
 
-{% if post.can_edit %}
+{% if not community_read_only and post.can_edit %}
 <a href="{{ post.edit_url }}" class="community-icon-action" title="Edit">
 <i class="fa-solid fa-pen"></i><span>Edit</span>
 </a>
 <form method="POST" action="{{ post.delete_url }}" class="inline-form">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="community-icon-action danger-action" onclick="return confirm('Delete this post?')" title="Delete">
+<input disabled aria-disabled="true" type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button disabled aria-disabled="true" type="submit" class="community-icon-action danger-action" onclick="return confirm('Delete this post?')" title="Delete">
 <i class="fa-solid fa-trash"></i><span>Delete</span>
 </button>
 </form>
@@ -187,10 +188,10 @@ Community Member
 <p class="section-copy">Connect with owners of the same car or vehicle type.</p>
 </div>
 <form method="POST" action="{{ url_for('community.create_car_community') }}" class="car-community-form">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<input type="text" name="name" placeholder="Create: Baleno Owners, XUV700..." required>
-<input type="text" name="description" placeholder="Short purpose (optional)">
-<button type="submit"><i class="fa-solid fa-plus"></i> Create</button>
+<input disabled aria-disabled="true" type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input disabled aria-disabled="true" type="text" name="name" placeholder="Create: Baleno Owners, XUV700..." required>
+<input disabled aria-disabled="true" type="text" name="description" placeholder="Short purpose (optional)">
+<button disabled aria-disabled="true" type="submit"><i class="fa-solid fa-plus"></i> Create</button>
 </form>
 </div>
 
@@ -234,9 +235,9 @@ Community Member
 <p class="section-copy">Quick prompts to make posting easier.</p>
 </div>
 <div class="community-topic-stack">
-<a href="/create-post" class="community-starter-card">My car is giving a new warning sign. What could it mean?</a>
-<a href="/create-post" class="community-starter-card">Which car is better for daily city use and family comfort?</a>
-<a href="/create-post" class="community-starter-card">What maintenance should I do before a long road trip?</a>
+<span class="community-starter-card" aria-disabled="true">My car is giving a new warning sign. What could it mean?</span>
+<span class="community-starter-card" aria-disabled="true">Which car is better for daily city use and family comfort?</span>
+<span class="community-starter-card" aria-disabled="true">What maintenance should I do before a long road trip?</span>
 </div>
 </div>
 
@@ -250,8 +251,8 @@ Community Member
 {% for user in top_contributors %}
 <div class="community-contributor-card">
 <div>
-<h3>{{ loop.index }}. {{ user.username }}</h3>
-<p>{{ user.badge }}</p>
+<h3>{{ loop.index }}. {{ user.username|community_public_name }}</h3>
+<p>Member</p>
 </div>
 <div class="community-contributor-score">⭐ {{ user.reputation }}</div>
 </div>

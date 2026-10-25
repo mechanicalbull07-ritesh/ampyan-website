@@ -1,3 +1,4 @@
+from services.community_read_only import public_name
 from datetime import datetime, timedelta
 import json
 import os
@@ -8,6 +9,8 @@ from flask import Blueprint, current_app, flash, jsonify, make_response, redirec
 from flask_login import current_user, login_required
 from models.models import CarCommunity, Comment, Post, User, Vote, db
 from services.public_image_storage import public_image_url, store_public_image
+from services.community_privacy_client import call as _privacy_call
+from services.canonical_garage_client import _token, GarageError
 from sqlalchemy import or_
 from sqlalchemy.orm import selectinload
 
@@ -28,23 +31,50 @@ def _ampyan_api_base_url():
 
 
 def _ampyan_api_request(path, method="GET", payload=None, timeout=3):
-    url = f"{_ampyan_api_base_url()}{path}"
+    if method.upper() != "GET":
+        raise RemoteSyncError("Website Community is read-only; remote mutations are disabled")
+    method = method.upper()
+    target = parse.urlsplit(path)
+    if target.scheme or target.netloc or target.fragment or not target.path.startswith("/community/"):
+        raise RemoteSyncError("Community target unavailable")
+    if target.path in ("/community/export", "/community/sync"):
+        raise RemoteSyncError("Privileged bulk route is not a website feed")
+    base = _ampyan_api_base_url()
+    origin = parse.urlsplit(base)
+    if (origin.scheme not in ("http", "https") or not origin.netloc or origin.username
+            or origin.password or origin.query or origin.fragment):
+        raise RemoteSyncError("Community configuration unavailable")
+    if origin.scheme != "https" and origin.hostname not in ("localhost", "127.0.0.1", "::1"):
+        raise RemoteSyncError("Community transport unavailable")
+    headers = {"Accept": "application/json"}
     data = None
-    headers = {}
+    if method != "GET":
+        try:
+            headers["Authorization"] = "Bearer " + _token()
+        except GarageError:
+            raise RemoteSyncError("Connect Garage before changing app Community data") from None
+        # A persona publisher must not silently publish as its logged-in admin instead.
+        for key in ("email", "author_email"):
+            if payload and payload.get(key) and str(payload[key]).strip().casefold() != str(current_user.email).strip().casefold():
+                raise RemoteSyncError("Community actor handoff required")
+        ignored = {"user_id", "userId", "author_user_id", "authorUserId", "author_email", "authorEmail",
+                   "email", "user_email", "userEmail", "community_user_id", "author_name", "authorName", "author_phone", "phone", "mobile", "role"}
+        payload = {k: v for k, v in (payload or {}).items() if k not in ignored}
     if payload is not None:
-        data = json.dumps(payload).encode("utf-8")
         headers["Content-Type"] = "application/json"
-
-    req = urllib_request.Request(url, data=data, headers=headers, method=method)
+        data = json.dumps(payload).encode("utf-8")
+    class NoRedirect(urllib_request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, hdrs, newurl):
+            return None
     try:
-        with urllib_request.urlopen(req, timeout=timeout) as response:
+        req = urllib_request.Request(base + path, data=data, headers=headers, method=method)
+        with urllib_request.build_opener(NoRedirect()).open(req, timeout=timeout) as response:
+            if response.status >= 300:
+                raise RemoteSyncError("Community operation unavailable")
             raw = response.read().decode("utf-8")
             return json.loads(raw) if raw else {}
-    except error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="ignore")
-        raise RemoteSyncError(f"{exc.code} {body}".strip())
-    except Exception as exc:
-        raise RemoteSyncError(str(exc))
+    except (error.URLError, error.HTTPError, OSError, ValueError):
+        raise RemoteSyncError("Community operation unavailable; no automatic identity fallback") from None
 
 
 def _safe_remote_call(path, method="GET", payload=None, timeout=3):
@@ -52,6 +82,8 @@ def _safe_remote_call(path, method="GET", payload=None, timeout=3):
         return _ampyan_api_request(path, method=method, payload=payload, timeout=timeout)
     except RemoteSyncError as exc:
         current_app.logger.warning("AMPYAN API sync failed for %s: %s", path, exc)
+        if method.upper() != "GET":
+            raise
         return None
 
 
@@ -99,15 +131,12 @@ def _get_or_create_car_community(name, description="", user=None):
 
 
 def _decorate_local_comment(comment):
-    username = getattr(comment.user, "username", None) or "Community Member"
+    username = public_name(getattr(comment.user, "username", None))
     comment.author_name = username
-    comment.author_badge = getattr(comment.user, "badge", "Member")
+    comment.author_badge = "Member"
     comment.author_avatar_url = _author_avatar_url(getattr(comment.user, "profile_photo", None))
     comment.author_avatar_letter = (username[:1] or "U").upper()
-    comment.can_edit = bool(
-        current_user.is_authenticated
-        and (current_user.id == comment.user_id or current_user.role == "admin")
-    )
+    comment.can_edit = False
     comment.edit_url = url_for("community.edit_comment", comment_id=comment.id)
     comment.delete_url = url_for("community.delete_comment", comment_id=comment.id)
     return comment
@@ -121,7 +150,11 @@ def _can_manage_post(post):
 
 
 def _comment_sort_key(comment):
-    return (getattr(comment, "created_at", None) or datetime.min, getattr(comment, "id", 0) or 0)
+    created = getattr(comment, "created_at", None)
+    date_key = created.isoformat() if hasattr(created, "isoformat") else str(created or "")
+    identifier = getattr(comment, "id", 0)
+    id_key = (0, identifier) if isinstance(identifier, int) else (1, str(identifier or ""))
+    return date_key, id_key
 
 
 def _root_comment_threads(comments):
@@ -139,7 +172,7 @@ def _decorate_local_post(post):
     post.detail_url = url_for("community.post_detail", post_id=post.id)
     post.share_url = url_for("community.post_detail", post_id=post.id, _external=True)
     post.reply_url = url_for("community.add_comment", post_id=post.id)
-    post.vote_url = url_for("community.upvote", post_id=post.id)
+    post.vote_url = None
     post.delete_url = url_for("community.delete_post", post_id=post.id)
     post.edit_url = url_for("community.edit_post", post_id=post.id)
     post.vote_count = len(post.votes)
@@ -152,10 +185,10 @@ def _decorate_local_post(post):
         if post.community_slug
         else url_for("community.community")
     )
-    post.author_display_name = post.author.username
-    post.author_badge = getattr(post.author, "badge", "Member")
+    post.author_display_name = public_name(post.author.username)
+    post.author_badge = "Member"
     post.author_reputation = getattr(post.author, "reputation", 0)
-    post.author_city = getattr(post.author, "city", None)
+    post.author_city = None
     post.author_avatar_url = _author_avatar_url(getattr(post.author, "profile_photo", None))
     post.author_avatar_letter = (post.author.username[:1] or "U").upper()
     post.preview_text = post.content[:180] + ("..." if len(post.content) > 180 else "")
@@ -165,8 +198,8 @@ def _decorate_local_post(post):
         reverse=True,
     )
     post.top_comments = [_decorate_local_comment(comment) for comment in sorted_comments[:4]]
-    post.can_edit = _can_manage_post(post)
-    post.can_vote = True
+    post.can_edit = False
+    post.can_vote = False
     decorated_comments = [_decorate_local_comment(comment) for comment in post.comments]
     post.reply_threads = _root_comment_threads(decorated_comments)
     return post
@@ -189,15 +222,7 @@ def _remote_text(payload):
 
 
 def _remote_author_name(payload, user):
-    return (
-        payload.get("author_name")
-        or payload.get("author")
-        or user.get("name")
-        or user.get("username")
-        or user.get("email")
-        or payload.get("userId")
-        or "AMPYAN User"
-    )
+    return public_name(user.get("name"))
 
 
 def _social_preview_text(text, fallback="AMPYAN community discussion"):
@@ -250,18 +275,20 @@ def _build_remote_comment(reply):
     )
     return SimpleNamespace(
         id=f"remote-reply-{reply.get('id')}",
-        user_id=user.get("id"),
+        user_id=user.get("public_id"),
+        post_id=reply.get("post_id"),
+        parent_id=reply.get("parent_reply_id"),
         content=content,
         text=content,
         created_at=reply.get("created_at"),
         author_name=author_name,
-        author_badge=user.get("role", "user").title(),
+        author_badge="Member",
         author_avatar_url=_author_avatar_url(profile_photo),
         author_avatar_letter=(author_name[:1] or "U").upper(),
         can_edit=False,
         edit_url=None,
         delete_url=None,
-        replies=[],
+        replies=[_build_remote_comment(child) for child in (reply.get("replies") or [])],
         user=SimpleNamespace(username=author_name),
     )
 
@@ -317,18 +344,17 @@ def _build_remote_post(post):
         can_vote=False,
         source=post.get("source") or "ampyan",
         author_display_name=author_name,
-        author_badge=user.get("role", "user").title(),
+        author_badge="Member",
         author_reputation=user.get("reputation", 0),
         author_city=post.get("location") or user.get("city"),
         author_avatar_url=_author_avatar_url(profile_photo),
         author_avatar_letter=(author_name[:1] or "U").upper(),
         author=SimpleNamespace(
             username=author_name,
-            badge=user.get("role", "user").title(),
+            badge="Member",
             reputation=user.get("reputation", 0),
             city=post.get("location") or user.get("city"),
             profile_photo=profile_photo,
-            email=user.get("email"),
         ),
         preview_text=content[:180] + ("..." if len(content) > 180 else ""),
     )
@@ -347,7 +373,7 @@ def _load_remote_posts(force_refresh=False):
         return REMOTE_POST_CACHE["posts"]
 
     timeout = float(os.environ.get("REMOTE_COMMUNITY_TIMEOUT_SECONDS", "1.5"))
-    payload = _safe_remote_call("/community/export?include_replies=true", timeout=timeout)
+    payload = _privacy_call("/community/posts?limit=40&include_replies=true", timeout=timeout)
     if not payload:
         return REMOTE_POST_CACHE["posts"] if REMOTE_POST_CACHE["posts"] else []
 
@@ -369,21 +395,22 @@ def _load_remote_post(remote_post_id):
     for post in _load_remote_posts():
         if str(post.remote_id) == str(remote_post_id):
             return post
-    return None
+    try:
+        identity = str(int(remote_post_id))
+    except (TypeError, ValueError):
+        return None
+    payload = _privacy_call("/community/posts/" + identity)
+    post = (payload or {}).get("post")
+    return _build_remote_post(post) if isinstance(post, dict) else None
 
 
 def _find_remote_post_id_for_website_post(local_post_id):
-    payload = _safe_remote_call("/community/export?include_replies=true")
-    if not payload:
+    try:
+        reference = "web-post-" + str(int(local_post_id))
+    except (TypeError, ValueError):
         return None
-
-    external_id = f"web-post-{local_post_id}"
-    for post in payload.get("posts") or []:
-        if (post.get("source") or "").lower() != "website":
-            continue
-        if str(post.get("external_id") or "") == external_id:
-            return post.get("id")
-    return None
+    payload = _privacy_call("/community/public-reference?source=website&external_id=" + reference)
+    return payload.get("post_id") if payload else None
 
 
 def refresh_author_stats(user):
@@ -494,14 +521,13 @@ def _serialize_comment(comment):
         "text": content,
         "created_at": _isoformat(getattr(comment, "created_at", None)),
         "author": {
-            "id": getattr(comment, "user_id", None),
-            "name": author_name or "Community Member",
-            "badge": getattr(comment, "author_badge", None) or getattr(user, "badge", "Member"),
+            "name": public_name(author_name),
+            "badge": "Member",
             "profile_photo": author_avatar_url,
             "profile_image": author_avatar_url,
             "avatar_url": author_avatar_url,
         },
-        "author_name": author_name or "Community Member",
+        "author_name": public_name(author_name),
         "replies": [_serialize_comment(reply) for reply in replies],
     }
 
@@ -540,10 +566,10 @@ def _serialize_post(post):
             "slug": getattr(post, "community_slug", None),
         },
         "author": {
-            "name": getattr(post, "author_display_name", "Community Member"),
-            "badge": getattr(post, "author_badge", "Member"),
+            "name": public_name(getattr(post, "author_display_name", None)),
+            "badge": "Member",
             "reputation": getattr(post, "author_reputation", 0) or 0,
-            "city": getattr(post, "author_city", None),
+            "city": None,
             "profile_photo": author_avatar_url,
             "profile_image": author_avatar_url,
             "avatar_url": author_avatar_url,

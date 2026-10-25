@@ -1,0 +1,193 @@
+/* Proposed Website presentation layer; no requests, identity or calculation changes. */
+body.toon-v31 { --bg:#101b2e; --bg-elevated:#17253b; --bg-soft:#1c2e48; --card:#17253b; --card-strong:#17253b; --text:#f5f7fb; --text-secondary:#b9c9df; --text-soft:#d7e2ef; --accent:#ffb59f; --accent-strong:#ffd0be; --border:#8396b1; --text-color:var(--text); --card-bg:var(--card); background:var(--bg); color:var(--text); }
+body.toon-v31.light { --bg:#f4f7fc; --bg-elevated:#fff; --bg-soft:#eaf0fb; --card:#fff; --card-strong:#fff; --text:#15243c; --text-secondary:#465972; --text-soft:#34465f; --accent:#a32e19; --accent-strong:#822210; --border:#687b94; }
+.toon-v31 .ampyan-discovery-card,.toon-v31 .ampyan-feature-card,.toon-v31 .diagnose-card,.toon-v31 .cg article { border-radius:24px; background:var(--card); border:1px solid var(--border); box-shadow:0 8px 24px #00000012; }
+.toon-v31 .cg,.toon-v31 .cg p,.toon-v31 .cg h1,.toon-v31 .cg h2 { color:var(--text); }
+.toon-v31 .cg input,.toon-v31 .cg select { background:var(--bg-elevated);color:var(--text);border-color:var(--border); }
+.toon-v31 .cg a {color:var(--accent);}
+.toon-v31 .auth-button,.toon-v31 .cg .action,.toon-v31 .cg button {background:#a32e19;color:#fff;border:1px solid #a32e19;}
+.toon-v31 input::placeholder,.toon-v31 textarea::placeholder {color:var(--text-secondary);opacity:1;}
+.toon-v31 :is(a,button,input,select,textarea):focus-visible {outline:3px solid var(--accent);outline-offset:4px;}
+.toon-v31 :is(button,input,select,textarea) {border-color:var(--border);}
+.toon-v31 .toon-page-art {display:block;width:min(240px,45vw);height:160px;object-fit:contain;margin:20px auto;}
+.toon-v31 .ampyan-discovery-card .toon-card-art {width:100%;height:128px;object-fit:contain;margin:0 auto 16px;}
+.toon-v31 .ampyan-discovery-card {min-width:0;overflow-wrap:anywhere;}
+.toon-v31 .toon-card-art + .fa-solid {display:none;}
+.toon-v31 .navbar,.toon-v31 footer {color:var(--text);}
+@media(max-width:480px){.toon-v31 .ampyan-discovery-grid{grid-template-columns:1fr;}.toon-v31 .toon-page-art{height:120px;}}
+@media(prefers-reduced-motion:reduce){.toon-v31{scroll-behavior:auto;}.toon-v31 .particles,.toon-v31 .mouse-light,.toon-v31 .cursor-glow,.toon-v31 #neural-bg{display:none;}.toon-v31 *,.toon-v31 *::before,.toon-v31 *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+
+/* Contrast correction proposal: colors only; preserve layout and all states. */
+body.toon-v31.light .page-kicker { color:var(--accent); }
+body.toon-v31.light .navbar-brand,
+body.toon-v31.light .nav-center a:not(.nav-link-disabled),
+body.toon-v31.light .mobile-menu-toggle,
+body.toon-v31.light .theme-toggle { color:var(--text); }
+body.toon-v31.light .mobile-menu-toggle,
+body.toon-v31.light .theme-toggle { border-color:var(--border); }
+
+/* Keep the existing dark trust strip legible in both page themes. */
+body.toon-v31 .ampyan-trust-strip { background:#17253b; }
+body.toon-v31 .ampyan-trust-strip span { color:#f5f7fb; }
+
+/* Existing News controls: same geometry, darker branded active red. */
+body.toon-v31 .news-filter-chip,
+body.toon-v31 .news-icon-button,
+body.toon-v31 .news-admin-link {
+ color:var(--text); background:var(--card); border-color:var(--border);
+}
+body.toon-v31 .news-filter-chip:is(.active,:hover,:focus-visible) {
+ color:#fff; background:#a32e19; border-color:#a32e19;
+}
+body.toon-v31.light .news-status-card p { color:var(--text-secondary); }
+
+/* Existing read-only Community states remain read-only. */
+body.toon-v31 .sort-btn:is(:hover,.active-sort) {
+ background:#a32e19 !important; color:#fff !important;
+}
+body.toon-v31.light .community-quick-chip,
+body.toon-v31.light .community-starter-card {
+ color:var(--text); background:var(--card); border-color:var(--border);
+}
+body.toon-v31.light .community-starter-card span { color:var(--text-secondary); }
+body.toon-v31.light .community-quick-chip.active-community-chip {
+ color:#fff; background:#a32e19; border-color:#a32e19;
+}
+body.toon-v31.light .community-quick-chip:not(.active-community-chip):hover,
+body.toon-v31.light .community-starter-card:hover { color:var(--text); border-color:var(--accent); }
+
+/* Dark controls use the existing warm accent with dark text and clear state contrast. */
+body.toon-v31:not(.light) .news-filter-chip:is(.active,:hover,:focus-visible) {
+ color:#15243c; background:#ffb59f; border-color:#ffb59f;
+}
+body.toon-v31:not(.light) .sort-btn:is(:hover,.active-sort) {
+ color:#15243c !important; background:#ffb59f !important;
+}
+
+/* The result placeholder is neutral guidance, not a severity indicator. */
+body.toon-v31 .result-placeholder,
+body.toon-v31 .result-placeholder p { color:var(--text-secondary); }
+body.toon-v31.light .diagnose-result {
+ background:var(--card); border-color:var(--border);
+}
+body.toon-v31.light .result-placeholder h3 { color:var(--text); }
+body.toon-v31.light .ai-version { color:var(--text-secondary); }
+
+/* Profile fallback and auth controls need a solid text-safe fill. */
+body.toon-v31 .profile-avatar.author-avatar-letter,
+body.toon-v31 .auth-btn {
+ color:#fff; background:#a32e19; border-color:#a32e19;
+}
+body.toon-v31.light .profile-wrapper .ui-meta-value { color:var(--text); }
+body.toon-v31.light .auth-top-switch a,
+body.toon-v31.light .auth-top-switch a:is(:hover,:focus-visible),
+body.toon-v31.light .auth-footer a,
+body.toon-v31.light .auth-footer a:is(:hover,:focus-visible) { color:var(--accent); }
+
+/* Final grouped contrast closure: colors only, no geometry or behavior changes. */
+body.toon-v31 .ampyan-card-cta,
+body.toon-v31 .filter-bar button,
+body.toon-v31 .social-share-action.story-card-share { color:#15243c; }
+body.toon-v31.light .ampyan-discovery-card h2 { color:var(--text); }
+body.toon-v31.light .ampyan-card-badge { color:var(--accent); }
+body.toon-v31.light .ampyan-feature-card i { color:var(--accent); }
+body.toon-v31 .ampyan-news-placeholder { background:var(--bg-soft); }
+body.toon-v31 .ampyan-news-placeholder span { color:var(--text-secondary); }
+body.toon-v31:not(.light) .profile-badge,
+body.toon-v31:not(.light) .diagnosis-cta { color:#15243c; }
+body.toon-v31.light .garage-trust-level,
+body.toon-v31.light .garage-trust-score { color:var(--text); }
+body.toon-v31.light .contact-label,
+body.toon-v31.light .calc-label { color:var(--accent); }
+body.toon-v31 .widget-btn,
+body.toon-v31 .widget-btn:is(:hover,:focus-visible) { background:#a32e19; color:#fff; }
+body.toon-v31.light .create-card { background:var(--card); border-color:var(--border); }
+body.toon-v31.light .news-editor-help { color:var(--text-secondary); }
+body.toon-v31.light .news-editor-toolbar .news-media-shortcut { color:var(--accent); }
+body.toon-v31 .image-upload p { color:#cfd9e8; }
+body.toon-v31.light .calculator-result-card h2 { color:var(--text); }
+body.toon-v31 .post-box p[style*="color:gray"],
+body.toon-v31 .comment-box p[style*="color:gray"] { color:var(--text-secondary) !important; }
+body.toon-v31 button[style*="background:#ff3b3b"] { background:#a32e19 !important; color:#fff !important; }
+body.toon-v31.light .news-back-link,
+body.toon-v31.light .news-meta-row,
+body.toon-v31.light .social-share-label,
+body.toon-v31.light .news-article-body { color:var(--text-secondary); }
+body.toon-v31.light .news-article-body a { color:var(--accent); }
+body.toon-v31 .facebook-share { background:#155bb5; color:#fff; }
+body.toon-v31 .whatsapp-share { background:#087c39; color:#fff; }
+body.toon-v31 .author-location { color:var(--text-secondary); }
+body.toon-v31.light .post-community-pill { color:var(--accent); }
+/* Exact legacy inline heading is unique to start.html; no template edit. */
+body.toon-v31.light h2[style="color:white;"] { color:var(--text) !important; }
+
+/* Remaining shared light surfaces and their text. */
+body.toon-v31.light .post-card,
+body.toon-v31.light .top-reply { background:var(--card); border-color:var(--border); }
+body.toon-v31.light .author-name,
+body.toon-v31.light .post-title a { color:var(--text); }
+body.toon-v31.light .post-preview,
+body.toon-v31.light .reply-count,
+body.toon-v31.light .create-sub,
+body.toon-v31.light .create-label { color:var(--text-secondary); }
+body.toon-v31.light .author-badge { background:var(--bg-soft); color:var(--text-secondary); }
+body.toon-v31 .author-avatar-letter { background:#a32e19; color:#fff; }
+body.toon-v31.light .top-reply-label { color:var(--accent); }
+body.toon-v31 .image-upload label[style*="color:#aaa"],
+body.toon-v31 .image-upload p[style*="color:#666"] { color:var(--text-secondary) !important; }
+body.toon-v31.light .ampyan-widget a:hover,
+body.toon-v31.light .ampyan-video-empty:hover { color:var(--text); }
+/* Retain dark branded Home panels, with explicitly light copy. */
+body.toon-v31 .ampyan-discovery,
+body.toon-v31 .ampyan-app-download { background:#17253b; }
+body.toon-v31 .ampyan-discovery-head h1,
+body.toon-v31 .ampyan-app-copy h2 { color:#f5f7fb; }
+body.toon-v31 .ampyan-discovery-head p,
+body.toon-v31 .ampyan-app-copy p,
+body.toon-v31 .ampyan-app-copy span { color:#d7e2ef; }
+body.toon-v31 .ampyan-discovery-head .ampyan-eyebrow span,
+body.toon-v31 .ampyan-app-copy .ampyan-eyebrow { color:#ffb59f; }
+body.toon-v31 .ampyan-widget.beta,
+body.toon-v31 .ampyan-widget.feedback,
+body.toon-v31 .ampyan-widget.reminder { background:linear-gradient(160deg,var(--card),var(--bg-soft)); }
+body.toon-v31 .ampyan-widget-button,
+body.toon-v31 .ampyan-widget-button:is(:hover,:focus-visible),
+body.toon-v31 .ampyan-action-primary { color:#15243c; }
+body.toon-v31 .help-info-card { background:var(--card); border-color:var(--border); }
+/* Bound white VI text contrast even beneath the existing translucent sheen. */
+body.toon-v31 .ai-orb { background:radial-gradient(circle at 30% 30%,#a32e19,#2a0000); }
+body.toon-v31 .news-hero-overlay { background:rgba(7,9,16,.94); }
+body.toon-v31 .news-hero-overlay h2,
+body.toon-v31 .news-hero-overlay p { color:#f5f7fb; }
+/* Existing field geometry and disabled semantics are untouched. */
+body.toon-v31 :is(input,select,textarea) { border-color:var(--border); }
+body.toon-v31 :is(input,textarea)[style*="border:1px solid #333"] { border-color:var(--border) !important; }
+
+/* Remaining descendant colors revealed by the complete state sweep. */
+body.toon-v31.light .author-reputation { color:#805500; }
+body.toon-v31.light .top-reply p { color:var(--text-secondary); }
+body.toon-v31 .ampyan-discovery-head .ampyan-eyebrow span { color:#15243c; }
+body.toon-v31 .ampyan-app-action > span { color:#d7e2ef; }
+/* A mid-tone focus ring contrasts with both white cards and dark branded panels. */
+body.toon-v31.light :is(a,button,input,select,textarea):focus-visible { outline-color:#687b94; }
+body.toon-v31 .news-search { border-color:var(--border); }
+body.toon-v31.light .help-info-card i,
+body.toon-v31.light .help-info-icon i { color:var(--accent); }
+body.toon-v31 button[style*="background:red;"] { background:#a32e19 !important; color:#fff !important; }
+body.toon-v31.light .tools-premium-card span { color:var(--accent); }
+body.toon-v31.light .tools-premium-card.fuel i,
+body.toon-v31.light .tools-premium-card.health i { color:#146b46; }
+body.toon-v31.light .tools-premium-card.finance i { color:#1853a4; }
+body.toon-v31.light .tools-premium-card.value i,
+body.toon-v31.light .tools-premium-card.diagnosis i { color:#a32e19; }
+body.toon-v31.light .tools-premium-card.maintenance i { color:#805500; }
+
+/* Read-only vote values remain disabled, but their information stays readable. */
+body.toon-v31.light span.vote-btn.ampyan-boost-btn[style*="opacity"] { color:#000; }
+body.toon-v31:not(.light) span.vote-btn.ampyan-boost-btn[style*="opacity"] { color:#fff; }
+/* Preserve the share gradient's orange/pink/purple identity at text-safe shades. */
+body.toon-v31 .instagram-share { background:linear-gradient(135deg,#9a3d00,#a51e5b,#8134af); color:#fff; }
+/* Existing vehicle caption gets a bounded background independent of the visual. */
+body.toon-v31 .car-visual-meta { background:#17253b; }
+body.toon-v31 .car-visual-meta strong { color:#f5f7fb; }
+body.toon-v31 .car-visual-meta span { color:#d7e2ef; }

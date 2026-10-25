@@ -60,6 +60,7 @@
 <div>
 <p class="page-kicker">Community Studio</p>
 <h2 class="section-heading">Managed personas and activity</h2>
+<p class="section-copy" role="status">{{ community_read_only_notice }} User deletion is also held because it removes Community records.</p>
 <p class="section-copy">Only whitelisted admins can create these accounts and publish community posts or replies through them.</p>
 </div>
 <span class="garage-trust-score">{{ managed_personas|length }} personas</span>
@@ -69,13 +70,13 @@
 <div class="simple-list-card">
 <h3>Create managed persona</h3>
 <form method="POST" action="/admin/community/personas" class="auth-form">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<input class="profile-input" type="text" name="username" placeholder="Username, e.g. DelhiCarOwner" required>
-<input class="profile-input" type="email" name="email" placeholder="Optional internal email">
-<input class="profile-input" type="text" name="city" placeholder="City">
-<input class="profile-input" type="text" name="badge" placeholder="Badge, e.g. Verified Owner">
-<textarea class="profile-input" name="managed_note" placeholder="Internal note" rows="3"></textarea>
-<button class="auth-button" type="submit">Create Persona</button>
+<input disabled aria-disabled="true" type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input disabled aria-disabled="true" class="profile-input" type="text" name="username" placeholder="Username, e.g. DelhiCarOwner" required>
+<input disabled aria-disabled="true" class="profile-input" type="email" name="email" placeholder="Optional internal email">
+<input disabled aria-disabled="true" class="profile-input" type="text" name="city" placeholder="City">
+<input disabled aria-disabled="true" class="profile-input" type="text" name="badge" placeholder="Badge, e.g. Verified Owner">
+<textarea disabled aria-disabled="true" class="profile-input" name="managed_note" placeholder="Internal note" rows="3"></textarea>
+<button disabled aria-disabled="true" class="auth-button" type="submit">Create Persona</button>
 </form>
 </div>
 
@@ -83,23 +84,23 @@
 <h3>Publish post as persona</h3>
 {% if managed_personas %}
 <form method="POST" action="/admin/community/post-as" class="auth-form">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<select class="profile-input" name="persona_id" required>
+<input disabled aria-disabled="true" type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<select disabled aria-disabled="true" class="profile-input" name="persona_id" required>
 <option value="">Select persona</option>
 {% for persona in managed_personas %}
 <option value="{{ persona.id }}">{{ persona.username }}{% if persona.city %} • {{ persona.city }}{% endif %}</option>
 {% endfor %}
 </select>
-<select class="profile-input" name="community_id">
+<select disabled aria-disabled="true" class="profile-input" name="community_id">
 <option value="">General Community</option>
 {% for car_community in car_communities %}
 <option value="{{ car_community.id }}">{{ car_community.name }}</option>
 {% endfor %}
 </select>
-<input class="profile-input" type="text" name="new_community_name" placeholder="Or new car community">
-<input class="profile-input" type="text" name="title" placeholder="Post title" required>
-<textarea class="profile-input" name="content" placeholder="Post content" rows="5" required></textarea>
-<button class="auth-button" type="submit">Publish Post</button>
+<input disabled aria-disabled="true" class="profile-input" type="text" name="new_community_name" placeholder="Or new car community">
+<input disabled aria-disabled="true" class="profile-input" type="text" name="title" placeholder="Post title" required>
+<textarea disabled aria-disabled="true" class="profile-input" name="content" placeholder="Post content" rows="5" required></textarea>
+<button disabled aria-disabled="true" class="auth-button" type="submit">Publish Post</button>
 </form>
 {% else %}
 <p class="section-copy">Create a managed persona first.</p>
@@ -110,21 +111,21 @@
 <h3>Quick reply as persona</h3>
 {% if managed_personas and recent_posts %}
 <form method="POST" action="/admin/community/reply-as" class="auth-form">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<select class="profile-input" name="persona_id" required>
+<input disabled aria-disabled="true" type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<select disabled aria-disabled="true" class="profile-input" name="persona_id" required>
 <option value="">Select persona</option>
 {% for persona in managed_personas %}
 <option value="{{ persona.id }}">{{ persona.username }}{% if persona.city %} • {{ persona.city }}{% endif %}</option>
 {% endfor %}
 </select>
-<select class="profile-input" name="post_id" required>
+<select disabled aria-disabled="true" class="profile-input" name="post_id" required>
 <option value="">Select recent post</option>
 {% for post in recent_posts %}
 <option value="{{ post.id }}">{{ post.title }}</option>
 {% endfor %}
 </select>
-<textarea class="profile-input" name="content" placeholder="Reply text" rows="5" required></textarea>
-<button class="auth-button" type="submit">Add Reply</button>
+<textarea disabled aria-disabled="true" class="profile-input" name="content" placeholder="Reply text" rows="5" required></textarea>
+<button disabled aria-disabled="true" class="auth-button" type="submit">Add Reply</button>
 </form>
 {% else %}
 <p class="section-copy">You need at least one managed persona and one post.</p>
@@ -390,8 +391,8 @@
 </form>
 {% endif %}
 <form method="POST" action="/admin/delete-user/{{ user.id }}" class="inline-form" onsubmit="return confirm('Delete this user permanently?')">
-<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-<button type="submit" class="ui-button-danger">Delete</button>
+<input disabled aria-disabled="true" type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button disabled aria-disabled="true" type="submit" class="ui-button-danger">Delete</button>
 </form>
 {% endif %}
 </div>
