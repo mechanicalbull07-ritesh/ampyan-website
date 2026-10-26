@@ -20,7 +20,8 @@
 <input type="number" step="0.1" min="0" name="daily_km" value="{{ form_data.daily_km }}" placeholder="Example: 35" class="auth-input">
 
 <label class="form-label">Mileage (KM/L)</label>
-<input type="number" step="0.1" min="0" name="mileage" value="{{ form_data.mileage }}" placeholder="Example: 18" required class="auth-input">
+<select name="unit" class="auth-input" aria-label="Efficiency unit">{% for code,label in [('KM_PER_L','km/L; price ₹/L'),('KM_PER_KG','km/kg; price ₹/kg'),('KM_PER_KWH','km/kWh; price ₹/kWh')] %}<option value="{{ code }}" {% if form_data.unit == code %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+<input type="number" step="0.01" min="0.01" name="mileage" value="{{ form_data.mileage }}" placeholder="Example: 18" required class="auth-input">
 
 <label class="form-label">Fuel Price (₹/L)</label>
 <input type="number" step="0.1" min="0" name="fuel_price" value="{{ form_data.fuel_price }}" placeholder="Example: 105" required class="auth-input">
@@ -33,7 +34,7 @@
 <p class="calc-label">Estimated Fuel Cost</p>
 <h2>₹{{ result.trip_cost }}</h2>
 <div class="calc-result-grid">
-<div><span>Fuel Used</span><strong>{{ result.fuel_used }} L</strong></div>
+<div><span>Fuel Used</span><strong>{{ result.fuel_used }} {{ result.quantity_unit }}</strong></div>
 <div><span>Daily</span><strong>₹{{ result.daily_cost }}</strong></div>
 <div><span>Monthly</span><strong>₹{{ result.monthly_cost }}</strong></div>
 <div><span>Yearly</span><strong>₹{{ result.yearly_cost }}</strong></div>

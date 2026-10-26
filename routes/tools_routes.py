@@ -1,3 +1,4 @@
+import math
 from flask import Blueprint, current_app, render_template, request, jsonify, session
 from flask_login import current_user
 from models.models import Car, AIFeedback, db
@@ -28,7 +29,8 @@ def _safe_float(value, default=None):
     try:
         if value in [None, ""]:
             return default
-        return float(value)
+        parsed = float(value)
+        return parsed if math.isfinite(parsed) else default
     except (TypeError, ValueError):
         return default
 
@@ -42,6 +44,7 @@ def fuel_cost():
         "daily_km": request.form.get("daily_km", ""),
         "mileage": request.form.get("mileage", ""),
         "fuel_price": request.form.get("fuel_price", ""),
+        "unit": request.form.get("unit", "KM_PER_L"),
     }
 
     if request.method == "POST":
@@ -52,7 +55,9 @@ def fuel_cost():
 
         estimate_distance = distance if distance is not None else daily_km
 
-        if estimate_distance is None or estimate_distance <= 0:
+        if form_data["unit"] not in {"KM_PER_L", "KM_PER_KG", "KM_PER_KWH"}:
+            error = "Choose a supported efficiency unit."
+        elif estimate_distance is None or estimate_distance <= 0:
             error = "Enter trip distance or daily running."
         elif mileage is None or mileage <= 0:
             error = "Mileage must be greater than zero."
@@ -62,12 +67,17 @@ def fuel_cost():
             trip_cost = (estimate_distance / mileage) * fuel_price
             daily_cost = ((daily_km / mileage) * fuel_price) if daily_km and daily_km > 0 else trip_cost
             result = {
+                "quantity_unit": {"KM_PER_L":"L", "KM_PER_KG":"kg", "KM_PER_KWH":"kWh"}[form_data["unit"]],
                 "fuel_used": round(estimate_distance / mileage, 2),
                 "trip_cost": round(trip_cost, 2),
                 "daily_cost": round(daily_cost, 2),
                 "monthly_cost": round(daily_cost * 30, 2),
                 "yearly_cost": round(daily_cost * 365, 2),
             }
+
+            if not all(math.isfinite(v) for v in result.values() if isinstance(v, (int, float))):
+                result = None
+                error = "Fuel calculation exceeds the supported range."
 
     return render_template("fuel_cost.html", result=result, error=error, form_data=form_data)
 
