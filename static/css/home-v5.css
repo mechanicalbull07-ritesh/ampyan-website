@@ -1,0 +1,55 @@
+/* V5 surface layer only. Preserve every accepted layout measurement in home-v4.css. */
+.v4-home .v5-toon-picture{display:contents}
+body.toon-v31:has(.v4-home):not(.light){background:#091425}
+.v4-home .v4-hero{background:linear-gradient(120deg,#e4f2fc 5%,#d8ecfa 62%,#cde9ef);border-color:#aacde5;box-shadow:0 18px 45px #0000001c,inset 0 1px 0 #ffffffa6}
+.v4-home .v4-copy{background:radial-gradient(ellipse at 0 0,#ffffff52,transparent 80%)}
+.v4-home .v4-landscape{background:radial-gradient(ellipse at 77% 23%,#ffe3a9 0,transparent 18%),radial-gradient(ellipse at 70% 30%,#6a97bd 0,transparent 52%),linear-gradient(160deg,#12355e 0%,#467d9a 46%,#bed9cc 100%)}
+.v4-home .v4-landscape:before{content:"";position:absolute;inset:0;background:radial-gradient(1px 1px at 15% 12%,#fff9 80%,transparent),radial-gradient(1px 1px at 44% 7%,#fffc 80%,transparent),radial-gradient(1px 1px at 84% 10%,#fff9 80%,transparent),linear-gradient(180deg,transparent 62%,#d5e8dd55);pointer-events:none}
+.v4-home .v4-mountain{background:linear-gradient(145deg,#b4d8dc,#346685);opacity:.88}
+.v4-home .v4-mountain.two{background:linear-gradient(145deg,#c5e4d3,#457d83);opacity:.9}
+.v4-home .v4-road{border-color:#425c72;box-shadow:0 0 0 2px #e4ead899,inset 0 0 0 2px #e4ead866}
+.v4-home .v4-feature,.v4-home .v4-panel{box-shadow:0 8px 22px #00000012,inset 0 1px 0 #ffffffcc;border-color:#c2d6e6}
+.v4-home .v4-feature:hover{box-shadow:0 12px 24px #00000024,inset 0 1px 0 #fff}
+.v4-home .blue{background:linear-gradient(145deg,#ecf5ff,#dbeafa)}
+.v4-home .mint{background:linear-gradient(145deg,#effaf2,#d7eee2)}
+.v4-home .peach{background:linear-gradient(145deg,#fff5ec,#f7e2d3)}
+.v4-home .lavender{background:linear-gradient(145deg,#f6f2ff,#e6e0f4)}
+.v4-home .v4-button{background:linear-gradient(135deg,#185fcb,#124aab);box-shadow:0 5px 14px #0b347d30,inset 0 1px 0 #ffffff30}
+.v4-home .v4-button:hover{background:#103f90}
+.v4-home .v4-feed{border-color:#304969;box-shadow:0 10px 25px #00000013;background:#102139}
+body .v4-home .v4-feed .v4-section-head h2{color:#f4f8ff}
+.v4-home .v4-feed .v4-section-head a{color:#b9d8ff}
+.v4-home .v4-feed .v4-readonly{background:#1e3655;color:#d8eaff}
+.v4-home .v4-feed .v4-empty{color:#d8e8fd}
+.v4-home .v4-story{position:relative;isolation:isolate;border-color:#36506f;border-radius:10px;background:#102139}
+.v4-home .v5-story-media{position:absolute;inset:0 0 0 26%;overflow:hidden;z-index:-1;pointer-events:none;background:#173653 url('../images/home-v5/editorial-fallback.svg') center/cover;mask-image:linear-gradient(90deg,transparent,#000 40%);border-radius:inherit;filter:brightness(.32)}
+.v4-home .v5-story-media img{display:block;width:100%;height:100%;object-fit:cover;aspect-ratio:16/9;filter:none!important}
+body .v4-home .v4-story h3{color:#fff}
+.v4-home .v4-story p,.v4-home .v4-story>span:not(.v5-story-media){color:#e4efff}
+.v4-home .v4-story:focus-visible{outline-color:#b9d8ff}
+.v4-home .v4-brands{background:linear-gradient(130deg,#10213a,#152b49);border-color:#365170;box-shadow:0 12px 28px #00000012}
+body .v4-home .v4-brands h2{color:#f4f8ff}
+.v4-home .v4-brands p{color:#d8e8fd}
+.v4-home .v4-brands li{position:relative;isolation:isolate;color:#eaf3ff}
+.v4-home .v4-brands li:before{content:"";position:absolute;inset:-5px -7px;border:1px solid #527499;border-radius:8px;background:#1c3656;z-index:-1;box-shadow:inset 0 1px 0 #ffffff0d}
+body.toon-v31.light .v4-home .v4-feed{box-shadow:0 9px 24px #1c38521c}
+body.toon-v31:not(.light) .v4-home .v4-hero{box-shadow:0 18px 50px #00000038,inset 0 1px 0 #ffffff70}
+@media(prefers-reduced-motion:reduce){.v4-home *{transition:none!important}}
+@media(forced-colors:active){.v4-home .v5-story-media{display:none}.v4-home .v4-story,.v4-home .v4-feed,.v4-home .v4-brands,.v4-home .v4-brands li{background:Canvas;color:CanvasText}.v4-home .v4-feed *{color:CanvasText!important}}
+
+/* Original V5 scenic artwork, layered inside the unchanged accepted hero box. */
+.v4-home .v4-hero{background:#dceefa url('../images/home-v5/scenic-road-1280.webp') center/cover no-repeat}
+.v4-home .v4-copy{background:linear-gradient(90deg,#e6f3fff7,#e6f3fff2 76%,#e6f3ffda)}
+.v4-home .v4-landscape{background:transparent}
+.v4-home .v4-landscape:before{background:linear-gradient(90deg,#e6f3ffad,transparent 40%)}
+.v4-home .v4-mountain,.v4-home .v4-road{opacity:0}
+@media(max-width:560px){.v4-home .v4-hero{background-image:url('../images/home-v5/scenic-road-640.webp');background-position:center bottom}.v4-home .v4-copy{background:#e6f3fff5}}
+/* Solid fallbacks also keep contrast deterministic before backgrounds decode. */
+.v4-home .blue{background-color:#e4f0ff}.v4-home .mint{background-color:#e4f5eb}.v4-home .peach{background-color:#fff0e5}.v4-home .lavender{background-color:#f0ecfb}.v4-home .v4-button{background-color:#1553b8}.v4-home .v4-brands{background-color:#10213a}
+/* Source metadata must not become an anonymous grid item when picture is flattened. */
+.v4-home .v5-toon-picture>source{display:none}
+/* Fade copy into the scene across the whole hero; no panel-edge seams. */
+.v4-home .v4-hero{background-image:linear-gradient(90deg,#e6f3fff9 0%,#e6f3fff5 48%,#e6f3ff00 70%),url('../images/home-v5/scenic-road-1280.webp')}
+.v4-home .v4-copy{background:transparent}
+.v4-home .v4-landscape:before{background:none}
+@media(max-width:560px){.v4-home .v4-hero{background-image:url('../images/home-v5/scenic-road-640.webp')}.v4-home .v4-copy{background:#e6f3fff5}}

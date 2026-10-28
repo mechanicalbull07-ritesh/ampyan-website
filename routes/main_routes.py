@@ -327,6 +327,42 @@ def _attach_listing_catalog_image(listing):
     return listing
 
 
+def _home_public_image(folder, value):
+    """Homepage-only public editorial images; never trust remote/private paths.
+
+    Use the existing public local News/Post fields and serving helpers. Remote
+    URLs are omitted here: ownership and query-string credentials are unknown.
+    No network fetch, derivative generation, schema change or private DTO access.
+    """
+    fallback = url_for("static", filename="images/home-v5/editorial-fallback.svg")
+    if folder not in {"news_images", "post_images"} or not isinstance(value, str):
+        return fallback
+    name = value.strip()
+    parsed = urlparse(name)
+    if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment or "\\" in name:
+        return fallback
+    for prefix in ("/static/" + folder + "/", folder + "/"):
+        if name.startswith(prefix):
+            name = name[len(prefix):]
+            break
+    if not name or name != os.path.basename(name) or name in {".", ".."}:
+        return fallback
+    if os.path.splitext(name)[1].lower() not in {".jpg", ".jpeg", ".png", ".webp", ".avif"}:
+        return fallback
+    roots = [os.path.join(current_app.static_folder, folder)]
+    uploads = current_app.config.get("UPLOAD_FOLDER")
+    if folder == "news_images" and uploads and os.path.isabs(uploads):
+        roots.append(uploads)
+    for root in roots:
+        candidate = os.path.join(root, name)
+        if os.path.isfile(candidate) and os.path.commonpath(
+            [os.path.realpath(root), os.path.realpath(candidate)]
+        ) != os.path.realpath(root):
+            return fallback
+    # Existing helper only receives one filename, never traversal or a URL.
+    return _static_image_url_if_exists(folder, name) or fallback
+
+
 # ================= HOME PAGE =================
 
 @main_bp.route("/")
@@ -365,11 +401,7 @@ def home():
                 "title": news.title,
                 "summary": (news.content or "Read the latest AMPYAN automotive update.")[:120],
                 "url": f"/news/{news.id}",
-                "image_url": _static_image_url_if_exists(
-                    "news_images",
-                    news.image,
-                    fallback=default_news_image
-                ),
+                "image_url": _home_public_image("news_images", news.image),
                 "meta": news.created_at.strftime("%d %b %Y") if news.created_at else "AMPYAN News",
             }
             for news in latest_news_records
@@ -383,7 +415,8 @@ def home():
     try:
         latest_tips = [
             {"title": item.title, "url": f"/news/{item.id}",
-             "summary": (item.content or "")[:120]}
+             "summary": (item.content or "")[:120],
+             "image_url": _home_public_image("news_images", item.image)}
             for item in News.query.filter_by(category="tips-and-tricks").order_by(News.created_at.desc()).limit(3).all()
         ]
     except Exception as exc:
@@ -398,11 +431,7 @@ def home():
                 "title": post.title,
                 "summary": (post.content or "Community discussion on AMPYAN.")[:120],
                 "url": f"/post/{post.id}",
-                "image_url": _static_image_url_if_exists(
-                    "post_images",
-                    post.image,
-                    fallback=default_news_image
-                ),
+                "image_url": _home_public_image("post_images", post.image),
                 "meta": post.created_at.strftime("%d %b") if post.created_at else "Community",
             }
             for post in recent_post_records
