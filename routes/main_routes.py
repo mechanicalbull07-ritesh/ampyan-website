@@ -1,4 +1,5 @@
 import os
+import re
 from urllib.parse import urlparse
 
 from flask import Blueprint, current_app, jsonify, render_template, request, redirect, flash, url_for
@@ -328,17 +329,25 @@ def _attach_listing_catalog_image(listing):
 
 
 def _home_public_image(folder, value):
-    """Homepage-only public editorial images; never trust remote/private paths.
+    """Home media from public local files or the pinned AMPYAN upload space.
 
-    Use the existing public local News/Post fields and serving helpers. Remote
-    URLs are omitted here: ownership and query-string credentials are unknown.
-    No network fetch, derivative generation, schema change or private DTO access.
+    Public cloud/folders match existing AMPYAN detail-page media. No private
+    DTOs, arbitrary hosts, signed URLs or server-side network fetches.
     """
     fallback = url_for("static", filename="images/home-v5/editorial-fallback.svg")
     if folder not in {"news_images", "post_images"} or not isinstance(value, str):
         return fallback
     name = value.strip()
     parsed = urlparse(name)
+    # Only versioned public uploads; never private/authenticated delivery,
+    # avatars, other clouds, query credentials, transforms or redirect URLs.
+    media_folder = "news" if folder == "news_images" else "community"
+    if (parsed.scheme == "https" and parsed.netloc == "res.cloudinary.com"
+            and not parsed.query and not parsed.fragment
+            and re.fullmatch(
+                r"/dwvee7mam/image/upload/v[0-9]+/ampyan/" + media_folder
+                + r"/[A-Za-z0-9_-]+\.(?:webp|jpg|jpeg|png|avif)", parsed.path)):
+        return name.replace("/image/upload/", "/image/upload/f_auto,q_auto:good,w_640,c_limit/", 1)
     if parsed.scheme or parsed.netloc or parsed.query or parsed.fragment or "\\" in name:
         return fallback
     for prefix in ("/static/" + folder + "/", folder + "/"):
