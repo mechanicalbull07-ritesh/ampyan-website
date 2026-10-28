@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<p class="page-subtitle" role="status">{{ community_read_only_notice }}</p>
+
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Network</p>
+<h1 class="page-title">AMPYAN Community</h1>
+<p class="page-subtitle">Ask questions, share ownership experience and learn from real car owners across the platform.</p>
+</div>
+
+<span class="create-btn" aria-disabled="true"><i class="fa-solid fa-pen-to-square"></i> Create Post</span>
+</div>
+
+<div class="community-interactive-grid card-spacer">
+<div class="community-stat-card">
+<span>Posts</span>
+<strong>{{ community_stats.posts }}</strong>
+<p>Active discussions visible right now.</p>
+</div>
+<div class="community-stat-card">
+<span>Replies</span>
+<strong>{{ community_stats.comments }}</strong>
+<p>Community responses and real ownership advice.</p>
+</div>
+<div class="community-stat-card">
+<span>Reactions</span>
+<strong>{{ community_stats.votes }}</strong>
+<p>Helpful votes from members across the feed.</p>
+</div>
+<div class="community-stat-card">
+<span>Contributors</span>
+<strong>{{ community_stats.contributors }}</strong>
+<p>Visible top contributors shaping discussions.</p>
+</div>
+</div>
+
+<div class="ui-card card-spacer">
+<form method="GET" class="filter-bar">
+<input type="text" name="q" value="{{ search_query }}" placeholder="Search posts, topics, problems...">
+{% if active_car_community %}
+<input type="hidden" name="car_community" value="{{ active_car_community }}">
+{% endif %}
+<button type="submit">Search</button>
+<a href="{{ url_for('community.community', q=search_query, sort='new', car_community=active_car_community) }}" class="sort-btn {% if current_sort == 'new' %}active-sort{% endif %}">New</a>
+<a href="{{ url_for('community.community', q=search_query, sort='popular', car_community=active_car_community) }}" class="sort-btn {% if current_sort == 'popular' %}active-sort{% endif %}">Popular</a>
+</form>
+<div class="community-quick-row">
+<a href="{{ url_for('community.community', q=search_query, sort=current_sort) }}" class="community-quick-chip {% if not active_car_community %}active-community-chip{% endif %}">
+<i class="fa-solid fa-layer-group"></i> All
+</a>
+{% for car_group in car_communities[:8] %}
+<a href="{{ url_for('community.community', car_community=car_group.slug, q=search_query, sort=current_sort) }}" class="community-quick-chip {% if active_car_community == car_group.slug %}active-community-chip{% endif %}">
+<i class="fa-solid fa-car-side"></i> {{ car_group.name }}
+</a>
+{% endfor %}
+</div>
+<div class="community-quick-row">
+{% for label, topic in quick_topics %}
+<a href="{{ url_for('community.community', q=topic) }}" class="community-quick-chip">{{ label }}</a>
+{% endfor %}
+</div>
+</div>
+
+<div class="community-layout">
+<div class="community-main">
+{% if active_topics %}
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Trending Topics</h2>
+<p class="section-copy">Jump into the most discussed areas right now.</p>
+</div>
+<div class="community-topic-row">
+{% for topic, count in active_topics %}
+<a href="{{ url_for('community.community', q=topic) }}" class="community-topic-chip">
+<strong>{{ topic }}</strong>
+<span>{{ count }} posts</span>
+</a>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+<div class="community-posts" id="community-posts" data-feed-url="{{ url_for('community.api_community_posts', limit=80, include_remote='true', fresh='true') }}">
+{% if posts %}
+{% for post in posts %}
+<div class="post-card" data-post-id="{{ post.id }}">
+<div class="post-header">
+<div class="author-left">
+{% if post.author_avatar_url %}
+<img src="{{ post.author_avatar_url }}" class="author-avatar">
+{% else %}
+<div class="author-avatar-letter">{{ post.author_avatar_letter }}</div>
+{% endif %}
+
+<div class="author-info">
+<div class="author-name">
+{{ post.author_display_name }}
+<span class="author-badge">{{ post.author_badge }}</span>
+<span class="author-reputation">⭐ {{ post.author_reputation }}</span>
+{% if post.is_remote %}
+<span class="author-badge">Phone/App</span>
+{% endif %}
+</div>
+<div class="author-location">
+{% if post.author_city %}
+<i class="fa-solid fa-location-dot"></i> {{ post.author_city }}
+{% else %}
+Community Member
+{% endif %}
+</div>
+</div>
+</div>
+</div>
+
+<h2 class="post-title">
+<a href="{{ post.detail_url }}">{{ post.title }}</a>
+</h2>
+
+<a href="{{ post.community_url }}" class="post-community-pill">
+<i class="fa-solid fa-car-rear"></i> {{ post.community_name }}
+</a>
+
+<p class="post-preview">{{ post.preview_text }}</p>
+
+{% if post.image_url %}
+<img src="{{ post.image_url }}" class="post-image">
+{% endif %}
+
+{% if post.top_comments %}
+<div class="reply-preview-stack">
+{% for comment in post.top_comments %}
+<div class="top-reply">
+<span class="top-reply-label">{% if loop.index == 1 %}Top Reply{% else %}Reply {{ loop.index }}{% endif %}</span>
+<p>{{ comment.content[:120] }}{% if comment.content|length > 120 %}...{% endif %}</p>
+</div>
+{% endfor %}
+</div>
+{% endif %}
+
+<div class="post-divider"></div>
+
+<div class="post-actions">
+{% if not community_read_only and post.vote_url %}
+<a href="{{ post.vote_url }}" class="vote-btn ampyan-boost-btn {% if current_user.is_authenticated and not post.is_remote and post.votes|selectattr('user_id','equalto',current_user.id)|list|length > 0 %}voted{% endif %}" title="Boost helpful post">
+<i class="fa-solid fa-bolt-lightning"></i> {{ post.vote_count }}
+</a>
+{% else %}
+<span class="vote-btn ampyan-boost-btn" style="opacity:0.7;pointer-events:none;"><i class="fa-solid fa-bolt-lightning"></i> {{ post.vote_count }}</span>
+{% endif %}
+
+<a href="{{ post.detail_url }}" class="reply-count">
+<i class="fa-solid fa-comments"></i> {{ post.reply_count }} replies
+</a>
+
+<button type="button" class="community-icon-action share-btn" data-share-url="{{ post.share_url }}" data-share-title="{{ post.title }}" title="Share">
+<i class="fa-solid fa-share-nodes"></i><span>Share</span>
+</button>
+
+{% if not community_read_only and post.can_edit %}
+<a href="{{ post.edit_url }}" class="community-icon-action" title="Edit">
+<i class="fa-solid fa-pen"></i><span>Edit</span>
+</a>
+<form method="POST" action="{{ post.delete_url }}" class="inline-form">
+<input disabled aria-disabled="true" type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button disabled aria-disabled="true" type="submit" class="community-icon-action danger-action" onclick="return confirm('Delete this post?')" title="Delete">
+<i class="fa-solid fa-trash"></i><span>Delete</span>
+</button>
+</form>
+{% endif %}
+</div>
+</div>
+{% endfor %}
+{% else %}
+<div class="empty-state" id="community-empty-state">No posts yet.</div>
+{% endif %}
+</div>
+<p class="page-subtitle" id="community-feed-error" style="display:none;">Community feed could not be refreshed right now.</p>
+</div>
+
+<aside class="community-sidebar">
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Car Communities</h2>
+<p class="section-copy">Connect with owners of the same car or vehicle type.</p>
+</div>
+<form method="POST" action="{{ url_for('community.create_car_community') }}" class="car-community-form">
+<input disabled aria-disabled="true" type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input disabled aria-disabled="true" type="text" name="name" placeholder="Create: Baleno Owners, XUV700..." required>
+<input disabled aria-disabled="true" type="text" name="description" placeholder="Short purpose (optional)">
+<button disabled aria-disabled="true" type="submit"><i class="fa-solid fa-plus"></i> Create</button>
+</form>
+</div>
+
+{% if unanswered_posts %}
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Needs Answers</h2>
+<p class="section-copy">Help owners who have not received a reply yet.</p>
+</div>
+<div class="community-topic-stack">
+{% for post in unanswered_posts %}
+<a href="{{ post.detail_url }}" class="community-starter-card">
+<strong>{{ post.title }}</strong>
+<span>Be first to reply</span>
+</a>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+{% if most_active_posts %}
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Active Now</h2>
+<p class="section-copy">Discussions getting the most replies or votes.</p>
+</div>
+<div class="community-topic-stack">
+{% for post in most_active_posts %}
+<a href="{{ post.detail_url }}" class="community-starter-card">
+<strong>{{ post.title }}</strong>
+<span>{{ post.reply_count }} replies • {{ post.vote_count }} votes</span>
+</a>
+{% endfor %}
+</div>
+</div>
+{% endif %}
+
+<div class="ui-card card-spacer">
+<div class="community-section-head">
+<h2 class="section-heading">Conversation Starters</h2>
+<p class="section-copy">Quick prompts to make posting easier.</p>
+</div>
+<div class="community-topic-stack">
+<span class="community-starter-card" aria-disabled="true">My car is giving a new warning sign. What could it mean?</span>
+<span class="community-starter-card" aria-disabled="true">Which car is better for daily city use and family comfort?</span>
+<span class="community-starter-card" aria-disabled="true">What maintenance should I do before a long road trip?</span>
+</div>
+</div>
+
+<div class="ui-card">
+<div class="community-section-head">
+<h2 class="section-heading">Top Contributors</h2>
+<p class="section-copy">Members helping the community the most.</p>
+</div>
+{% if top_contributors %}
+<div class="community-topic-stack">
+{% for user in top_contributors %}
+<div class="community-contributor-card">
+<div>
+<h3>{{ loop.index }}. {{ user.username|community_public_name }}</h3>
+<p>Member</p>
+</div>
+<div class="community-contributor-score">⭐ {{ user.reputation }}</div>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">Contributors will appear here as activity grows.</div>
+{% endif %}
+</div>
+</aside>
+</div>
+
+</section>
+
+<script>
+(function(){
+try {
+const feed = document.getElementById("community-posts");
+if(!feed || !feed.dataset.feedUrl) return;
+const emptyState = document.getElementById("community-empty-state");
+const errorState = document.getElementById("community-feed-error");
+function textValue(value) {
+return value == null ? "" : String(value);
+}
+function escapeHtml(value) {
+return textValue(value).replace(/[&<>"']/g, function(char) {
+return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[char];
+});
+}
+function existingPostIds() {
+const ids = new Set();
+feed.querySelectorAll("[data-post-id]").forEach(function(node) {
+ids.add(String(node.dataset.postId || ""));
+});
+return ids;
+}
+function postContent(post) {
+return post.content || post.text || post.body || "";
+}
+function postAuthor(post) {
+return post.author_name || (post.author && post.author.name) || post.author || "AMPYAN User";
+}
+function postTitle(post) {
+const title = textValue(post.title).trim();
+if(title) return title;
+const content = postContent(post).trim();
+return content ? content.split(/\s+/).slice(0, 10).join(" ") : "Community post";
+}
+function postCardHtml(post) {
+const id = escapeHtml(post.id || "");
+const title = escapeHtml(postTitle(post));
+const content = postContent(post);
+const preview = escapeHtml(content.length > 180 ? content.slice(0, 180) + "..." : content);
+const author = escapeHtml(postAuthor(post));
+const badge = escapeHtml((post.author && post.author.badge) || (post.is_remote ? "Phone/App" : "Member"));
+const reputation = escapeHtml((post.author && post.author.reputation) || "0");
+const city = escapeHtml((post.author && post.author.city) || "Community Member");
+const detailUrl = escapeHtml(post.detail_url || "/community");
+const shareUrl = escapeHtml(post.share_url || detailUrl);
+const communityName = escapeHtml((post.community && post.community.name) || "General Community");
+const imageUrl = post.image_url ? escapeHtml(post.image_url) : "";
+let html = '<div class="post-card" data-post-id="' + id + '">';
+html += '<div class="post-header"><div class="author-left"><div class="author-avatar-letter">' + author.slice(0, 1).toUpperCase() + '</div>';
+html += '<div class="author-info"><div class="author-name">' + author + ' <span class="author-badge">' + badge + '</span> <span class="author-reputation">⭐ ' + reputation + '</span>';
+if(post.is_remote) html += ' <span class="author-badge">Phone/App</span>';
+html += '</div><div class="author-location">' + city + '</div></div></div></div>';
+html += '<h2 class="post-title"><a href="' + detailUrl + '">' + title + '</a></h2>';
+html += '<a href="/community" class="post-community-pill"><i class="fa-solid fa-car-rear"></i> ' + communityName + '</a>';
+html += '<p class="post-preview">' + preview + '</p>';
+if(imageUrl) html += '<img src="' + imageUrl + '" class="post-image">';
+html += '<div class="post-divider"></div><div class="post-actions">';
+html += '<span class="vote-btn ampyan-boost-btn" style="opacity:0.7;pointer-events:none;"><i class="fa-solid fa-bolt-lightning"></i> ' + escapeHtml(post.vote_count || 0) + '</span>';
+html += '<a href="' + detailUrl + '" class="reply-count"><i class="fa-solid fa-comments"></i> ' + escapeHtml(post.reply_count || 0) + ' replies</a>';
+html += '<button type="button" class="community-icon-action share-btn" data-share-url="' + shareUrl + '" data-share-title="' + title + '" title="Share"><i class="fa-solid fa-share-nodes"></i><span>Share</span></button>';
+html += '</div></div>';
+return html;
+}
+fetch(feed.dataset.feedUrl, {cache: "no-store", headers: {"Accept": "application/json"}})
+.then(function(response) {
+if(!response.ok) throw new Error("community_feed_fetch_failed");
+return response.json();
+})
+.then(function(payload) {
+if(!payload || payload.status !== "success") throw new Error("community_feed_fetch_failed");
+const ids = existingPostIds();
+(payload.posts || []).slice().reverse().forEach(function(post) {
+const id = String(post.id || "");
+if(id && !ids.has(id)) {
+feed.insertAdjacentHTML("afterbegin", postCardHtml(post));
+ids.add(id);
+}
+});
+if(emptyState && feed.querySelector("[data-post-id]")) emptyState.style.display = "none";
+if(errorState) errorState.style.display = "none";
+})
+.catch(function(error) {
+if(errorState) errorState.style.display = "block";
+if(window.console && console.debug) console.debug("AMPYAN community feed refresh skipped", error && error.message);
+});
+} catch(error) {}
+})();
+</script>
+
+{% endblock %}

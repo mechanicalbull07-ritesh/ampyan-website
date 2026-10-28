@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">MARKETPLACE INBOX</p>
+<h1 class="page-title">Buy/Sell Messages</h1>
+<p class="page-subtitle">Messages from users interested in marketplace listings.</p>
+</div>
+<a href="/marketplace" class="auth-button">Open Marketplace</a>
+</div>
+
+{% if messages %}
+<div class="ui-grid">
+{% for message in messages %}
+<article class="simple-list-card">
+<div class="garage-trust-top">
+<span class="garage-trust-level">{{ "Received" if message.receiver_id == current_user.id else "Sent" }}</span>
+<span class="garage-trust-score">{{ message.created_at.strftime("%d %b %H:%M") }}</span>
+</div>
+<h3>{{ message.listing.title if message.listing else "Marketplace listing" }}</h3>
+<p class="section-copy">
+From {{ message.sender.username if message.sender else "User" }} to {{ message.receiver.username if message.receiver else "User" }}
+</p>
+<p class="body-copy-lg">{{ message.message }}</p>
+<a href="/marketplace/{{ message.listing_id }}" class="ui-button-secondary">Open Listing</a>
+</article>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">No marketplace messages yet.</div>
+{% endif %}
+</section>
+
+{% endblock %}

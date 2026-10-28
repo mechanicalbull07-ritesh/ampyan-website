@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="page-shell tools-page">
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Toolkit</p>
+<h1 class="page-title">Automotive Tools</h1>
+<p class="page-subtitle">Premium calculators and diagnostics for fuel, finance, ownership cost and garage health.</p>
+</div>
+</div>
+
+<div class="tools-premium-grid">
+<a href="/tools/fuel-cost" class="tools-premium-card fuel">
+<i class="fa-solid fa-gas-pump"></i>
+<h3>Fuel Cost Calculator</h3>
+<p>Calculate trip, daily, monthly and yearly fuel spend.</p>
+<span>Open Calculator</span>
+</a>
+
+<a href="/tools/emi-calculator" class="tools-premium-card finance">
+<i class="fa-solid fa-chart-line"></i>
+<h3>EMI Calculator</h3>
+<p>Estimate EMI, total interest and total payable.</p>
+<span>Calculate EMI</span>
+</a>
+
+<a href="/tools/depreciation-calculator" class="tools-premium-card value">
+<i class="fa-solid fa-car-burst"></i>
+<h3>Car Depreciation Calculator</h3>
+<p>Estimate current value and depreciation percentage.</p>
+<span>Estimate Value</span>
+</a>
+
+<a href="/tools/maintenance-cost" class="tools-premium-card maintenance">
+<i class="fa-solid fa-screwdriver-wrench"></i>
+<h3>Service Estimator</h3>
+<p>Know service needs by km, age, usage and symptoms.</p>
+<span>Estimate Service</span>
+</a>
+
+<a href="/tools/ai-diagnosis" class="tools-premium-card diagnosis">
+<i class="fa-solid fa-brain"></i>
+<h3>Vehicle Intelligence Check</h3>
+<p>Understand symptoms, causes and repair direction.</p>
+<span>Start Vehicle Check</span>
+</a>
+
+<a href="/my-car-health" class="tools-premium-card health">
+<i class="fa-solid fa-heart-pulse"></i>
+<h3>Car Health</h3>
+<p>Open your car health score, service and usage insights.</p>
+<span>Open Garage</span>
+</a>
+</div>
+</section>
+
+{% endblock %}

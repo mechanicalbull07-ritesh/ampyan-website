@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<script src="{{ url_for('static', filename='js/csrf.js') }}"></script>
+<button id="topBtn" onclick="topFunction()">↑</button>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% set site_description = "AMPYAN is an AI powered automotive ecosystem helping car owners diagnose vehicle problems, track maintenance, improve safety, and save money." %}
+{% set page_description = meta_description|default(site_description, true) %}
+<meta name="description" content="{{ page_description }}">
+<meta name="keywords" content="AMPYAN, AI car diagnosis, automotive AI, car maintenance, vehicle assistant, dashcam AI">
+<meta name="robots" content="{{ robots_content|default('noindex, nofollow' if noindex|default(false) else 'index, follow', true) }}">
+{% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}">{% endif %}
+{% set social_title = meta_title|default("AMPYAN", true) %}
+{% set social_description = meta_description|default(site_description, true) %}
+{% set social_url = meta_url|default(request.url, true) %}
+{% set social_image = meta_image|default(url_for('static', filename='images/logo.png', _external=True), true) %}
+{% set social_type = meta_type|default("website", true) %}
+{% set resolved_browser_title = browser_title|default((social_title ~ " - AMPYAN") if meta_title is defined else "AMPYAN - AI Powered Automotive Assistant", true) %}
+<link rel="canonical" href="{{ social_url }}">
+<meta property="og:site_name" content="AMPYAN">
+<meta property="og:title" content="{{ social_title }}">
+<meta property="og:description" content="{{ social_description }}">
+<meta property="og:type" content="{{ social_type }}">
+<meta property="og:url" content="{{ social_url }}">
+<meta property="og:image" content="{{ social_image }}">
+<meta property="og:image:secure_url" content="{{ social_image }}">
+<meta name="twitter:card" content="{{ twitter_card|default('summary_large_image' if meta_image|default(none, true) else 'summary', true) }}">
+<meta name="twitter:title" content="{{ social_title }}">
+<meta name="twitter:description" content="{{ social_description }}">
+<meta name="twitter:image" content="{{ social_image }}">
+<link rel="icon" type="image/png" href="{{ url_for('static', filename='images/favicon.png') }}">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "AMPYAN",
+  "url": "https://ampyan.com",
+  "logo": "https://ampyan.com/static/images/logo.png",
+  "sameAs": [
+    "https://instagram.com/",
+    "https://youtube.com/"
+  ]
+}
+</script>
+{% block structured_data %}{% endblock %}
+
+<title>{{ resolved_browser_title }}</title>
+
+
+<!-- FONTS -->
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<!-- CSS -->
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/navbar.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/hero.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/community.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/auth.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/ai.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/footer.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/account_deletion_navigation.css') }}">
+<link rel="stylesheet" href="/static/css/news.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/garage.css') }}">
+{% if request.path.startswith("/blogs") %}<link rel="stylesheet" href="{{ url_for('static', filename='css/blogs.css') }}"><link rel="stylesheet" href="{{ url_for('static', filename='css/blogs-rich-media.css') }}">{% endif %}
+
+<!-- ICONS -->
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+<link rel="stylesheet" href="{{ url_for('static', filename='css/toon-v31.css') }}">
+</head>
+
+<body class="toon-v31">
+
+<div class="particles"></div>
+<div class="mouse-light"></div>
+<div class="cursor-glow"></div>
+<canvas id="neural-bg"></canvas>
+
+<!-- NAVBAR -->
+<div id="scrollBar"></div>
+<nav class="navbar">
+
+<!-- LEFT : BRAND -->
+
+<a href="/" class="navbar-brand" aria-label="AMPYAN home">
+AMPYAN
+</a>
+
+<!-- AMPYAN HOME PAGE REDESIGN START -->
+<button class="mobile-menu-toggle" type="button" onclick="toggleMobileNav()" aria-label="Open AMPYAN menu" aria-expanded="false">
+<i class="fa-solid fa-bars"></i>
+</button>
+<!-- AMPYAN HOME PAGE REDESIGN END -->
+
+
+<!-- PRIMARY MENU -->
+<div class="nav-center" id="primaryNavigation">
+<div class="nav-dropdown">
+<a href="/" class="nav-link" aria-haspopup="true">Home <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></a>
+<div class="nav-dropdown-content">
+<a href="/about">About AMPYAN</a>
+<a href="/vision">Vision</a>
+<a href="/platform">Platform</a>
+<a href="/contact">Contact</a>
+<a href="/help">Help / Report Issue</a>
+<div class="dropdown-divider"></div>
+<a href="/privacy">Privacy Policy</a>
+<a href="/terms">Terms of Service</a>
+<a href="/disclaimer">Disclaimer</a>
+</div>
+</div>
+{% if config.get("COMMUNITY_BLOG_ENABLED", "false")|string|lower in ["true", "1", "yes", "on"] %}
+<a href="{{ url_for('website_blogs.index') }}" class="nav-link">Blog</a>
+{% else %}
+<span class="nav-link nav-link-disabled" aria-disabled="true" title="Blog is not available yet">Blog</span>
+{% endif %}
+<a href="/news" class="nav-link">News</a>
+<a href="/news?category=tips-and-tricks" class="nav-link">Tips &amp; Tricks</a>
+<a href="/community" class="nav-link">Community</a>
+<div class="nav-dropdown">
+<a href="/tools" class="nav-link" aria-haspopup="true">Tools <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></a>
+<div class="nav-dropdown-content">
+<a href="/tools/ai-diagnosis">Diagnose</a>
+<a href="/tools/fuel-cost">Fuel Cost Calculator</a>
+<a href="/tools/emi-calculator">EMI Calculator</a>
+<a href="/tools/depreciation-calculator">Depreciation Calculator</a>
+<a href="/tools/maintenance-cost">Maintenance Cost Estimator</a>
+<a href="/tools/car-suggestion">Car Suggestion Tool</a>
+</div>
+</div>
+<div class="nav-dropdown">
+<a href="/my-car-health" class="nav-link" aria-haspopup="true">My Car <i class="fa-solid fa-chevron-down" aria-hidden="true"></i></a>
+<div class="nav-dropdown-content">
+<a href="/my-car-health">My Car Health</a>
+<a href="{{ ampyan_app_url }}" rel="noopener">Manage vehicles in App</a>
+</div>
+</div>
+</div>
+
+
+<!-- RIGHT SIDE -->
+
+<div class="nav-right">
+
+<!-- THEME -->
+
+<button onclick="toggleTheme()" class="theme-toggle" type="button" aria-label="Toggle colour theme">
+<i id="themeIcon" class="fa-solid fa-moon"></i>
+</button>
+
+
+{% if current_user.is_authenticated %}
+
+<div class="nav-profile-wrapper">
+
+<div class="nav-profile">
+
+<div class="profile-badge">
+{% set current_profile_photo_url = current_user_profile_image_url() %}
+{% if current_profile_photo_url %}
+<img src="{{ current_profile_photo_url }}" alt="{{ current_user.username }}">
+{% else %}
+{{ current_user.username[0] | upper }}
+{% endif %}
+</div>
+
+<button class="user-button" type="button" onclick="toggleUserMenu()" aria-label="Account menu" aria-controls="userMenu" aria-expanded="false">
+{{ current_user.username }}
+<i class="fa-solid fa-chevron-down"></i>
+</button>
+
+</div>
+
+<div class="user-dropdown" id="userMenu">
+
+<a href="/profile">
+<i class="fa-solid fa-user"></i> Profile
+</a>
+
+<a href="/account-deletion" class="account-deletion-link">
+<i class="fa-solid fa-user-shield" aria-hidden="true"></i> Account Deletion
+</a>
+
+{% if current_user.role == "mechanic" %}
+<a href="/mechanic-dashboard">
+<i class="fa-solid fa-screwdriver-wrench"></i> Dashboard
+{% else %}
+<a href="/my-car-health">
+<i class="fa-solid fa-heart-pulse"></i> My Car Health
+{% endif %}
+</a>
+
+<div class="dropdown-divider"></div>
+
+{% if current_user.role == "admin" or current_user.email|lower in ADMIN_EMAILS %}
+
+<a href="/admin">
+<i class="fa-solid fa-user-shield"></i> Admin Panel
+</a>
+
+<div class="dropdown-divider"></div>
+
+{% endif %}
+
+<a href="/privacy">
+<i class="fa-solid fa-shield-halved"></i> Privacy Policy
+</a>
+
+<a href="/terms">
+<i class="fa-solid fa-file-contract"></i> Terms of Service
+</a>
+
+<a href="/disclaimer">
+<i class="fa-solid fa-circle-exclamation"></i> Disclaimer
+</a>
+
+<div class="dropdown-divider"></div>
+
+<form method="POST" action="{{ url_for('auth.logout') }}" class="nav-logout-form">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<button type="submit" class="nav-logout-button">
+<i class="fa-solid fa-right-from-bracket"></i> Logout
+</button>
+</form>
+
+</div>
+
+</div>
+
+{% else %}
+
+<a href="{{ url_for('auth.login') }}" class="nav-btn">
+Sign In
+</a>
+
+{% endif %}
+
+</div>
+
+</nav>
+
+
+
+<!-- MAIN CONTENT -->
+
+<main class="main-container">
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+<section class="site-flash-region" aria-label="Notifications">
+{% for category, message in messages %}
+<div class="auth-flash" role="{{ 'alert' if category in ['error', 'danger'] else 'status' }}" tabindex="-1" data-flash-focus>{{ message }}</div>
+{% endfor %}
+</section>
+<script>document.addEventListener("DOMContentLoaded",function(){var notice=document.querySelector("[data-flash-focus]");if(notice){notice.focus();}});</script>
+{% endif %}
+{% endwith %}
+{% set toon_art = none %}
+{% if request.path in ['/garage', '/my-car-health'] %}{% set toon_art = 'Car_Health_Garage_Background_Approved.png' %}
+{% elif request.path == '/tools/ai-diagnosis' %}{% set toon_art = 'ai_diagnosis_ambassador.png' %}
+{% elif request.path == '/tools' %}{% set toon_art = 'car_tools_ambassador.png' %}
+{% elif request.path == '/community' %}{% set toon_art = 'AMPYAN_Community_Megaphone.png' %}{% endif %}
+{% if toon_art %}<img class="toon-page-art" src="{{ url_for('static', filename='images/toon-v31/' ~ toon_art) }}" alt="" aria-hidden="true" width="240" height="160" loading="lazy" decoding="async">{% endif %}
+{% block content %}{% endblock %}
+</main>
+
+<!-- BRAND STRIP -->
+
+<section class="brand-strip">
+
+<div class="brand-content">
+
+<div class="brand-left">
+<h3>Powered by Speed 16</h3>
+</div>
+
+<div class="brand-social">
+
+<a href="https://youtube.com/@speed16R" target="_blank" rel="noopener noreferrer" class="social-icon youtube" aria-label="AMPYAN on YouTube">
+<i class="fab fa-youtube"></i>
+</a>
+
+<a href="https://instagram.com/channelspeed16" target="_blank" rel="noopener noreferrer" class="social-icon instagram" aria-label="AMPYAN on Instagram">
+<i class="fab fa-instagram"></i>
+</a>
+
+</div>
+
+<p class="brand-founder">
+Founded by Ritesh, Engineer & Automotive Creator
+</p>
+
+</div>
+
+</section>
+
+<!-- INTELLIGENCE FLOATING BUTTON -->
+
+{% if current_user.is_authenticated %}
+
+<div class="ai-orb" onclick="toggleAI()">
+<span class="ai-text">VI</span>
+</div>
+
+<div class="ai-chatbox" id="aiBox">
+
+<div class="ai-header">
+AMPYAN Intelligence
+<span style="cursor:pointer;" onclick="toggleAI()">✖</span>
+</div>
+
+<div class="ai-messages" id="aiMessages">
+
+<div class="ai-message">
+Hi 👋 I’m your AMPYAN Car Assistant.
+Ask anything about buying, service, engine, EV or scams.
+</div>
+
+</div>
+
+<div class="ai-input-area">
+<input type="text" id="aiInput" placeholder="Ask something..." />
+<button onclick="sendAI()">Send</button>
+</div>
+
+</div>
+
+{% else %}
+
+<div class="ai-orb disabled-ai" onclick="redirectToLogin()">
+<span class="ai-text">VI</span>
+</div>
+
+{% endif %}
+
+<!-- FOOTER -->
+<button id="topBtn" onclick="topFunction()">↑</button>
+<footer class="site-footer">
+
+<div class="footer-container">
+
+<p>© 2026 AMPYAN Automotive Intelligence Platform</p>
+
+{% if request.path == "/" %}
+<nav class="footer-groups" aria-label="Footer navigation">
+<div><strong>AMPYAN</strong><a href="/about">About</a><a href="/contact">Contact</a><a href="/vision">Vision</a><a href="/platform">Platform</a></div>
+<div><strong>Explore</strong><a href="/community">Community</a><a href="/garages">Garages</a><a href="/marketplace">Marketplace</a><a href="/news">News</a><a href="/videos">Videos</a></div>
+<div><strong>Tools</strong><a href="/tools/fuel-cost">Fuel Cost</a><a href="/tools/emi-calculator">EMI</a><a href="/tools/depreciation-calculator">Depreciation</a><a href="/tools/maintenance-cost">Repair Estimate</a><a href="/tools/car-suggestion">Car Suggestion</a></div>
+<div><strong>Support</strong><a href="/help">Help &amp; Feedback</a><a href="/contact">Contact Support</a><a href="/account-deletion" class="account-deletion-link">Account Deletion</a></div>
+<div><strong>Legal</strong><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a><a href="/disclaimer">Disclaimer</a></div>
+</nav>
+{% else %}
+<div class="footer-links">
+<a href="/privacy">Privacy Policy</a> <a href="/terms">Terms of Service</a> <a href="/disclaimer">Disclaimer</a> <a href="/contact">Contact / Support</a> <a href="/help">Help / Report Issue</a> <a href="/account-deletion" class="account-deletion-link">Account Deletion</a>
+</div>
+{% endif %}
+{% if analytics_enabled %}<button type="button" id="analytics-preferences">Analytics preferences</button>{% endif %}
+
+</div>
+
+</footer>
+{% if analytics_enabled %}<aside id="analytics-consent" hidden role="dialog" aria-label="Analytics preferences" style="position:fixed;bottom:1rem;left:1rem;right:1rem;z-index:9999;background:#fff;color:#111;padding:1rem;border:1px solid #777;max-width:34rem">
+<p>AMPYAN counts basic aggregate page loads regardless of your choice. Allow optional behavioral analytics and GA4 to help us improve the site? You can change this choice later.</p>
+<button type="button" id="analytics-grant">Allow analytics</button>
+<button type="button" id="analytics-deny">Decline analytics</button>
+</aside>{% endif %}
+
+<!-- SCRIPTS -->
+
+<script>
+
+function redirectToLogin(){
+alert("Login to unlock AMPYAN Intelligence.");
+window.location.href="{{ url_for('auth.login') }}";
+}
+
+function toggleAI(){
+const box=document.getElementById("aiBox");
+box.classList.toggle("show-ai");
+}
+
+function appendAIMessage(text, className){
+const messages=document.getElementById("aiMessages");
+if(!messages) return;
+const bubble=document.createElement("div");
+bubble.className=className;
+bubble.textContent=text;
+messages.appendChild(bubble);
+messages.scrollTop=messages.scrollHeight;
+}
+
+async function sendAI(){
+const input=document.getElementById("aiInput");
+if(!input) return;
+const message=input.value.trim();
+if(!message) return;
+
+appendAIMessage(message,"ai-user-message");
+input.value="";
+appendAIMessage("Thinking...","ai-message");
+
+const messages=document.getElementById("aiMessages");
+const loading=messages ? messages.lastElementChild : null;
+
+try{
+const response=await fetch("/ask-ai",{
+method:"POST",
+headers:{"Content-Type":"application/json","X-CSRFToken":document.querySelector('meta[name="csrf-token"]').content},
+body:JSON.stringify({message:message})
+});
+const data=await response.json();
+if(loading) loading.textContent=data.reply || "AMPYAN Intelligence could not answer right now.";
+}catch(error){
+if(loading) loading.textContent="AMPYAN Intelligence connection failed. Please try again.";
+}
+}
+
+document.addEventListener("DOMContentLoaded",function(){
+const input=document.getElementById("aiInput");
+if(!input) return;
+input.addEventListener("keydown",function(event){
+if(event.key==="Enter"){
+event.preventDefault();
+sendAI();
+}
+});
+});
+
+document.addEventListener("click",async function(event){
+const storyButton=event.target.closest(".story-share-btn");
+if(storyButton){
+const storyUrl=storyButton.dataset.storyUrl;
+const shareUrl=storyButton.dataset.shareUrl || window.location.href;
+const shareTitle=storyButton.dataset.shareTitle || document.title;
+const shareText=shareTitle+"\n"+shareUrl;
+const label=storyButton.querySelector("span");
+const originalText=label ? label.textContent : "Share as Story";
+try{
+if(label) label.textContent="Preparing…";
+const response=await fetch(storyUrl,{credentials:"same-origin"});
+if(!response.ok) throw new Error("Story image unavailable");
+const blob=await response.blob();
+const file=new File([blob],storyButton.dataset.storyFilename || "ampyan-news-story.png",{type:"image/png"});
+if(navigator.share && navigator.canShare && navigator.canShare({files:[file]})){
+await navigator.share({title:shareTitle,text:shareText,url:shareUrl,files:[file]});
+}else{
+const download=document.createElement("a");
+const objectUrl=URL.createObjectURL(blob);
+download.href=objectUrl;
+download.download=file.name;
+document.body.appendChild(download);
+download.click();
+download.remove();
+URL.revokeObjectURL(objectUrl);
+try{await navigator.clipboard.writeText(shareText);}catch(copyError){}
+if(label) label.textContent="Saved + link copied";
+setTimeout(function(){if(label) label.textContent=originalText;},1800);
+return;
+}
+}catch(error){
+window.open(storyUrl,"_blank","noopener");
+try{await navigator.clipboard.writeText(shareText);}catch(copyError){}
+}finally{
+if(label && label.textContent==="Preparing…") label.textContent=originalText;
+}
+return;
+}
+const copyButton=event.target.closest(".copy-share-btn");
+if(copyButton){
+const copyUrl=copyButton.dataset.shareUrl || window.location.href;
+try{
+await navigator.clipboard.writeText(copyUrl);
+const label=copyButton.querySelector("span");
+const originalText=label ? label.textContent : copyButton.textContent;
+if(label){
+label.textContent="Copied";
+}else{
+copyButton.textContent="Copied";
+}
+setTimeout(function(){
+if(label){
+label.textContent=originalText;
+}else{
+copyButton.textContent=originalText;
+}
+},1400);
+}catch(error){
+window.prompt("Copy this link",copyUrl);
+}
+return;
+}
+
+const button=event.target.closest(".share-btn");
+if(!button) return;
+
+const shareUrl=button.dataset.shareUrl || window.location.href;
+const shareTitle=button.dataset.shareTitle || document.title;
+
+try{
+if(navigator.share){
+await navigator.share({title:shareTitle,url:shareUrl});
+return;
+}
+
+await navigator.clipboard.writeText(shareUrl);
+const label=button.querySelector("span");
+const originalText=label ? label.textContent : button.textContent;
+if(label){
+label.textContent="Copied";
+}else{
+button.textContent="Copied";
+}
+setTimeout(function(){
+if(label){
+label.textContent=originalText;
+}else{
+button.textContent=originalText;
+}
+},1400);
+}catch(error){
+window.prompt("Copy this link",shareUrl);
+}
+});
+
+function toggleUserMenu(){
+const menu=document.getElementById("userMenu");
+const button=document.querySelector('[aria-controls="userMenu"]');
+if(!menu || !button) return;
+const open=menu.style.display!=="block";
+menu.style.display=open ? "block" : "none";
+button.setAttribute("aria-expanded", open ? "true" : "false");
+}
+document.addEventListener("keydown",function(event){
+if(event.key!=="Escape") return;
+const menu=document.getElementById("userMenu");
+const button=document.querySelector('[aria-controls="userMenu"]');
+if(menu && button && menu.style.display==="block"){
+menu.style.display="none";
+button.setAttribute("aria-expanded","false");
+button.focus();
+}
+});
+
+// AMPYAN HOME PAGE REDESIGN START
+function toggleMobileNav(){
+const nav=document.querySelector(".navbar");
+const button=document.querySelector(".mobile-menu-toggle");
+if(!nav || !button) return;
+const isOpen=nav.classList.toggle("nav-open");
+button.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+// AMPYAN HOME PAGE REDESIGN END
+
+</script>
+
+<!-- CURSOR GLOW -->
+
+<script>
+
+const glow=document.querySelector(".cursor-glow");
+
+document.addEventListener("mousemove",function(e){
+
+if(!glow) return;
+
+glow.style.left=e.clientX+"px";
+glow.style.top=e.clientY+"px";
+
+});
+
+</script>
+
+<!-- HERO PARALLAX -->
+
+<script>
+
+document.addEventListener("DOMContentLoaded",function(){
+
+const hero=document.querySelector(".hero-main");
+
+document.addEventListener("mousemove",function(e){
+
+if(!hero) return;
+
+let x=(window.innerWidth/2 - e.clientX)/40;
+let y=(window.innerHeight/2 - e.clientY)/40;
+
+hero.style.transform="rotateY("+x+"deg) rotateX("+y+"deg)";
+
+});
+
+});
+
+</script>
+
+<!-- NEURAL BACKGROUND -->
+
+<script>
+
+const canvas=document.getElementById("neural-bg");
+const ctx=canvas.getContext("2d");
+
+canvas.width=window.innerWidth;
+canvas.height=window.innerHeight;
+
+let nodes=[];
+
+for(let i=0;i<70;i++){
+
+nodes.push({
+x:Math.random()*canvas.width,
+y:Math.random()*canvas.height,
+vx:(Math.random()-0.5)*0.4,
+vy:(Math.random()-0.5)*0.4
+});
+
+}
+
+function draw(){
+
+ctx.clearRect(0,0,canvas.width,canvas.height);
+
+nodes.forEach(node=>{
+
+node.x+=node.vx;
+node.y+=node.vy;
+
+if(node.x<0 || node.x>canvas.width) node.vx*=-1;
+if(node.y<0 || node.y>canvas.height) node.vy*=-1;
+
+ctx.beginPath();
+ctx.arc(node.x,node.y,2,0,Math.PI*2);
+ctx.fillStyle="#ff2a2a";
+ctx.fill();
+
+nodes.forEach(other=>{
+
+let dx=node.x-other.x;
+let dy=node.y-other.y;
+
+let dist=Math.sqrt(dx*dx+dy*dy);
+
+if(dist<120){
+
+ctx.beginPath();
+ctx.moveTo(node.x,node.y);
+ctx.lineTo(other.x,other.y);
+
+ctx.strokeStyle="rgba(255,42,42,0.15)";
+ctx.stroke();
+
+}
+
+});
+
+});
+
+requestAnimationFrame(draw);
+
+}
+
+draw();
+
+</script>
+<script>
+
+/* ================= THEME SYSTEM ================= */
+
+const themeIcon = document.getElementById("themeIcon");
+
+/* load saved theme */
+
+if(localStorage.getItem("theme") === "light"){
+
+document.body.classList.add("light");
+
+if(themeIcon){
+themeIcon.classList.remove("fa-moon");
+themeIcon.classList.add("fa-sun");
+}
+
+}else{
+
+if(themeIcon){
+themeIcon.classList.remove("fa-sun");
+themeIcon.classList.add("fa-moon");
+}
+
+}
+
+/* toggle theme */
+
+function toggleTheme(){
+
+document.body.classList.toggle("light");
+
+if(document.body.classList.contains("light")){
+
+localStorage.setItem("theme","light");
+
+if(themeIcon){
+themeIcon.classList.remove("fa-moon");
+themeIcon.classList.add("fa-sun");
+}
+
+}else{
+
+localStorage.setItem("theme","dark");
+
+if(themeIcon){
+themeIcon.classList.remove("fa-sun");
+themeIcon.classList.add("fa-moon");
+}
+
+}
+
+}
+
+</script>
+<script>
+
+window.onscroll=function(){
+
+let winScroll=document.body.scrollTop || document.documentElement.scrollTop;
+
+let height=document.documentElement.scrollHeight - document.documentElement.clientHeight;
+
+let scrolled=(winScroll/height)*100;
+
+document.getElementById("scrollBar").style.width=scrolled+"%";
+
+}
+
+</script>
+<script>
+
+window.addEventListener("scroll",function(){
+
+let btn=document.getElementById("topBtn");
+
+if(window.scrollY>300){
+btn.style.display="block";
+}else{
+btn.style.display="none";
+}
+
+});
+
+function topFunction(){
+
+window.scrollTo({
+top:0,
+behavior:"smooth"
+});
+
+}
+
+</script>
+<script>
+
+const observer=new IntersectionObserver(entries=>{
+
+entries.forEach(entry=>{
+
+if(entry.isIntersecting){
+
+entry.target.classList.add("visible");
+
+}
+
+});
+
+});
+
+document.querySelectorAll("section").forEach(sec=>{
+sec.classList.add("fade-in");
+observer.observe(sec);
+});
+
+</script>
+<script>
+
+/* ================= NON-BLOCKING PRODUCT ANALYTICS ================= */
+{% set pending_analytics_events = session.pop('_analytics_pending', []) %}
+document.querySelectorAll('input[name="analytics_request_token"]').forEach(input => {
+  if(!input.value && window.crypto && crypto.randomUUID) input.value = crypto.randomUUID();
+});
+(function(){
+try {
+const enabled = {{ analytics_enabled|tojson }};
+if(!enabled) return;
+const consentKey = "ampyan_analytics_consent";
+const sessionKey = "ampyan_analytics_session";
+const consentBox = document.getElementById("analytics-consent");
+let consent = "unknown";
+try { consent = localStorage.getItem(consentKey) || "unknown"; } catch(error) {}
+if(!["unknown", "granted", "denied"].includes(consent)) consent = "unknown";
+const consentCookie = document.cookie.split("; ").find(x => x.startsWith(consentKey + "="));
+if(consent === "granted" && consentCookie !== consentKey + "=granted") consent = "unknown";
+function newId() { return crypto.randomUUID(); }
+function sessionId() {
+  const now = Date.now();
+  const day = new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata", year:"numeric", month:"2-digit", day:"2-digit"}).format(new Date(now)).replace(/\D/g, "");
+  const raw = document.cookie.split("; ").find(x => x.startsWith(sessionKey + "="));
+  const parts = raw ? raw.slice(sessionKey.length + 1).split(".") : [];
+  const valid = parts.length === 3 && /^[0-9a-f]{32}$/.test(parts[0]) && parts[1] === day && /^\d+$/.test(parts[2])
+    && now - Number(parts[2]) * 1000 >= 0 && now - Number(parts[2]) * 1000 <= 1800000;
+  const id = valid ? parts[0] : newId().replace(/-/g, "");
+  document.cookie = sessionKey + "=" + id + "." + day + "." + Math.floor(now / 1000)
+    + "; Path=/; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : "");
+  try { sessionStorage.setItem(sessionKey, id); } catch(error) {}
+  return id;
+}
+const params = new URLSearchParams(window.location.search);
+const safePagePath = {{ (request.url_rule.rule if request.url_rule else '/other')|tojson }}.replace(/<[^>]+>/g, ":id");
+function attribution(name) { const value = (params.get(name) || "").toLowerCase(); return /^[a-z0-9_-]{1,60}$/.test(value) && /[a-z]/.test(value) ? value : ""; }
+function safeReferrer() { try { return document.referrer ? new URL(document.referrer).origin + "/" : ""; } catch(error) { return ""; } }
+function track(eventType, details) {
+try {
+if(consent !== "granted") return;
+const payload = JSON.stringify(Object.assign({session_id:sessionId(), path:safePagePath,
+  referrer:safeReferrer(), utm_source:attribution("utm_source"), utm_medium:attribution("utm_medium"),
+  utm_campaign:attribution("utm_campaign")}, details || {}, {event_type:eventType}));
+fetch("/api/track-event", {method:"POST", credentials:"same-origin", headers:{"Content-Type":"application/json", "X-CSRFToken":document.querySelector('meta[name="csrf-token"]').content}, body:payload, keepalive:true})
+  .then(response => { window.AMPYANAnalytics.lastDelivery = response.status === 202 ? "accepted" : response.status < 500 ? "rejected" : "failed"; })
+  .catch(() => { window.AMPYANAnalytics.lastDelivery = "failed"; });
+} catch(error) {}
+}
+window.AMPYANAnalytics = {track: track};
+function initialize() {
+  if(consent !== "granted") return;
+  {% if ga4_measurement_id %}
+  if(!window.ampyanGaLoaded) {
+    window.ampyanGaLoaded = true;
+    window.dataLayer = window.dataLayer || [];
+    window.gtag = function(){dataLayer.push(arguments);};
+    gtag("js", new Date());
+    let safePageReferrer = "";
+    try { if(document.referrer) safePageReferrer = new URL(document.referrer).origin + "/"; } catch(error) {}
+    gtag("config", {{ ga4_measurement_id|tojson }}, {
+      send_page_view:true, page_location:location.origin + safePagePath, page_referrer:safePageReferrer
+    });
+    {% for pending_event in pending_analytics_events %}
+    gtag("event", {{ pending_event.name|tojson }}, {{ pending_event.parameters|tojson }});
+    {% endfor %}
+    {% if request.endpoint == 'garage.garage_dashboard' %}
+    gtag("event", "car_health_viewed", {feature:"car_health"});
+    {% endif %}
+    const ga = document.createElement("script"); ga.async = true;
+    ga.src = "https://www.googletagmanager.com/gtag/js?id=" + encodeURIComponent({{ ga4_measurement_id|tojson }});
+    document.head.appendChild(ga);
+  }
+  {% endif %}
+  {% if clarity_project_id %}
+  if(!window.ampyanClarityLoaded) {
+    window.ampyanClarityLoaded = true;
+    (function(c,l,a,r,i,t,y){c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window, document, "clarity", "script", {{ clarity_project_id|tojson }});
+  }
+  {% endif %}
+  // This is the browser collector's page view; WebsiteVisit and GA4 report separately.
+  track("page_view");
+}
+function showPreferences() { consentBox.hidden = false; }
+function setConsent(value) {
+  consent = value;
+  try { localStorage.setItem(consentKey, value); } catch(error) {}
+  if(value !== "granted") {
+    [sessionKey, "ampyan_analytics_attribution", "ampyan_analytics_first_attribution", "ampyan_visitor_id"].forEach(name => {
+      document.cookie = name + "=; Path=/; Max-Age=0; SameSite=Lax";
+    });
+    try { sessionStorage.removeItem(sessionKey); } catch(error) {}
+  }
+  document.cookie = consentKey + "=" + value + "; Path=/; Max-Age=31536000; SameSite=Lax" + (location.protocol === "https:" ? "; Secure" : "");
+  consentBox.hidden = true;
+  // Reload so denied consent also stops previously loaded third-party scripts.
+  location.reload();
+}
+document.getElementById("analytics-preferences").addEventListener("click", showPreferences);
+document.getElementById("analytics-grant").addEventListener("click", () => setConsent("granted"));
+document.getElementById("analytics-deny").addEventListener("click", () => setConsent("denied"));
+if(consent === "unknown") showPreferences();
+if(consent === "granted") initialize();
+} catch(error) {}
+})();
+
+</script>
+<script>
+
+window.addEventListener("scroll", function(){
+
+let btn = document.getElementById("topBtn");
+
+if(window.scrollY > 300){
+
+btn.style.display = "block";
+
+}else{
+
+btn.style.display = "none";
+
+}
+
+});
+
+function topFunction(){
+
+window.scrollTo({
+
+top:0,
+
+behavior:"smooth"
+
+});
+
+}
+
+</script>
+</body>
+</html>

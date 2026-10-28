@@ -1,0 +1,233 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="diagnose-page">
+
+<h1 class="diagnose-title">AMPYAN Vehicle Intelligence Check</h1>
+
+<p class="ai-version">Automotive Intelligence Engine - Beta</p>
+
+<div class="diagnose-layout">
+
+<!-- LEFT SIDE FORM -->
+
+<div class="diagnose-card">
+
+{% if default_car %}
+
+<p class="default-car">
+Default Car:
+<strong>{{ default_car.brand }} {{ default_car.model }}</strong>
+</p>
+
+<form method="POST" action="/tools/ai-diagnosis" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="analytics_request_token" value="">
+
+<select name="car_id" class="auth-input" required>
+
+{% for car in cars %}
+<option value="{{ car.id }}"
+{% if default_car and car.id == default_car.id %}selected{% endif %}>
+{{ car.brand }} {{ car.model }} ({{ car.year }})
+</option>
+{% endfor %}
+
+</select>
+
+<input
+type="text"
+name="problem"
+placeholder="Describe your car problem or dashboard warning light..."
+class="auth-input"
+>
+
+<select name="dashboard_light_hint" class="auth-input">
+<option value="">Dashboard light/symbol if visible</option>
+<option value="check_engine">Check engine light</option>
+<option value="check_engine_flashing">Check engine blinking</option>
+<option value="battery">Battery warning</option>
+<option value="oil">Oil pressure warning</option>
+<option value="temperature">Temperature warning</option>
+<option value="brake">Brake warning</option>
+<option value="abs">ABS warning</option>
+<option value="airbag">Airbag warning</option>
+<option value="tpms">Tyre pressure/TPMS</option>
+<option value="multiple">Multiple dashboard lights</option>
+<option value="unknown">Unknown dashboard light</option>
+</select>
+
+<input
+type="file"
+name="dashboard_image"
+accept="image/png,image/jpeg,image/webp"
+class="auth-input"
+>
+
+<button type="submit" class="auth-button">
+Diagnose Now
+</button>
+
+</form>
+
+<div class="popular-problems">
+
+<h3>Popular Problems</h3>
+
+<div class="problem-buttons">
+<button onclick="fillProblem('car not starting')">Car not starting</button>
+<button onclick="fillProblem('engine vibration')">Engine vibration</button>
+<button onclick="fillProblem('brake noise')">Brake noise</button>
+<button onclick="fillProblem('ac not cooling')">AC not cooling</button>
+<button onclick="fillProblem('steering vibration')">Steering vibration</button>
+<button onclick="fillProblem('tail light stays on after ignition off')">Tail light stays on</button>
+<button onclick="fillProblem('headlight throw low')">Headlight throw low</button>
+<button onclick="fillProblem('check engine light on')">Check engine light</button>
+</div>
+
+</div>
+
+{% else %}
+
+<p>Add your car first</p>
+<a href="{{ ampyan_app_url }}" rel="noopener" class="auth-button">Manage vehicles in App</a>
+
+{% endif %}
+
+</div>
+
+
+<!-- RIGHT SIDE RESULT -->
+
+<div class="diagnose-result">
+
+{% if diagnosis_result %}
+
+<h2>Vehicle Intelligence Report</h2>
+
+<div class="result-block">
+
+<h3>Possible Causes</h3>
+<ul>
+{% for cause in diagnosis_result.causes %}
+<li>{{ cause.name }} — {{ cause.probability }}%</li>
+{% endfor %}
+</ul>
+
+</div>
+
+
+<div class="result-block">
+<h3>Severity</h3>
+<p class="severity-{{ diagnosis_result.severity | lower }}">
+{{ diagnosis_result.severity }}
+</p>
+</div>
+
+
+<div class="result-block">
+<h3>User Check</h3>
+<ul>
+{% for check in diagnosis_result.user_checks %}
+<li>{{ check }}</li>
+{% endfor %}
+</ul>
+</div>
+
+
+<div class="result-block">
+<h3>Estimated Repair Cost</h3>
+<ul>
+{% for cost in diagnosis_result.estimated_cost %}
+<li>{{ cost }}</li>
+{% endfor %}
+</ul>
+</div>
+
+
+<div class="result-block">
+<h3>Mechanic Advice</h3>
+<p>{{ diagnosis_result.advice }}</p>
+</div>
+
+
+<!-- 🔥 QUESTIONS WITH YES/NO + FORM -->
+
+{% if questions and questions|length > 0 %}
+
+<div class="result-block">
+
+<h3>🔍 Follow-up Questions</h3>
+
+<form method="POST" action="/tools/ai-diagnosis-followup">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<input type="hidden" name="analytics_request_token" value="">
+
+{% for q in questions %}
+
+<div style="margin-bottom:15px;">
+
+<p>
+{% if q.text %}
+    {{ q.text }}
+{% elif q.question %}
+    {{ q.question }}
+{% else %}
+    {{ q }}
+{% endif %}
+</p>
+
+<label>
+<input type="radio" name="{{ q.id if q.id else 'q' ~ loop.index }}" value="yes" required>
+Yes
+</label>
+
+<label style="margin-left:10px;">
+<input type="radio" name="{{ q.id if q.id else 'q' ~ loop.index }}" value="no">
+No
+</label>
+
+</div>
+
+{% endfor %}
+
+<input type="hidden" name="problem" value="{{ request.form.get('problem') }}">
+
+<button type="submit" class="auth-button">
+Submit Answers
+</button>
+
+</form>
+
+</div>
+
+{% endif %}
+
+{% else %}
+
+<div class="result-placeholder">
+
+<h3>Vehicle Intelligence Result</h3>
+
+<p>
+Describe your car issue and AMPYAN will analyze
+possible causes and repair suggestions.
+</p>
+
+</div>
+
+{% endif %}
+
+</div>
+
+</div>
+
+</section>
+
+<script>
+function fillProblem(problem){
+document.querySelector("input[name='problem']").value = problem;
+}
+</script>
+
+{% endblock %}

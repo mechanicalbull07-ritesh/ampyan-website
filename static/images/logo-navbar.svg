@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="160" viewBox="0 0 640 160" role="img" aria-labelledby="ampyanLogoTitle">
+  <title id="ampyanLogoTitle">AMPYAN</title>
+  <defs>
+    <linearGradient id="ampyanRed" x1="48" y1="128" x2="185" y2="22" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ff381f"/>
+      <stop offset="0.48" stop-color="#ff1010"/>
+      <stop offset="1" stop-color="#ff5b32"/>
+    </linearGradient>
+    <linearGradient id="ampyanBolt" x1="34" y1="129" x2="224" y2="69" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffce1e"/>
+      <stop offset="0.45" stop-color="#ff9f05"/>
+      <stop offset="1" stop-color="#fff05a"/>
+    </linearGradient>
+    <linearGradient id="ampyanText" x1="250" y1="39" x2="598" y2="118" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.48" stop-color="#d9d9d9"/>
+      <stop offset="1" stop-color="#f8f8f8"/>
+    </linearGradient>
+    <filter id="redGlow" x="-30%" y="-35%" width="165%" height="175%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="6" flood-color="#ff4123" flood-opacity="0.42"/>
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="#000000" flood-opacity="0.28"/>
+    </filter>
+    <filter id="boltGlow" x="-25%" y="-60%" width="155%" height="220%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="0" stdDeviation="4" flood-color="#ffb000" flood-opacity="0.62"/>
+    </filter>
+  </defs>
+  <g filter="url(#redGlow)">
+    <path d="M42 126C80 80 117 38 169 20c5-2 9 1 8 6l-27 89c-1 4-4 7-8 8l-34 9 22-73c-33 22-60 48-88 67z" fill="url(#ampyanRed)"/>
+    <path d="M154 82l-13 43c-1 4 2 8 6 7l23-6c4-1 7-4 8-8l13-43z" fill="url(#ampyanRed)"/>
+  </g>
+  <path d="M26 133c62-42 130-75 221-101-71 34-132 74-184 119z" fill="url(#ampyanBolt)" filter="url(#boltGlow)"/>
+  <path d="M40 125c57-34 112-58 176-78-55 28-104 58-150 92z" fill="#ffd94a" opacity="0.5"/>
+  <g fill="url(#ampyanText)" stroke="#ffffff" stroke-opacity="0.42" stroke-width="1.1" paint-order="stroke">
+    <path d="M270 119h-28l41-84h28l41 84h-30l-6-14h-40zm15-36h23l-12-27z"/>
+    <path d="M362 119V35h34l31 50 31-50h34v84h-27V70l-27 42h-22l-27-42v49z"/>
+    <path d="M512 119V35h77c19 0 30 11 30 28s-11 29-30 29h-49v27zm28-49h44c5 0 8-3 8-7s-3-7-8-7h-44z"/>
+  </g>
+  <g fill="url(#ampyanText)" stroke="#ffffff" stroke-opacity="0.42" stroke-width="1.1" paint-order="stroke" transform="translate(0 0)">
+    <path d="M250 119h-29l41-84h28l41 84h-30l-6-14h-40zm15-36h23l-12-27z" transform="translate(355 0) scale(.18 1)" opacity="0"/>
+  </g>
+  <g fill="url(#ampyanText)" stroke="#ffffff" stroke-opacity="0.42" stroke-width="1.1" paint-order="stroke">
+    <path d="M232 119h-28l41-84h28l41 84h-30l-6-14h-40zm15-36h23l-12-27z" opacity="0"/>
+    <text x="242" y="112" font-family="Orbitron, Rajdhani, Eurostile, Arial Black, Arial, sans-serif" font-size="84" font-weight="900" letter-spacing="3">AMPYAN</text>
+  </g>
+</svg>

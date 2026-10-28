@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% from 'components/ampyan_app_cta.html' import app_cta with context %}
+{% macro token() %}<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">{% endmacro %}
+{% macro transmission(value) %}{{ {'MANUAL':'Manual','AMT':'AMT','TORQUE_CONVERTER_AT':'Automatic','CVT':'CVT','DCT':'DCT','E_CVT':'e-CVT','EV_SINGLE_SPEED':'Single-speed'}.get(value,'Transmission not confirmed') }}{% endmacro %}
+{% block content %}
+<style>
+.cg{max-width:1000px;margin:32px auto;padding:0 16px;color:var(--text-color,#e8edf4)}.cg nav,.cg header{display:flex;flex-wrap:wrap;gap:16px;align-items:center;justify-content:space-between}.cg article{border:1px solid #394557;background:var(--card-bg,#17202e);border-radius:14px;padding:18px;margin:16px 0;min-width:0}.cg .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(240px,100%),1fr));gap:16px}.cg p,.cg h1,.cg h2,.cg h3,.cg dd,.cg a{overflow-wrap:anywhere}.cg a{color:#9cc2ff}.cg .action,.cg button{display:inline-block;box-sizing:border-box;max-width:100%;white-space:normal;padding:10px 16px;margin:6px 0;border:1px solid #719fff;border-radius:7px;background:#183969;color:white;text-decoration:none}.cg label{display:block;margin:12px 0}.cg input,.cg select{width:100%;box-sizing:border-box;max-width:100%;padding:10px;color:#f4f7fa;background:#111925;border:1px solid #566276;border-radius:6px}.cg input[type=checkbox]{width:auto}.cg dl{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}.cg dd{margin:0}.cg .notice{border-left:4px solid #e3b756;padding:12px}.cg small{display:block}.cg .preview{opacity:.85}@media(max-width:480px){.cg dl{grid-template-columns:minmax(0,1fr)}.cg article{padding:12px}.cg .grid{gap:0}}
+</style>
+{% if view == 'health' %}<link rel="stylesheet" href="{{ url_for('static', filename='css/car_health_dashboard.css') }}">{% endif %}
+<main class="cg{% if view == 'health' %} ch{% endif %}">
+<nav><a href="/garage">Garage</a><a href="/my-car-health">My Car Health</a>{% if view != 'health' %}{{ app_cta('open') }}{% endif %}</nav>
+{% if view == 'onboarding' %}
+<h1>Your Car Health starts in the AMPYAN App</h1>
+<p>Add your vehicle in the AMPYAN App to unlock personalized maintenance insights across App and Website.</p>
+{{ app_cta() }}<p>Already have the app? Sign in with the same account.</p><a href="/garage/connect">Connect your existing Garage</a>
+<div class="grid">{% for title,description in [('Service Forecast','Plan your next main service using your saved service history.'),('Mileage Intelligence','Understand mileage using your confirmed odometer and running pattern.'),('Service Checklist','See service checks for your confirmed vehicle setup.'),('Vehicle Health / Safety','Review available guidance and reported safety concerns.')] %}<article class="preview" data-preview-card><h2>{{ title }}</h2><p>{{ description }}</p><small>Available after adding your vehicle in the App.</small></article>{% endfor %}</div>
+{% elif view == 'error' %}
+<h1>Garage needs your attention</h1><p role="alert">{{ error }}</p><a class="action" href="/garage/connect">Sign in to Garage</a><p>Your saved vehicle information remains in the App. No health estimate is substituted when the service is unavailable.</p>{{ app_cta('open') }}
+{% elif view == 'connect' %}
+<h1>Connect your Garage</h1><p>Sign in using the password for your AMPYAN app account with the same email as your website account. Your website session stays signed in.</p><p>For a Google account, use Google sign-in on the website.</p>
+<form method="post">{{ token() }}<label>AMPYAN app password<input type="password" name="password" autocomplete="current-password" required></label><label><input type="checkbox" name="create_account" value="yes"> I do not have an app Garage account. Create one for my website email using this password.</label><p>An existing account is never replaced or claimed by this option. Add vehicles in the App.</p><button>Connect Garage</button></form>
+{% elif view == 'garage' %}
+<h1>My Garage</h1><p>View your vehicles here. Manage their details in the AMPYAN App.</p>{% if legacy_count %}<p class="notice">Older Website vehicle records are preserved. View your connected App Garage for current Car Health information.</p>{% endif %}
+{% for car in cars %}<article><h2>{{ car.brand }} {{ car.model }}</h2><p>{{ car.fuel_type }} • {{ transmission(car.transmission) }}</p>{% if car.current_odometer_km is not none %}<p>Saved odometer: {{ car.current_odometer_km | garage_km }} km</p>{% endif %}<a class="action" href="/my-car-health?car_id={{ car.id }}">View Car Health</a><a href="/garage/cars/{{ car.id }}/services">View service history</a>{{ app_cta('open') }}</article>{% endfor %}
+{% elif view == 'health' %}
+{% include 'components/car_health_dashboard.html' %}
+{% elif view == 'services' %}
+<h1>Service History</h1><p>{{ car.brand }} {{ car.model }}</p><p>These records were saved in your App Garage. Add or update services in the App.</p>
+{% for record in records %}<article><h2>{{ record.service_type }}</h2><p>{{ record.service_date }} · {{ record.odometer_km | garage_km }} km</p><p>{% if record.qualifying_main_service is sameas true %}Confirmed main service{% elif record.qualifying_main_service is sameas false %}Other service work{% else %}Main-service confirmation not recorded{% endif %}</p>{% for part in record.parts_replaced or [] %}<p>{{ part }}</p>{% endfor %}</article>{% else %}<p>Service history needed. Confirm your latest main service in the AMPYAN App.</p>{% endfor %}{{ app_cta('service') }} <a href="/my-car-health?car_id={{ car.id }}">Return to Car Health</a>
+{% endif %}
+</main>
+{% endblock %}

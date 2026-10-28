@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="auth-wrapper">
+
+    <div class="auth-card">
+
+        <div class="auth-header">
+            <h2>Create Account</h2>
+            <p>Join the AMPYAN ecosystem for owners, garages, vehicle intelligence and automotive community trust.</p>
+        </div>
+
+        <form method="POST" autocomplete="off">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="analytics_request_token" value="">
+
+            <div class="input-group">
+                <input type="text"
+                       name="username"
+                       placeholder="Username"
+                       required>
+            </div>
+             <div class="input-group">
+                  <input type="email"
+                        name="email"
+                        placeholder="Email Address"
+                        required>
+            </div>
+            <div class="input-group">
+                <input type="password"
+                       name="password"
+                       placeholder="Password"
+                       required>
+            </div>
+
+            <button type="submit" class="auth-btn">
+                Create Account
+            </button>
+
+        </form>
+
+        <div class="auth-footer">
+            <p>
+                Already have an account?
+               <a href="{{ url_for('auth.login') }}">Sign in</a>
+            </p>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

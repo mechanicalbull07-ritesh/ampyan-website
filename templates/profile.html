@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="page-shell profile-wrapper">
+
+<div class="page-header">
+<div class="page-header-copy">
+<p class="page-kicker">AMPYAN Profile</p>
+<h1 class="page-title">{{ current_user.username }}</h1>
+<p class="page-subtitle">Manage your account and community activity here. View Car Health on the Website and update vehicle details in the App.</p>
+</div>
+
+<div class="ui-button-row">
+<a href="#edit-profile" class="ui-button-secondary">Edit Profile</a>
+<a href="{{ ampyan_app_url }}" rel="noopener" class="auth-button">Manage vehicles in App</a>
+</div>
+</div>
+
+<div class="profile-header ui-card">
+
+{% set current_profile_photo_url = current_user_profile_image_url() %}
+{% if current_profile_photo_url %}
+<img src="{{ current_profile_photo_url }}" class="profile-avatar">
+{% else %}
+<div class="author-avatar-letter profile-avatar">
+{{ current_user.username[0] | upper }}
+</div>
+{% endif %}
+
+<h2 class="profile-name">{{ current_user.username }}</h2>
+<div class="profile-role">{{ current_user.badge }}</div>
+
+<div class="ui-pill-row">
+<span class="ui-pill">{{ current_user.email }}</span>
+{% if current_user.mobile %}
+<span class="ui-pill">{{ current_user.mobile }}</span>
+{% endif %}
+</div>
+
+</div>
+
+<div class="profile-stats">
+<div class="stat-card">
+<span>Cars</span>
+<div class="stat-number">{{ cars_count }}</div>
+</div>
+<div class="stat-card">
+<span>Posts</span>
+<div class="stat-number">{{ posts_count }}</div>
+</div>
+<div class="stat-card">
+<span>Intelligence Used Today</span>
+<div class="stat-number">{{ ai_used }}</div>
+</div>
+<div class="stat-card">
+<span>Reputation</span>
+<div class="stat-number">{{ current_user.reputation }}</div>
+</div>
+</div>
+
+<div class="ui-grid ui-grid-2">
+
+<div class="profile-card">
+<h2 id="edit-profile" class="section-heading">Personal Information</h2>
+
+<form action="/update-profile" method="POST" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+<h3 class="profile-section">Location</h3>
+
+<div class="profile-grid">
+<input type="text" name="city" placeholder="City" value="{{ current_user.city or '' }}" class="profile-input">
+<input type="text" name="state" placeholder="State" value="{{ current_user.state or '' }}" class="profile-input">
+<input type="text" name="country" placeholder="Country" value="{{ current_user.country or '' }}" class="profile-input">
+<input type="text" name="pincode" placeholder="Pincode" value="{{ current_user.pincode or '' }}" class="profile-input">
+</div>
+
+<h3 class="profile-section">Mobile</h3>
+<input type="text" name="mobile" placeholder="Enter mobile number" value="{{ current_user.mobile or '' }}" class="profile-input">
+
+<h3 class="profile-section">Profile Photo</h3>
+<input type="file" name="profile_photo" class="file-input">
+
+<button type="submit" class="auth-button">Save Profile</button>
+</form>
+</div>
+
+<div class="profile-card">
+<h2 class="section-heading">Quick Access</h2>
+<div class="ui-meta-list">
+<div class="ui-meta-item">
+<span class="ui-meta-label">Email Verified</span>
+<span class="ui-meta-value">{{ "Yes" if current_user.email_verified else "No" }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Account Role</span>
+<span class="ui-meta-value">{{ current_user.role|title }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Helpful Answers</span>
+<span class="ui-meta-value">{{ current_user.helpful_answers }}</span>
+</div>
+<div class="ui-meta-item">
+<span class="ui-meta-label">Location</span>
+<span class="ui-meta-value">{{ current_user.city or "Not set" }}</span>
+</div>
+</div>
+
+<div class="profile-actions">
+<a href="/account-deletion" class="ui-button-secondary account-deletion-link">Account Deletion</a>
+{% if current_user.role == "mechanic" %}
+<a href="/mechanic-dashboard" class="auth-button">Mechanic Dashboard</a>
+<a href="/garages" class="ui-button-secondary">Garages</a>
+{% else %}
+<a href="/garage" class="auth-button">My Cars</a>
+<a href="/my-car-health" class="ui-button-secondary">My Car Health</a>
+{% endif %}
+</div>
+</div>
+
+</div>
+
+<div class="profile-card profile-section-block">
+<h2 class="section-heading">Your Cars</h2>
+
+<p>View Car Health and service history in your connected Garage. Update vehicle details in the AMPYAN App.</p>
+<a class="ui-button-secondary" href="/garage">Open Garage</a>
+{% if cars %}<p>Your older website vehicle records are preserved and have not been linked automatically.</p>{% endif %}
+
+</div>
+
+<div class="profile-card">
+<h2 class="section-heading">Your Posts</h2>
+
+{% if profile_posts %}
+<div class="ui-grid">
+{% for post in profile_posts %}
+<div class="profile-post-card">
+<h3>{% if post.detail_url %}<a href="{{ post.detail_url }}">{{ post.title }}</a>{% else %}{{ post.title }}{% endif %}</h3>
+<p>{{ post.content[:120] }}{% if post.content|length > 120 %}...{% endif %}</p>
+</div>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty-state">You have not created any community posts yet.</div>
+{% endif %}
+</div>
+
+</section>
+
+<script>
+document.querySelectorAll(".health-bar").forEach(bar => {
+const score = bar.getAttribute("data-score");
+const color = bar.getAttribute("data-color");
+bar.style.width = score + "%";
+bar.style.background = color;
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,83 @@
+
+
+/* ===== FUTURISTIC BRAND STRIP ===== */
+
+.brand-strip {
+    padding: 50px 20px;
+    text-align: center;
+    background: #0a0a0a;
+    position: relative;
+    overflow: hidden;
+}
+
+.brand-strip::before {
+    content: "";
+    position: absolute;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,0,0,0.15), transparent 60%);
+    animation: rotateGlow 20s linear infinite;
+    top: -50%;
+    left: -50%;
+}
+
+@keyframes rotateGlow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.brand-content {
+    position: relative;
+    z-index: 2;
+}
+
+.brand-left {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+}
+
+.brand-logo {
+    height: 50px;
+    animation: pulseLogo 3s ease-in-out infinite;
+}
+
+@keyframes pulseLogo {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+.brand-left h3 {
+    font-size: 22px;
+    color: #ff3b3b;
+    letter-spacing: 1px;
+}
+
+.brand-social {
+    margin-top: 20px;
+}
+
+.social-icon {
+    font-size: 28px;
+    margin: 0 15px;
+    color: white;
+    transition: 0.3s;
+}
+
+.social-icon.youtube:hover {
+    color: #ff0000;
+    transform: scale(1.2);
+}
+
+.social-icon.instagram:hover {
+    color: #e1306c;
+    transform: scale(1.2);
+}
+
+.brand-founder {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #aaa;
+}

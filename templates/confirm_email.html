@@ -1,0 +1,1 @@
+{% extends 'base.html' %}{% block content %}<h1>Confirm your email</h1><form method='post'><input type='hidden' name='csrf_token' value='{{ csrf_token() }}'><button>Verify email</button></form>{% endblock %}
