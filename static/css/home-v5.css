@@ -53,3 +53,5 @@ body.toon-v31:not(.light) .v4-home .v4-hero{box-shadow:0 18px 50px #00000038,ins
 .v4-home .v4-copy{background:transparent}
 .v4-home .v4-landscape:before{background:none}
 @media(max-width:560px){.v4-home .v4-hero{background-image:url('../images/home-v5/scenic-road-640.webp')}.v4-home .v4-copy{background:#e6f3fff5}}
+/* Author display rules must respect the error handler's hidden attribute. */
+.v4-home .v5-story-media img[hidden]{display:none}
