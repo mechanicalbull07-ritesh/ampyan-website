@@ -16,7 +16,7 @@ from services.garage_network_service import (
     refresh_mechanic_reputation,
 )
 from services.app_api_sync import sync_garage_to_app
-from services.india_car_catalog import catalog_image_path
+from services.india_car_catalog import catalog_image_path, INDIA_CAR_CATALOG
 
 main_bp = Blueprint("main", __name__)
 PUBLIC_SEED_OWNER_NAME = "Listing Owner Not Provided"
@@ -379,12 +379,6 @@ def home():
         current_app.logger.warning("home_section_error=news error=%s", exc.__class__.__name__)
         latest_news = []
 
-    if not latest_news:
-        latest_news = [
-            {"title": "What to check before a long highway drive", "summary": "Tyres, fluids, lights and service history should be checked before a long trip.", "url": "/news", "image_url": fallback_news_image, "meta": "Ownership Guide"},
-            {"title": "Understanding service estimate line items", "summary": "Learn which workshop items are routine and which should be approved only after inspection.", "url": "/news", "image_url": fallback_news_image, "meta": "Service Awareness"},
-            {"title": "Used car checklist for city buyers", "summary": "Documents, accident signs, tyres, clutch feel and maintenance records matter before purchase.", "url": "/news", "image_url": fallback_news_image, "meta": "Used Car Guide"},
-        ]
 
     try:
         recent_post_records = Post.query.order_by(Post.created_at.desc()).limit(8).all()
@@ -408,12 +402,22 @@ def home():
         recent_post_records = []
         community_threads = []
 
-    if not community_threads:
-        community_threads = [
-            {"title": "Engine vibration at idle after service", "summary": "Owners discuss mounts, plugs, idle RPM and recent service checks.", "url": "/create-post", "image_url": None, "meta": "Start discussion"},
-            {"title": "Brake noise after monsoon driving", "summary": "A practical thread about dust, pads, discs and when inspection is needed.", "url": "/create-post", "image_url": None, "meta": "Community"},
-            {"title": "Best maintenance routine for daily city use", "summary": "Compare real owner routines for tyres, fluids, filters and battery care.", "url": "/create-post", "image_url": None, "meta": "Community"},
+
+    # V4.2: real stored Tips only; preserve existing homepage image contract.
+    try:
+        latest_tips = [
+            {"title": item.title, "url": f"/news/{item.id}",
+             "summary": (item.content or "")[:120],
+             "image_url": _static_image_url_if_exists(
+                 "news_images", item.image, fallback=default_news_image)}
+            for item in News.query.filter_by(category="tips-and-tricks").order_by(News.created_at.desc()).limit(3).all()
         ]
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning("home_section_error=tips error=%s", exc.__class__.__name__)
+        latest_tips = []
+
+    home_brands = list(dict.fromkeys(item["brand"] for item in INDIA_CAR_CATALOG))[:8]
 
     trending_problems = [
         "Engine vibration at idle",
@@ -467,6 +471,8 @@ def home():
         default_car=default_car,
         recent_posts=recent_post_records,
         latest_news=latest_news,
+        latest_tips=latest_tips,
+        home_brands=home_brands,
         community_threads=community_threads,
         trending_problems=trending_problems,
         popular_problems=popular_problems,
