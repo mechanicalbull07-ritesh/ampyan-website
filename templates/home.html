@@ -2,10 +2,17 @@
 {% block content %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home-v4.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home-v42.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home-v44.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home-v44-final.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home-v44-editorial.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/home-v44-polish.css') }}">
 <a class="v4-skip" href="#v4-main">Skip to homepage content</a>
 {% macro icon(kind) -%}
 <svg class="c42-icon c42-icon-{{ kind }}" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-{% if kind=='health' %}<path d="M20.5 4.8a5.4 5.4 0 0 0-7.5 0L12 5.9l-1.1-1.1a5.3 5.3 0 0 0-7.5 7.5L12 21l8.6-8.7a5.3 5.3 0 0 0-.1-7.5Z"/><path d="M3 12h5l2-4 3 8 2-4h6"/>
+{% if kind=='ai' %}<rect x="4" y="7" width="16" height="13" rx="4"/><path d="M12 3v4M2 12h2m16 0h2M8 16h8"/><circle cx="8" cy="12" r="1"/><circle cx="16" cy="12" r="1"/>
+{% elif kind=='tools' %}<rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h1m6 0h1m-8 4h1m6 0h1m-8 4h1m6 0h1"/>
+{% elif kind=='garage' %}<path d="m3 10 9-7 9 7v11H3Z"/><path d="M7 21V11h10v10M7 15h10M7 18h10"/>
+{% elif kind=='health' %}<path d="M20.5 4.8a5.4 5.4 0 0 0-7.5 0L12 5.9l-1.1-1.1a5.3 5.3 0 0 0-7.5 7.5L12 21l8.6-8.7a5.3 5.3 0 0 0-.1-7.5Z"/><path d="M3 12h5l2-4 3 8 2-4h6"/>
 {% elif kind=='trip' %}<circle cx="6" cy="5" r="3"/><circle cx="18" cy="19" r="3"/><path d="M9 5h7a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h7"/>
 {% elif kind=='safety' %}<path d="m12 3 8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6l8-3Z"/><path d="m8 12 3 3 5-6"/>
 {% elif kind=='community' %}<circle cx="9" cy="8" r="3"/><path d="M3 21v-3a6 6 0 0 1 12 0v3M16 5a3 3 0 0 1 0 6m3 4a5 5 0 0 1 2 4v2"/>
@@ -19,9 +26,9 @@
 {% set toon_alt={'02_garage_clipboard.png':'Original AMPYAN Toon helping with garage and car health','03_ai_magnifier.png':'Original AMPYAN Toon inspecting a car with a magnifier','06_car_suggestion.png':'Original AMPYAN Toon beside the approved blue car illustration','07_maintenance_tools.png':'Original AMPYAN Toon with vehicle maintenance tools'} %}
 <img class="c42-toon" src="{{ url_for('static', filename='images/home-v4/' ~ image) }}" width="{{ width }}" height="{{ height }}" alt="{{ toon_alt[image] }}" {% if eager %}fetchpriority="high"{% else %}loading="lazy"{% endif %} decoding="async">
 {%- endmacro %}
-<main id="v4-main" class="v4-home c42-home">
+<main id="v4-main" class="v4-home c42-home c44-final c44-polish">
 <section class="c42-hero" aria-labelledby="c42-title">
-<div><p class="c42-eyebrow">YOUR SMARTER AUTOMOTIVE COMPANION</p><h1 id="c42-title">Smarter Car Care,<br><span>Happier Drives.</span></h1><p>Understand your car, plan your next drive and explore practical tools with AMPYAN.</p><a class="c42-button" href="https://play.google.com/store/apps/details?id=com.ampyan.app" target="_blank" rel="noopener noreferrer">Get AMPYAN on Google Play <span aria-hidden="true">↗</span></a></div>
+<div><p class="c42-eyebrow">YOUR SMARTER AUTOMOTIVE COMPANION</p><h1 id="c42-title">Smarter Cars,<br><span>Happier Drives.</span></h1><p>AI diagnosis, maintenance tips and ownership tools — all in one place.</p><nav class="c44-hero-tools" aria-label="Quick car care"><a href="/my-car-health">{{ icon('health') }}<span>Car Health<small>Care for your car</small></span></a><a href="/tools/ai-diagnosis">{{ icon('ai') }}<span>AI Diagnosis<small>Understand symptoms</small></span></a><a href="/tools">{{ icon('tools') }}<span>Car Tools<small>Plan ownership</small></span></a><a href="/community">{{ icon('community') }}<span>Community<small>Read owner discussions</small></span></a></nav><a class="c42-button" href="https://play.google.com/store/apps/details?id=com.ampyan.app" target="_blank" rel="noopener noreferrer">Get AMPYAN on Google Play <span aria-hidden="true">↗</span></a></div>
 <div class="c42-hero-art">{{ toon('06_car_suggestion.png',1536,1024,true) }}</div>
 </section>
 <section class="c42-features" aria-label="How AMPYAN helps you">
@@ -30,13 +37,13 @@
 ('Best Car for You','Explore cars for your needs.','/tools/car-suggestion','06_car_suggestion.png','mint'),
 ('Car Tools','Plan fuel, finance and ownership costs.','/tools','07_maintenance_tools.png','peach'),
 ('My Garage','Keep your vehicles together.','/garage','02_garage_clipboard.png','lavender')] %}
-<a class="c42-feature {{ tone }}" href="{{ path }}"><div><h2>{{ title }}</h2><p>{{ description }}</p><span class="c42-link">Explore <span aria-hidden="true">→</span></span></div>{{ toon(image,1536,1152) }}</a>
+<a class="c42-feature {{ tone }}" href="{{ path }}"><div><h2>{{ icon('ai' if loop.index==1 else 'cars' if loop.index==2 else 'tools' if loop.index==3 else 'garage') }}{{ title }}</h2><p>{{ description }}</p><span class="c42-link c44-feature-arrow"><span class="c42-sr">Explore {{ title }}</span><span aria-hidden="true">→</span></span></div>{{ toon(image,1536,1152) }}</a>
 {% endfor %}
 </section>
 <section class="c42-care" aria-label="Care for every drive">
-<article class="c42-card mint"><span class="c42-care-art">{{ toon('02_garage_clipboard.png',1402,1122) }}</span><h2>{{ icon('health') }}My Car Health</h2><p>Keep service history and vehicle health together.</p><a class="c42-link" href="/my-car-health">Open My Car <span aria-hidden="true">→</span></a></article>
-<article class="c42-card blue"><span class="c42-care-art">{{ toon('06_car_suggestion.png',1536,1024) }}</span><h2>{{ icon('trip') }}Trip Readiness</h2><p>Use Trip Readiness in the AMPYAN app before setting off.</p><div class="c42-actions"><a class="c42-link" href="https://play.google.com/store/apps/details?id=com.ampyan.app" target="_blank" rel="noopener noreferrer">Open Google Play ↗</a><a href="/tools/fuel-cost">Plan fuel costs</a></div></article>
-<article class="c42-card peach"><h2>{{ icon('safety') }}Safety &amp; Emergency</h2><p>Explore safety features in the AMPYAN app.</p><div class="c42-actions"><a class="c42-link" href="https://play.google.com/store/apps/details?id=com.ampyan.app" target="_blank" rel="noopener noreferrer">Open Google Play ↗</a><a href="/help">Help &amp; Feedback</a></div></article>
+<article class="c42-card mint c44-care-primary c44-health"><p class="c44-kicker">YOUR CAR, CARED FOR</p><span class="c42-care-art">{{ toon('02_garage_clipboard.png',1402,1122) }}</span><h2>{{ icon('health') }}My Car Health</h2><p>Keep service history and vehicle health together.</p><a class="c42-link" href="/my-car-health">Open My Car <span aria-hidden="true">→</span></a></article>
+<article class="c42-card blue c44-care-primary c44-trip"><p class="c44-kicker">MAKE THE JOURNEY COUNT</p><span class="c42-care-art">{{ toon('06_car_suggestion.png',1536,1024) }}</span><h2>{{ icon('trip') }}Trip Readiness</h2><p>Use Trip Readiness in the AMPYAN app before setting off.</p><div class="c42-actions"><a class="c42-link" href="https://play.google.com/store/apps/details?id=com.ampyan.app" target="_blank" rel="noopener noreferrer">Open Google Play ↗</a><a href="/tools/fuel-cost">Plan fuel costs</a></div></article>
+<article class="c42-card peach c44-safety"><h2>{{ icon('safety') }}Safety &amp; Emergency</h2><p>Explore safety features in the AMPYAN app.</p><div class="c42-actions"><a class="c42-link" href="https://play.google.com/store/apps/details?id=com.ampyan.app" target="_blank" rel="noopener noreferrer">Open Google Play ↗</a><a href="/help">Help &amp; Feedback</a></div></article>
 </section>
 <section class="c42-content" aria-label="From AMPYAN">
 {% for title,items,path,empty,kind in [
@@ -49,14 +56,15 @@
 {% endfor %}
 </section>
 <section class="c42-bottom" aria-label="Explore more">
-<article class="c42-card c42-best"><div class="c42-section-head"><h2>{{ icon('cars') }}Best Cars for You</h2><a href="/tools/car-suggestion">Find your car →</a></div><p>Explore makes in our existing car catalog.</p><ul class="c42-brands">{% for brand in home_brands %}<li>{{ brand }}</li>{% endfor %}</ul><a class="c42-link" href="/garages">Browse garage listings →</a></article>
+<article class="c42-card c42-best"><div class="c42-section-head"><h2>{{ icon('cars') }}Best Cars for You</h2><a href="/tools/car-suggestion">Find your car →</a></div><p>Explore makes in our existing car catalog.</p><div class="c44-catalog"><div class="c44-car-gallery" tabindex="0" aria-label="Car image gallery — scroll horizontally"><a class="c44-car" href="/tools/car-suggestion"><img class="c42-media c44-car-image" src="/static/images/home-v44/xl6-catalog.webp" width="480" height="320" loading="lazy" decoding="async" alt="Maruti Suzuki XL6 — existing AMPYAN catalog image"><span><small>FROM OUR EXISTING CATALOG</small><strong>Maruti Suzuki XL6</strong><span class="c42-link">Explore car options →</span></span></a><a class="c44-car-placeholder" href="/tools/car-suggestion">{{ icon('cars') }}<strong>More car photos</strong><span>Image unavailable</span><span class="c42-link">Browse catalogue →</span></a><a class="c44-car-placeholder" href="/tools/car-suggestion">{{ icon('cars') }}<strong>More car photos</strong><span>Image unavailable</span><span class="c42-link">Browse catalogue →</span></a></div><p class="c44-catalog-note">Catalog example, not a personalised recommendation. More vehicle images are not available here.</p></div><a class="c42-link" href="/garages">Browse garage listings →</a></article>
 <article class="c42-card c42-videos"><div class="c42-section-head"><h2>{{ icon('video') }}Automotive Videos</h2><a href="/videos">View all videos →</a></div>
 {# Existing handler supplies stored Video records. Do not invent external videos. #}
 {% set valid=namespace(count=0) %}
-<div class="c42-video-list">{% for video in latest_videos|default([]) %}{% set embed=video.embed_url|default('',true) %}{% set id=embed[30:] if embed.startswith('https://www.youtube.com/embed/') else '' %}{% if embed.startswith('https://www.youtube.com/embed/') and id|length==11 and id.isascii() and (id|replace('-','')|replace('_','')).isalnum() %}{% set valid.count=valid.count+1 %}<a class="c42-video" href="/videos#video-{{ video.id }}"><img class="c42-media" src="https://i.ytimg.com/vi/{{ id }}/hqdefault.jpg" width="160" height="90" alt="Video thumbnail: {{ video.title }}" loading="lazy" decoding="async" referrerpolicy="no-referrer"><span>{{ video.title }}</span></a>{% endif %}{% endfor %}</div>
+<div class="c42-video-list">{% for video in latest_videos|default([]) %}{% set embed=video.embed_url|default('',true) %}{% set id=embed[30:] if embed.startswith('https://www.youtube.com/embed/') else '' %}{% if embed.startswith('https://www.youtube.com/embed/') and id|length==11 and id.isascii() and (id|replace('-','')|replace('_','')).isalnum() %}{% set valid.count=valid.count+1 %}<a class="c42-video" href="/videos#video-{{ video.id }}"><span class="c44-video-art"><span class="c44-play" aria-hidden="true">▶</span><img class="c42-media" src="https://i.ytimg.com/vi/{{ id }}/hqdefault.jpg" width="160" height="90" alt="Video thumbnail: {{ video.title }}" loading="lazy" decoding="async" referrerpolicy="no-referrer"></span><span>{{ video.title }}</span></a>{% endif %}{% endfor %}</div>
 {% if not valid.count %}<p class="c42-empty">No verified automotive videos available right now.</p><a class="c42-link" href="/videos">Browse the video hub →</a>{% endif %}
 </article>
 </section>
+<section class="c42-card c44-brand-strip" aria-labelledby="c44-brands-heading"><h2 id="c44-brands-heading">Popular Car Brands</h2><p>Explore makes in our existing car catalog.</p><ul class="c42-brands" tabindex="0" aria-label="Car brands in our catalog">{% for brand in home_brands %}<li><span class="c44-brand-icon" aria-hidden="true">{{ icon('cars') }}</span>{{ brand }}</li>{% endfor %}</ul></section>
 <nav class="c42-more" aria-label="More AMPYAN features"><a href="/tools/fuel-cost">Fuel Cost</a><a href="/tools/emi-calculator">EMI</a><a href="/tools/depreciation-calculator">Depreciation</a><a href="/tools/maintenance-cost">Repair Estimate</a><a href="/marketplace">Marketplace</a><a href="/help">Help &amp; Feedback</a></nav>
 </main>
 <script>

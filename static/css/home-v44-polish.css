@@ -1,0 +1,34 @@
+/* Final focused polish: approved editorial, gallery, videos and brand strip only. */
+@media(min-width:901px){.c44-polish .c42-content .c42-editorial-thumb{height:176px;margin-bottom:12px}}
+.c44-polish .c42-content .c42-editorial-thumb{border-color:var(--line);box-shadow:0 2px 7px #1027430b}
+.c44-car-gallery{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(230px,1fr);gap:10px;overflow-x:auto;max-width:100%;padding:2px 0 8px;scroll-snap-type:x proximity;overscroll-behavior-x:contain}
+.c44-car-gallery>*{scroll-snap-align:start;min-width:0}
+.c44-car-gallery:focus-visible{outline:3px solid var(--link);outline-offset:3px;border-radius:8px}
+.c44-polish .c44-car-gallery .c44-car{grid-template-columns:96px minmax(0,1fr);gap:10px;padding:10px;min-height:136px;align-content:center}
+.c44-polish .c44-car-gallery .c44-car img{width:96px;height:72px;object-fit:contain}
+.c44-polish .c44-car-gallery .c44-car strong{font-size:13px}
+.c44-car-placeholder{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:5px;min-height:136px;border:1px dashed var(--line);border-radius:10px;padding:10px 14px;background:var(--surface);color:var(--ink);font-size:11px}
+.c44-car-placeholder .c42-icon{width:35px;height:35px;margin:0;color:var(--link);background:transparent}
+.c44-car-placeholder strong{font-size:13px;line-height:1.5}
+.c44-car-placeholder>span:not(.c42-link){color:var(--muted)}
+.c44-polish .c42-videos .c42-video-list{gap:10px}
+.c44-polish .c42-videos .c42-video{display:grid;grid-template-columns:144px minmax(0,1fr);gap:12px;padding:8px;border:1px solid var(--line);border-radius:10px;background:var(--surface);font-size:12px;line-height:1.5}
+.c44-polish .c42-videos .c44-video-art{width:144px;height:86px}
+.c44-polish .c42-videos .c44-video-art img{width:100%;height:100%;object-fit:contain;border-radius:7px}
+.c44-polish .c42-videos .c44-play{width:32px;height:32px;font-size:14px;box-shadow:0 2px 7px #0004}
+.c44-polish .c44-brand-strip{padding:13px 16px}
+.c44-polish .c44-brand-strip>p{margin:4px 0 9px}
+.c44-polish .c44-brand-strip .c42-brands{gap:8px;padding-bottom:3px}
+.c44-polish .c44-brand-strip .c42-brands li{min-height:66px;padding:6px}
+@media(max-width:560px){
+ .c44-polish .c42-content .c42-feed{column-gap:10px}
+ .c44-car-gallery{grid-auto-columns:minmax(242px,1fr)}
+ .c44-polish .c42-videos .c42-video{grid-template-columns:96px minmax(0,1fr);gap:10px;padding:7px}
+ .c44-polish .c42-videos .c44-video-art{width:96px;height:64px}
+ .c44-polish .c42-videos .c44-play{width:28px;height:28px;font-size:12px}
+ .c44-polish .c44-brand-strip{padding:12px}
+}
+/* Missing thumbnails retain the reserved visual box and the actual video link. */
+.c44-polish .c44-video-art:has(img[hidden]){min-height:86px}
+@media(max-width:560px){.c44-polish .c44-video-art:has(img[hidden]){min-height:64px}}
+.c44-polish .c44-car-gallery .c44-car:has(>img[hidden])::after{width:96px;height:72px}

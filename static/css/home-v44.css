@@ -1,0 +1,104 @@
+/* V4.4 PREMIUM AUTOMOTIVE PREVIEW. Presentation only, V4.2 geometry unchanged.
+   No selectors or inherited variables target the locked editorial section. */
+body .c42-home .c42-hero{
+ --ink:#102b50;--muted:#36516e;--link:#124ca6;
+ background:linear-gradient(115deg,#f2f8ff,#e3f0ff 70%,#eef4fb);
+ border-color:#acc8e8;box-shadow:0 8px 24px #17395b0c;
+}
+body .c42-home .c42-hero h1 span{color:#174fa7}
+body .c42-home .c42-hero .c42-eyebrow{color:#8b410e}
+body .c42-home .c42-button{
+ background:#154fa9;box-shadow:0 4px 10px #154fa91f;
+ transition:background-color .16s ease,box-shadow .16s ease;
+}
+body .c42-home .c42-button>span{color:#ffe0bd}
+body .c42-home .c42-button:hover{background:#103c83;box-shadow:0 5px 14px #154fa933}
+body .c42-home .c42-button:focus-visible{outline:3px solid #a44813;outline-offset:4px}
+body .c42-home .c42-feature,
+body .c42-home .c42-care>.c42-card,
+body .c42-home .c42-bottom>.c42-card{
+ --ink:#122e51;--muted:#3c526b;--line:#c6d5e6;--link:#164fa5;
+ border-color:#c6d5e6;box-shadow:0 3px 12px #14375409;
+ transition:box-shadow .18s ease,border-color .18s ease,transform .18s ease;
+}
+body .c42-home .c42-feature.blue,body .c42-home .c42-care>.blue{background:#edf4ff}
+body .c42-home .c42-feature.mint,body .c42-home .c42-care>.mint{background:#eef7f4}
+body .c42-home .c42-feature.peach,body .c42-home .c42-care>.peach{background:#fff3e9}
+body .c42-home .c42-feature.lavender{background:#f2f1fb}
+body .c42-home .c42-bottom>.c42-card{background:#fff}
+.c42-best .c42-brands li{border-color:#c6d5e6;background:#f5f8fd}
+.c42-best .c42-icon-cars{color:#17576d;background:#e0eff7}
+.c42-videos .c42-icon-video{color:#974311;background:#ffead8}
+body.toon-v31:not(.light) .c42-home .c42-hero{
+ --ink:#f0f6ff;--muted:#c0d1e7;--link:#bad7ff;
+ background:linear-gradient(115deg,#132b49,#183c60);border-color:#426084;box-shadow:0 8px 24px #0002;
+}
+body.toon-v31:not(.light) .c42-home .c42-hero h1 span{color:#a9ceff}
+body.toon-v31:not(.light) .c42-home .c42-hero .c42-eyebrow{color:#ffca96}
+body.toon-v31:not(.light) .c42-home .c42-feature,
+body.toon-v31:not(.light) .c42-home .c42-care>.c42-card,
+body.toon-v31:not(.light) .c42-home .c42-bottom>.c42-card{
+ --ink:#edf5ff;--muted:#c3d2e6;--line:#415d7d;--link:#bad7ff;
+ background:#192f49;border-color:#415d7d;box-shadow:0 3px 12px #0002;
+}
+body.toon-v31:not(.light) .c42-home .c42-best .c42-brands li{background:#203a56;border-color:#486482}
+body.toon-v31:not(.light) .c42-home .c42-button:focus-visible{outline-color:#ffc58c}
+@media(hover:hover) and (pointer:fine){
+ body .c42-home .c42-feature:hover,
+ body .c42-home .c42-care>.c42-card:hover,
+ body .c42-home .c42-bottom>.c42-card:hover{
+  transform:translateY(-2px);border-color:#729bd0;box-shadow:0 8px 20px #1437541a;
+ }
+}
+/* Opacity only on text: no movement/animation of the original Toon artwork. */
+@media(prefers-reduced-motion:no-preference){
+ .c42-hero>div:first-child{animation:c44-hero-intro .28s ease-out both}
+}
+@keyframes c44-hero-intro{from{opacity:.65}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+ .c42-hero>div:first-child{animation:none!important}
+ body .c42-home .c42-feature:hover,
+ body .c42-home .c42-care>.c42-card:hover,
+ body .c42-home .c42-bottom>.c42-card:hover{transform:none;transition:none!important}
+}
+/* Existing approved scenic road is decorative; original Toon remains a separate,
+   unmodified contain-fit PNG. No layout dimensions change above locked feeds. */
+body .c42-home .c42-hero{
+ background-image:linear-gradient(90deg,rgba(245,250,255,.98),rgba(236,245,255,.93) 53%,rgba(236,245,255,.35)),url('/static/images/home-v44/scenic-road-1280.webp');
+ background-size:cover;background-position:center;
+}
+body.toon-v31:not(.light) .c42-home .c42-hero{
+ background-image:linear-gradient(90deg,rgba(15,34,58,.98),rgba(18,44,72,.93) 53%,rgba(18,44,72,.55)),url('/static/images/home-v44/scenic-road-1280.webp');
+}
+.c44-catalog{margin:8px 0}
+.c44-car{display:grid;grid-template-columns:120px minmax(0,1fr);align-items:center;gap:12px;border:1px solid var(--line);border-radius:10px;padding:8px;background:var(--surface)}
+.c44-car img{display:block;width:120px;height:80px;object-fit:contain;border-radius:7px}
+.c44-car>span{display:grid;gap:4px;min-width:0}
+.c44-car small{font-size:9px;letter-spacing:.6px;color:var(--muted);overflow-wrap:anywhere}
+.c44-car strong{font-size:14px;line-height:1.4;color:var(--ink);overflow-wrap:anywhere}
+.c42-home .c44-catalog-note{font-size:11px;line-height:1.5;margin:6px 0;color:var(--muted)}
+.c42-videos .c42-video-list{grid-template-columns:1fr;gap:10px}
+.c42-videos .c42-video{align-items:center;gap:12px}
+.c44-video-art{display:block;position:relative;flex:0 0 104px;min-width:0}
+.c42-home .c44-video-art img{display:block;width:104px;height:64px;object-fit:contain;background:#102743;border:1px solid var(--line)}
+.c44-play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:#102743e8;color:#ffd0a1;font-size:12px;line-height:1;pointer-events:none;box-shadow:0 1px 5px #0003}
+body.toon-v31:not(.light) .c42-home .c44-car{background:#142a43}
+@media(max-width:560px){
+ body .c42-home .c42-hero{background-image:linear-gradient(90deg,rgba(245,250,255,.98),rgba(236,245,255,.90) 70%,rgba(236,245,255,.45)),url('/static/images/home-v44/scenic-road-640.webp')}
+ body.toon-v31:not(.light) .c42-home .c42-hero{background-image:linear-gradient(90deg,rgba(15,34,58,.98),rgba(18,44,72,.94) 70%,rgba(18,44,72,.60)),url('/static/images/home-v44/scenic-road-640.webp')}
+ .c44-car{grid-template-columns:96px minmax(0,1fr);gap:10px}
+ .c44-car img{width:96px;height:64px}
+ .c44-video-art{flex-basis:88px}
+ .c42-home .c44-video-art img{width:88px;height:56px}
+}
+.c44-car:has(>img[hidden])::after{content:"Catalog image unavailable";font-size:11px;color:var(--muted)}
+.c44-video-art:has(img[hidden]){min-height:64px;background:#102743;border-radius:6px}
+.c44-car img[hidden],.c44-video-art img[hidden]{display:none!important}
+/* Opaque fallback preserves text contrast when decorative scenery is absent. */
+body .c42-home .c42-hero{background-color:#f2f8ff}
+body.toon-v31:not(.light) .c42-home .c42-hero{background-color:#132b49}
+
+/* Preserve the same reserved boxes when a below-fold image fails. */
+.c44-car:has(>img[hidden])>span{grid-column:2;grid-row:1}
+.c44-car:has(>img[hidden])::after{grid-column:1;grid-row:1;display:grid;place-items:center;width:120px;height:80px;text-align:center;background:var(--surface);border:1px solid var(--line);border-radius:7px}
+@media(max-width:560px){.c44-car:has(>img[hidden])::after{width:96px;height:64px}.c44-video-art:has(img[hidden]){min-height:56px}}
