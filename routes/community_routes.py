@@ -5,13 +5,13 @@ import os
 from types import SimpleNamespace
 from urllib import error, parse, request as urllib_request
 
-from flask import Blueprint, current_app, flash, jsonify, make_response, redirect, render_template, request, url_for
+from flask import abort, Blueprint, current_app, flash, jsonify, make_response, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 from models.models import CarCommunity, Comment, Post, User, Vote, db
 from services.public_image_storage import public_image_url, store_public_image
 from services.community_privacy_client import call as _privacy_call
 from services.canonical_garage_client import _token, GarageError
-from sqlalchemy import or_
+from sqlalchemy import or_, text, bindparam
 from sqlalchemy.orm import selectinload
 
 community_bp = Blueprint("community", __name__)
@@ -166,7 +166,9 @@ def _root_comment_threads(comments):
     return sorted(roots, key=_comment_sort_key)
 
 
-def _decorate_local_post(post):
+def _decorate_local_post(post, _visibility_checked=False):
+    if not _visibility_checked and not _visible_local_posts([post]):
+        abort(404)
     post.is_remote = False
     post.remote_id = None
     post.detail_url = url_for("community.post_detail", post_id=post.id)
@@ -365,43 +367,51 @@ def _remote_community_feed_enabled():
 
 
 def _load_remote_posts(force_refresh=False):
+    # Visibility and account erasure must be checked afresh on every read.
+    # Clear old in-process values, including rolling-process remnants; no stale fallback.
+    REMOTE_POST_CACHE.update(expires_at=None, posts=[])
     if not _remote_community_feed_enabled():
-        return REMOTE_POST_CACHE["posts"] if REMOTE_POST_CACHE["posts"] else []
-
-    now = datetime.utcnow()
-    if not force_refresh and REMOTE_POST_CACHE["expires_at"] and REMOTE_POST_CACHE["expires_at"] > now:
-        return REMOTE_POST_CACHE["posts"]
-
+        return []
     timeout = float(os.environ.get("REMOTE_COMMUNITY_TIMEOUT_SECONDS", "1.5"))
     payload = _privacy_call("/community/posts?limit=40&include_replies=true", timeout=timeout)
-    if not payload:
-        return REMOTE_POST_CACHE["posts"] if REMOTE_POST_CACHE["posts"] else []
-
-    remote_posts = []
-    for post in payload.get("posts") or []:
-        if (post.get("source") or "").lower() == "website":
+    if not isinstance(payload, dict) or not isinstance(payload.get("posts"), list):
+        return []
+    posts = []
+    for post in payload["posts"]:
+        if not isinstance(post, dict) or (post.get("source") or "").lower() == "website" or post.get("id") is None:
             continue
-        if post.get("id") is None:
-            current_app.logger.warning("remote_community_post_skipped reason=missing_id")
-            continue
-        remote_posts.append(_build_remote_post(post))
-    remote_posts = remote_posts[:40]
-    REMOTE_POST_CACHE["posts"] = remote_posts
-    REMOTE_POST_CACHE["expires_at"] = now + timedelta(seconds=REMOTE_CACHE_TTL_SECONDS)
-    return remote_posts
+        posts.append(_build_remote_post(post))
+    return posts[:40]
 
 
 def _load_remote_post(remote_post_id):
-    for post in _load_remote_posts():
-        if str(post.remote_id) == str(remote_post_id):
-            return post
+    REMOTE_POST_CACHE.update(expires_at=None, posts=[])
+    if not _remote_community_feed_enabled():
+        return None
     try:
         identity = str(int(remote_post_id))
     except (TypeError, ValueError):
         return None
     payload = _privacy_call("/community/posts/" + identity)
     post = (payload or {}).get("post")
-    return _build_remote_post(post) if isinstance(post, dict) else None
+    if not isinstance(post, dict) or str(post.get("id")) != identity:
+        return None
+    return _build_remote_post(post)
+
+
+def _visible_local_posts(posts):
+    # Imported Website discussions have a canonical source-scoped reference.
+    # Do not confuse local post IDs with canonical IDs. Missing schema/DB errors
+    # propagate as unavailable; they never permit hidden content as a fallback.
+    if not posts:
+        return []
+    refs = ["web-post-" + str(int(post.id)) for post in posts]
+    statement = text("SELECT c.external_id FROM public.community_post c "
+                     "JOIN public.community_post_hide h ON h.post_id=c.id "
+                     "WHERE c.source='website' AND c.external_id IN :refs")
+    statement = statement.bindparams(bindparam('refs', expanding=True))
+    hidden = set(db.session.execute(statement, {'refs': refs}).scalars())
+    return [post for post in posts if "web-post-" + str(int(post.id)) not in hidden]
 
 
 def _find_remote_post_id_for_website_post(local_post_id):
@@ -649,6 +659,8 @@ def _community_post_for_api(post_id):
 
 
 def _comments_for_post(post_id):
+    if not _visible_local_posts([SimpleNamespace(id=post_id)]):
+        abort(404)
     comments = (
         Comment.query
         .options(selectinload(Comment.user), selectinload(Comment.replies).selectinload(Comment.user))
@@ -671,7 +683,7 @@ def _community_feed(limit=50, include_remote=False):
         .order_by(Post.id.desc())
         .limit(limit)
     )
-    local_posts = [_decorate_local_post(post) for post in local_query.all()]
+    local_posts = [_decorate_local_post(post, _visibility_checked=True) for post in _visible_local_posts(local_query.all())]
     remote_posts = _load_remote_posts(force_refresh=request.args.get("fresh", "").lower() == "true") if include_remote else []
     posts = sorted(
         local_posts + remote_posts,
@@ -926,7 +938,7 @@ def community():
                     Post.content.ilike(f"%{query}%"),
                 )
             )
-        local_posts = [_decorate_local_post(post) for post in local_query.limit(80).all()]
+        local_posts = [_decorate_local_post(post, _visibility_checked=True) for post in _visible_local_posts(local_query.limit(80).all())]
     except Exception as exc:
         db.session.rollback()
         current_app.logger.warning("community_section_error=local_posts error=%s detail=%s", exc.__class__.__name__, str(exc)[:300])

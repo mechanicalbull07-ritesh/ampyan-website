@@ -404,6 +404,20 @@ def _create_indexes():
 def ensure_analytics_schema(reason=None):
     """Additively create/repair analytics storage without touching core tables."""
     global _schema_retry_after
+    if os.environ.get("AMPYAN_SCHEMA_MANAGED_EXTERNALLY") == "1":
+        # Scoped runtime is intentionally not a schema owner. Validate existing
+        # storage only; never repair indexes/tables from request/worker code.
+        try:
+            inspector = inspect(db.engine)
+            for model in (WebsiteVisit, AnalyticsEvent, AnalyticsDedupeClaim, ApiRequestMetric):
+                if not inspector.has_table(model.__tablename__):
+                    return False
+                columns = {c['name'] for c in inspector.get_columns(model.__tablename__)}
+                if not set(model.__table__.columns.keys()).issubset(columns):
+                    return False
+            return True
+        except Exception:
+            return False
     if time.monotonic() < _schema_retry_after:
         return False
 

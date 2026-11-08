@@ -68,5 +68,16 @@ def install(app):
     if app.before_request_funcs.get(None):
         raise RuntimeError('Community read-only guard must be installed first')
     app.before_request(reject)
+    app.after_request(response_policy)
     app.context_processor(lambda:{'community_read_only':True,'community_read_only_notice':NOTICE})
     app.add_template_filter(public_name,'community_public_name')
+
+
+def response_policy(response):
+    path = request.path.rstrip('/') or '/'
+    if (request.blueprint == 'community' or path in ('/community', '/api/community')
+            or path.startswith(('/community/', '/api/community/'))
+            or re.fullmatch(r'/post/[0-9]+(?:/.*)?', path)):
+        response.headers['Cache-Control'] = 'private, no-store, max-age=0'
+        response.vary.add('Authorization')
+    return response

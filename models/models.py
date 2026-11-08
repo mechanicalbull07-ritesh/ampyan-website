@@ -498,6 +498,8 @@ class AnalyticsEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     created_at = db.Column(db.DateTime, default=db.func.current_timestamp(), index=True)
     event_type = db.Column(db.String(60), nullable=False, index=True)
+    # Shared production API table already requires this existing column.
+    status = db.Column(db.String(30), nullable=False, default="stored")
     session_id = db.Column(db.String(100), index=True)
     source = db.Column(db.String(120), index=True)
     utm_medium = db.Column(db.String(60))

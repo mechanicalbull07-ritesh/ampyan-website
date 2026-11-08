@@ -921,6 +921,10 @@ def handle_csrf_error(_error):
         action_label="Return home and try again",
     ), 400
 
+if database_url and IS_PRODUCTION:
+    from services.postgres_transport import database_url as verified_postgres_url
+    database_url = verified_postgres_url(database_url, "website")
+
 app.config["SQLALCHEMY_DATABASE_URI"] = database_url or "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 engine_options = {"pool_pre_ping": True}
