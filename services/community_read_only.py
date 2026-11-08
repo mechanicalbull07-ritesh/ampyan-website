@@ -1,6 +1,7 @@
 """Temporary Website Community read-only containment. No schema, queue or replay state.
 The early guard must be registered before every other application request callback.
 """
+import os
 import re
 from flask import g,request,jsonify,make_response
 
@@ -29,6 +30,25 @@ def guarded():
     return False
 
 def reject():
+    path = request.path.rstrip('/') or '/'
+    hold = os.environ.get('COMMUNITY_PUBLIC_READ_HOLD', 'false').lower() == 'true'
+    community_read = (request.blueprint == 'community' or path in ('/community', '/api/community')
+                      or path.startswith(('/community/', '/api/community/'))
+                      or re.fullmatch(r'/post/[0-9]+(?:/.*)?', path))
+    if hold and request.method in ('GET', 'HEAD') and community_read:
+        # First request callback; never consult cache, identity, ORM or transport.
+        g.community_read_only_rejected = True
+        message = 'Community is temporarily unavailable during maintenance. Other website features remain available.'
+        if request.path.startswith('/api/') or request.accept_mimetypes.best == 'application/json':
+            response = jsonify(status='error', code='COMMUNITY_MAINTENANCE', message=message)
+            response.status_code = 503
+        else:
+            response = make_response('<!doctype html><html lang="en"><meta name="viewport" content="width=device-width, initial-scale=1">'
+                                     '<title>Community maintenance</title><main><h1>Community is temporarily unavailable</h1>'
+                                     '<p>' + message + '</p><a href="/">AMPYAN home</a></main></html>', 503)
+        response.headers['Cache-Control'] = 'no-store'
+        response.headers['X-Community-Mode'] = 'maintenance-hold'
+        return response
     if not guarded():return None
     # No current_user, form/files, session, models, uploads or HTTP access here.
     g.community_read_only_rejected=True
