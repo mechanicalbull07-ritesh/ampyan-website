@@ -9,7 +9,7 @@
 <a class="skip" href="#main">Skip to analytics</a>
 <div class="shell">
 <aside class="sidebar" aria-label="Admin navigation">
-<a class="brand" href="/admin"><img src="{{ url_for('static', filename='images/logo-navbar.svg') }}" alt="AMPYAN" width="150" height="40"><span>FOUNDER WORKSPACE</span></a>
+<a class="brand" href="/admin"><span class="brand-wordmark">AMPYAN</span><span>FOUNDER WORKSPACE</span></a>
 <div class="nav-label">ANALYTICS</div>
 <nav aria-label="Analytics sections">
 {% for key,label in sections.items() %}<a href="{{ url_for('admin.admin_analytics_v2', section=key, range=period) }}" {% if section == key %}aria-current="page"{% endif %}><span class="nav-mark" aria-hidden="true">{{ '%02d'|format(loop.index) }}</span>{{ label }}</a>{% endfor %}
