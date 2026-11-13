@@ -1,6 +1,6 @@
 """Read-only, bounded admin aggregates. No tracking, classification or cache writes."""
 from datetime import datetime, timedelta
-from sqlalchemy import case, func, or_
+from sqlalchemy import Text, case, func, or_
 from models.models import db, User, WebsiteVisit, AnalyticsEvent, TrafficMetric
 from services.analytics_contract import CANONICAL_EVENTS, ALLOWED_EVENT_TYPES
 
@@ -43,10 +43,13 @@ def build_summary(period='7d', section='overview', now=None):
                 func.lower(User.email).notin_(ADMIN_EMAIL_SET), User.is_managed_persona.isnot(True))
     excluded = db.select(User.id).where(or_(func.coalesce(User.role, 'user') == 'admin',
                        func.lower(User.email).in_(ADMIN_EMAIL_SET), User.is_managed_persona.is_(True)))
+    # Shared PostgreSQL events store IDs as text; WebsiteVisit IDs remain integers.
+    event_user_id = User.id.cast(Text)
+    excluded_event_ids = excluded.with_only_columns(event_user_id)
     human = (AnalyticsEvent.created_at >= start, AnalyticsEvent.created_at < end,
              AnalyticsEvent.is_bot.is_(False), AnalyticsEvent.is_internal.is_(False),
              AnalyticsEvent.is_admin.is_(False),
-             or_(AnalyticsEvent.user_id.is_(None), AnalyticsEvent.user_id.notin_(excluded)))
+             or_(AnalyticsEvent.user_id.is_(None), AnalyticsEvent.user_id.notin_(excluded_event_ids)))
     # Hourly anonymous counts cannot resolve IST midnight's half-hour boundary.
     traffic_start = start.replace(minute=0, second=0, microsecond=0)
     if traffic_start < start:
@@ -57,7 +60,7 @@ def build_summary(period='7d', section='overview', now=None):
         traffic[quality] = int(count or 0)
     registered = db.session.query(func.count(User.id)).filter(*eligible).scalar() or 0
     active = (db.session.query(func.count(func.distinct(AnalyticsEvent.user_id)))
-              .join(User, User.id == AnalyticsEvent.user_id)
+              .join(User, event_user_id == AnalyticsEvent.user_id)
               .filter(*human, *eligible, AnalyticsEvent.event_type.in_(MEANINGFUL_EVENTS)).scalar() or 0)
     event_key = case((AnalyticsEvent.event_type.in_(ALLOWED_EVENT_TYPES), AnalyticsEvent.event_type), else_='other')
     platform = case((AnalyticsEvent.traffic_type.in_(['web', 'app']), AnalyticsEvent.traffic_type), else_='other')
