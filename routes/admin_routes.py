@@ -1359,3 +1359,29 @@ def unfeature_garage(mechanic_id):
 
     flash("Garage removed from featured list.")
     return redirect("/admin")
+
+
+# Additive review candidate. The existing production dashboard is unchanged.
+@admin_bp.route('/admin/analytics-v2')
+@admin_bp.route('/admin/analytics-v2/<section>')
+@login_required
+def admin_analytics_v2(section='overview'):
+    if not _require_admin():
+        return 'Access Denied', 403
+    from services.admin_analytics_v2 import build_summary, SECTIONS, PERIODS
+    period = request.args.get('range', '7d')
+    if section not in SECTIONS or period not in PERIODS:
+        return 'Unsupported analytics view or period', 400
+    try:
+        summary = build_summary(period, section)
+    except Exception as exc:
+        db.session.rollback()
+        current_app.logger.warning('admin_analytics_v2_unavailable error=%s', type(exc).__name__)
+        summary = None
+    response = current_app.make_response(render_template(
+        'admin_analytics_v2.html', summary=summary, section=section, period=period,
+        sections=SECTIONS, periods=PERIODS))
+    response.headers['Cache-Control'] = 'private, no-store'
+    response.headers['Vary'] = 'Cookie'
+    response.headers['X-Robots-Tag'] = 'noindex, nofollow'
+    return response

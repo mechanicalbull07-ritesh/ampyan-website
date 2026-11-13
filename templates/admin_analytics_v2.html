@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><title>{{ sections[section] }} · AMPYAN Analytics</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/admin-analytics-v2.css') }}">
+</head>
+<body>
+<a class="skip" href="#main">Skip to analytics</a>
+<div class="shell">
+<aside class="sidebar" aria-label="Admin navigation">
+<a class="brand" href="/admin"><img src="{{ url_for('static', filename='images/logo-navbar.svg') }}" alt="AMPYAN" width="150" height="40"><span>FOUNDER WORKSPACE</span></a>
+<div class="nav-label">ANALYTICS</div>
+<nav aria-label="Analytics sections">
+{% for key,label in sections.items() %}<a href="{{ url_for('admin.admin_analytics_v2', section=key, range=period) }}" {% if section == key %}aria-current="page"{% endif %}><span class="nav-mark" aria-hidden="true">{{ '%02d'|format(loop.index) }}</span>{{ label }}</a>{% endfor %}
+</nav>
+<div class="side-note"><span class="status-dot"></span> YOUR DATA, CLEARLY<p>Every number has a source. Page loads are not people.</p></div>
+<a class="back-link" href="/admin/analytics/overview">← Original dashboard</a>
+</aside>
+<main id="main" tabindex="-1">
+<header class="page-head"><div><p class="eyebrow">AMPYAN / ANALYTICS</p><h1>{{ sections[section] }}</h1><p class="lede">{% if section == 'overview' %}A clear view of traffic and meaningful activity.{% elif section == 'traffic' %}Understand requests before you call them visitors.{% elif section == 'engagement' %}See which features people choose to use.{% elif section == 'acquisition' %}Recorded sources, with their limits in view.{% else %}The actions that move AMPYAN forward.{% endif %}</p></div><span class="access-badge">Admin only</span></header>
+<nav class="periods" aria-label="Date range">{% for key,label in periods.items() %}<a href="{{ url_for('admin.admin_analytics_v2', section=section, range=key) }}" {% if period == key %}aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+{% if summary is none %}
+<section class="panel unavailable" role="status"><p class="eyebrow">DATA UNAVAILABLE</p><h2>We couldn’t load this view.</h2><p>These values are unavailable, not zero. Retry this page or use the original dashboard. No tracking settings have changed.</p></section>
+{% else %}
+<p class="freshness">Updated {{ summary.as_of_ist }} <span>·</span> {% if period == 'today' %}Today from midnight IST{% else %}Trailing {{ periods[period] }}{% endif %} <span>·</span> Registered accounts are an all-time snapshot.</p>
+{% if section in ['overview','traffic'] %}
+<div class="metrics">
+<article class="metric primary"><p>Human-like page loads</p><strong>{{ '{:,}'.format(summary.traffic.human_like) }}</strong><span>Browser-like request signals</span><small>TrafficMetric · not unique people</small></article>
+<article class="metric"><p>Likely bot page loads</p><strong>{{ '{:,}'.format(summary.traffic.likely_bot) }}</strong><span>Recognised automation signals</span><small>TrafficMetric · classification, not certainty</small></article>
+{% if section == 'overview' %}
+<article class="metric"><p>Registered accounts</p><strong>{{ '{:,}'.format(summary.registered) }}</strong><span>All-time account snapshot</span><small>Excludes admins & managed personas</small></article>
+<article class="metric"><p>Meaningfully active accounts</p><strong>{{ '{:,}'.format(summary.active) }}</strong><span>Known accounts with a feature action</span><small>AnalyticsEvent · consented subset</small></article>
+{% else %}
+<article class="metric"><p>Unclassified page loads</p><strong>{{ '{:,}'.format(summary.traffic.unknown) }}</strong><span>Not enough browser or bot signals</span><small>TrafficMetric · kept separate</small></article>
+<article class="metric"><p>Eligible page loads</p><strong>{{ '{:,}'.format(summary.traffic_total) }}</strong><span>All three classifications</span><small>TrafficMetric only · no sources added</small></article>
+{% endif %}
+</div>
+<section class="panel chart-panel"><div class="panel-head"><div><p class="eyebrow">TRAFFICMETRIC / ORIGIN-SERVED HTML</p><h2>Traffic at a glance</h2></div><div class="legend"><span class="human">Human-like</span><span class="bot">Likely bot</span><span class="unknown">Unclassified</span></div></div>
+<p class="explain">Daily totals use UTC dates. Buckets start {{ summary.traffic_start_ist }}; the current hour may be incomplete. Hourly storage cannot resolve IST midnight’s half-hour boundary.</p>
+<div class="chart" role="list" aria-label="Daily page load counts, UTC">
+{% for row in summary.trend %}<div class="chart-row" role="listitem" aria-label="{{ row.day }} UTC: {{ row.human_like }} human-like, {{ row.likely_bot }} likely bot, {{ row.unknown }} unclassified"><time>{{ row.day[5:] }}</time><div class="track" aria-hidden="true"><i class="human" style="width:{{ (row.human_like / summary.trend_max * 100)|round(3) }}%"></i><i class="bot" style="width:{{ (row.likely_bot / summary.trend_max * 100)|round(3) }}%"></i><i class="unknown" style="width:{{ (row.unknown / summary.trend_max * 100)|round(3) }}%"></i></div><strong>{{ '{:,}'.format(row.human_like + row.likely_bot + row.unknown) }}</strong></div>{% endfor %}
+</div>
+{% if not summary.traffic_total %}<p class="empty">No eligible page loads recorded for these stored buckets.</p>{% endif %}
+<div class="chart-footer"><span>Unclassified loads: <strong>{{ '{:,}'.format(summary.traffic.unknown) }}</strong></span><span>Request counts, never unique visitors</span></div></section>
+{% endif %}
+{% if section == 'overview' %}
+<div class="two-up"><section class="panel"><p class="eyebrow">ANALYTICSEVENT / RECORDED ACTIONS</p><h2>Progress worth watching</h2><p class="explain">Consented action records, not unique conversions. Website and app stay separate.</p>
+{% for row in summary.conversions %}<div class="action-row"><span>{{ row.label }}</span><strong>{{ row.web }} <small>web</small> / {{ row.app }} <small>app</small>{% if row.other %} / {{ row.other }} <small>other</small>{% endif %}</strong></div>{% endfor %}<a class="text-link" href="{{ url_for('admin.admin_analytics_v2', section='conversions', range=period) }}">Explore conversion actions →</a></section>
+<section class="panel note-panel"><p class="eyebrow">READ THIS FIRST</p><h2>What these numbers mean</h2><p>TrafficMetric counts eligible public page loads, including visits without analytics consent. A person can load many pages.</p><p>Active accounts have at least one recorded feature action beyond login or signup. Anonymous activity and unconsented behavior are not counted as active accounts.</p><p>GA4 reports are unavailable here. We never substitute another source for GA4.</p></section></div>
+{% endif %}
+{% if section == 'traffic' %}
+<section class="panel"><h2>How traffic is classified</h2><div class="definition-grid"><div><h3>Human-like</h3><p>Recognised browser signals plus document-navigation headers. This does not prove a human.</p></div><div><h3>Likely bot</h3><p>Existing crawler, automation, monitoring or headless user-agent markers. Bots can hide these signals.</p></div><div><h3>Unclassified</h3><p>Signals are insufficient. These requests are not reassigned to humans or bots.</p></div></div><p class="explain">Only eligible public GET requests returning origin-served HTML 200 are counted. Admin, internal, private, prefetch and non-document requests are excluded by the accepted classifier. CDN-served requests may not reach the origin.</p></section>
+{% endif %}
+{% if section in ['engagement','conversions'] %}
+<section class="panel"><p class="eyebrow">ANALYTICSEVENT / CONSENTED ACTIONS</p><h2>{% if section == 'engagement' %}Feature activity{% else %}Conversion actions{% endif %}</h2><p class="explain">Counts are records, not unique people. Bot, internal, admin and managed-persona activity is excluded. Zero means no qualifying records in this period.</p>
+<div class="table-wrap" tabindex="0" role="region" aria-label="Recorded actions; scroll horizontally if needed"><table><thead><tr><th scope="col">Recorded action</th><th scope="col">Website</th><th scope="col">App</th><th scope="col">Other channel</th></tr></thead><tbody>{% for row in (summary.engagement if section == 'engagement' else summary.conversions) %}<tr><th scope="row">{{ row.label }}</th><td>{{ '{:,}'.format(row.web) }}</td><td>{{ '{:,}'.format(row.app) }}</td><td>{{ '{:,}'.format(row.other) }}</td></tr>{% else %}<tr><td colspan="4">No qualifying feature actions recorded.</td></tr>{% endfor %}</tbody></table></div></section>
+<section class="panel note-panel"><h2>Diagnosis steps, not a linked funnel</h2><div class="steps"><div><span>01 / Started</span><strong>{{ summary.counts.get('diagnosis_started', {}).get('web', 0) }}</strong><small>Website action records</small></div><span aria-hidden="true">→</span><div><span>02 / Completed</span><strong>{{ summary.counts.get('diagnosis_completed', {}).get('web', 0) }}</strong><small>Website action records</small></div></div><p>These are independent event counts. Starts and completions may belong to different sessions or periods; a completion rate would be misleading. Signup records also depend on consent and tracking coverage.</p></section>
+{% endif %}
+{% if section == 'acquisition' %}
+<section class="panel"><p class="eyebrow">ANALYTICSEVENT / WEBSITE ONLY</p><h2>Where recorded activity came from</h2><p class="explain">Website action records grouped by their recorded source label. This is not a visitor count, acquisition attribution model or signup attribution report. Missing labels stay missing.</p>
+{% for row in summary.sources %}<div class="action-row"><span>{{ row.label }}</span><strong>{{ '{:,}'.format(row.count) }} <small>records</small></strong></div>{% else %}<p class="empty">No qualifying website source records for this period.</p>{% endfor %}
+</section><section class="panel note-panel"><h2>What isn’t available</h2><p>Anonymous TrafficMetric buckets have no source attribution. GA4 reports and a linked conversion attribution model are not connected to this dashboard. Raw UTM strings and referrer URLs are not displayed.</p></section>
+{% endif %}
+<details class="panel source-details"><summary>Data sources & coverage</summary><dl><div><dt>TrafficMetric</dt><dd>Anonymous hourly origin page-load counts. No visitor identities. Today uses stored UTC buckets starting at {{ summary.traffic_start_ist }}.</dd></div><div><dt>WebsiteVisit</dt><dd>{{ '{:,}'.format(summary.website_views) }} qualifying consented page-view records from {{ summary.window_start_ist }}. Separate from TrafficMetric; never added to it. Historical flag handling follows the existing dashboard.</dd></div><div><dt>AnalyticsEvent</dt><dd>{{ '{:,}'.format(summary.event_records) }} qualifying action records in the selected period. Stored web/app channels remain separate. FALSE bot/internal/admin flags are required, as in the existing live summary.</dd></div><div><dt>Registered accounts</dt><dd>Current non-admin, non-managed-persona account count. All time; no signup timestamp exists in the account model.</dd></div><div><dt>Meaningfully active accounts</dt><dd>Distinct eligible registered account IDs with a canonical feature action other than signup or login. A consented subset, not all active visitors. <details><summary>Included actions</summary><p>Diagnosis started/completed; vehicle added/updated; Car Health viewed; fuel/EMI/depreciation calculator used; repair estimate used; garage viewed/contact clicked; blog viewed/created; comment added; marketplace viewed; video clicked; share clicked.</p></details></dd></div><div><dt>GA4 & legacy clicks</dt><dd>GA4 report values are unavailable. WebsiteEvent legacy clicks remain in the original dashboard and are not combined with AnalyticsEvent.</dd></div></dl></details>
+{% endif %}
+<footer>AMPYAN Admin <span>·</span> Aggregate information only <span>·</span> <a href="/admin">Back to dashboard</a></footer>
+</main></div></body></html>

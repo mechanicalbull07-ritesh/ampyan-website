@@ -1,1 +1,2 @@
-{% extends 'base.html' %}{% block content %}<h1>Confirm your email</h1><form method='post'><input type='hidden' name='csrf_token' value='{{ csrf_token() }}'><button>Verify email</button></form>{% endblock %}
+{% extends 'base.html' %}{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public-page-polish.css') }}"><div class="auth-wrapper public-page-polish confirm-email-polish"><div class="auth-card"><h1>Confirm your email</h1><form method='post' class='polish-auth-form'><input type='hidden' name='csrf_token' value='{{ csrf_token() }}'><button class="auth-btn">Verify email</button></form></div></div>{% endblock %}
