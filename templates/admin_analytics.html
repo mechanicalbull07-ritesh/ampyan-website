@@ -19,7 +19,8 @@
 
 <div class="admin-studio-nav card-spacer">
 <a href="/admin"><i class="fa-solid fa-gauge-high"></i><span>Dashboard</span></a>
-<a href="/admin/analytics/overview" class="{% if section == 'overview' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i><span>Overview</span></a>
+<a href="/admin/analytics-v2/overview?range=7d"><i class="fa-solid fa-chart-line"></i><span>Analytics V2</span></a>
+<a href="/admin/analytics/overview" class="{% if section == 'overview' %}active{% endif %}"><i class="fa-solid fa-chart-line"></i><span>Legacy Analytics</span></a>
 <a href="/admin/analytics/traffic" class="{% if section == 'traffic' %}active{% endif %}"><i class="fa-solid fa-signal"></i><span>Traffic</span></a>
 <a href="/admin/analytics/engagement" class="{% if section == 'engagement' %}active{% endif %}"><i class="fa-solid fa-arrow-pointer"></i><span>Engagement</span></a>
 <a href="/admin/analytics/users" class="{% if section == 'users' %}active{% endif %}"><i class="fa-solid fa-users"></i><span>Users</span></a>
