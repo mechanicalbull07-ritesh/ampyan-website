@@ -1,0 +1,16 @@
+/* Loaded only by the audited non-Home templates; never imported by base/Home. */
+.toon-v31 .public-page-polish .polish-inline-link { color:var(--accent); }
+.toon-v31 .public-page-polish .news-section-heading > span { color:var(--text-secondary); }
+.toon-v31.light .public-page-polish :is(.blog-card-tags,.blog-tags) a { color:#f5f7fb; }
+.toon-v31.light .public-page-polish .city-cluster-card strong { color:var(--text); }
+.toon-v31.light .public-page-polish .city-cluster-card p { color:var(--text-secondary); }
+.toon-v31.light .public-page-polish .city-cluster-card span { color:var(--accent); }
+.toon-v31.light .public-page-polish .garage-network-card :is(.ui-meta-label,.ui-meta-value,.garage-trust-score,.ui-pill) { color:#d7e2ef; }
+.toon-v31.light .public-page-polish .garage-network-card .garage-trust-level { color:#ffd0be; }
+.toon-v31 .public-page-polish .polish-auth-form { display:grid;gap:16px; }
+.toon-v31 .confirm-email-polish h1 { font-size:32px;line-height:1.25;margin:0 0 24px; }
+.toon-v31 .forgot-password-polish .auth-back { display:inline-block;margin-top:18px; }
+@media(max-width:900px) {
+  .toon-v31 .public-page-polish .diagnose-layout { flex-direction:column;gap:24px; }
+  .toon-v31 .public-page-polish :is(.diagnose-card,.diagnose-result) { width:100%;min-width:0; }
+}

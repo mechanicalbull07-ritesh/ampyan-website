@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public-page-polish.css') }}">
 {% macro render_news_reply(reply, news) %}
 <div class="simple-list-card reply-card {% if reply.parent_id %}nested-reply{% endif %}">
 <p class="body-copy-lg" style="margin-top:0;">{{ reply.content }}</p>
@@ -44,7 +45,7 @@
 {% endfor %}
 {% endmacro %}
 
-<article class="news-article-shell">
+<article class="news-article-shell public-page-polish">
 <header class="news-article-header">
 <a href="{{ url_for('news_list') }}" class="news-back-link"><i class="fa-solid fa-arrow-left" aria-hidden="true"></i><span>News</span></a>
 <span class="news-category-badge">{{ news_category_label(effective_news_category(news)) }}</span>
@@ -135,7 +136,7 @@
 </form>
 </div>
 {% else %}
-<p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" style="color:#ff3b3b;">login</a> to reply.</p>
+<p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" class="polish-inline-link">login</a> to reply.</p>
 {% endif %}
 </section>
 <script>

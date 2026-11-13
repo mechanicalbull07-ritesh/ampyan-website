@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
-<section class="blog-shell">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public-page-polish.css') }}">
+<section class="public-page-polish blog-shell">
 <header class="blog-hero"><p class="page-kicker">AMPYAN Community</p><h1>Community Blog</h1><p>Automotive stories, ownership lessons and practical advice from the AMPYAN community.</p>{% if current_user.is_authenticated %}
 <div class="ui-button-row">
 <a class="auth-button" href="{{ url_for('website_blogs.write') }}">Write a Blog</a>

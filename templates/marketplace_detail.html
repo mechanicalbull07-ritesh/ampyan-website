@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/public-page-polish.css') }}">
 
-<section class="page-shell">
+<section class="page-shell public-page-polish">
 <div class="ui-card narrow-card">
 <div class="garage-trust-top">
 <span class="garage-trust-level">{{ listing.listing_type|upper }}</span>
@@ -50,7 +51,7 @@
 {% elif current_user.is_authenticated %}
 <p class="section-copy">This is your listing.</p>
 {% else %}
-<p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" style="color:#ff5a36;">login</a> to message this user.</p>
+<p class="page-subtitle">Please <a href="{{ url_for('auth.login') }}" class="polish-inline-link">login</a> to message this user.</p>
 {% endif %}
 </div>
 </section>
