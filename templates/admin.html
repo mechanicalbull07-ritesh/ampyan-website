@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% if g.get('admin_mechanics_unavailable') %}
+<div class="ui-card card-spacer" role="status">Garage information temporarily unavailable. Please try again later.</div>
+{% endif %}
 
 <section class="page-shell">
 <div class="page-header">

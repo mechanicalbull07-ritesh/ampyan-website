@@ -2,10 +2,10 @@ from collections import Counter, defaultdict
 from datetime import datetime, time, timedelta
 import secrets
 
-from flask import Blueprint, current_app, jsonify, render_template, redirect, flash, request, url_for
+from flask import Blueprint, current_app, g, jsonify, render_template, redirect, flash, request, url_for
 from flask_login import login_required, current_user
 from sqlalchemy import inspect as sqlalchemy_inspect
-from sqlalchemy.orm import load_only
+from sqlalchemy.orm import load_only, selectinload
 from werkzeug.security import generate_password_hash
 
 from models.models import db, User, Post, Comment, News, WebsiteVisit, WebsiteEvent, MechanicProfile, MechanicReview, Car, CarCommunity
@@ -272,6 +272,47 @@ def _empty_admin_analytics_context(section="overview"):
     }
 
 
+def _legacy_user_stats(user_ids, frequency_start):
+    """Bounded aggregate/latest-row batches; preserve the old 1000-visit cap.
+
+    Latest-in-period takes precedence over the all-time fallback, including
+    databases where descending timestamp order puts NULL timestamps first.
+    """
+    if not user_ids:
+        return {}
+    stats = {uid: {} for uid in user_ids}
+    visits = db.session.query(WebsiteVisit.user_id, db.func.count(WebsiteVisit.id)).filter(
+        WebsiteVisit.user_id.in_(user_ids), WebsiteVisit.is_page_view.is_(True))
+    events = db.session.query(WebsiteEvent.user_id, db.func.count(WebsiteEvent.id)).filter(
+        WebsiteEvent.user_id.in_(user_ids))
+    if frequency_start:
+        visits = visits.filter(WebsiteVisit.visit_time >= frequency_start)
+        events = events.filter(WebsiteEvent.event_time >= frequency_start)
+    for uid, count in visits.group_by(WebsiteVisit.user_id).all():
+        stats[uid]["visits"] = min(count, 1000)
+    for uid, count in events.group_by(WebsiteEvent.user_id).all():
+        stats[uid]["events"] = count
+
+    def latest_rows(start):
+        query = db.session.query(
+            WebsiteVisit.user_id, WebsiteVisit.visit_time, WebsiteVisit.path,
+            db.func.row_number().over(partition_by=WebsiteVisit.user_id,
+                order_by=WebsiteVisit.visit_time.desc()).label("position"),
+        ).filter(WebsiteVisit.user_id.in_(user_ids), WebsiteVisit.is_page_view.is_(True))
+        if start:
+            query = query.filter(WebsiteVisit.visit_time >= start)
+        ranked = query.subquery()
+        return db.session.query(ranked.c.user_id, ranked.c.visit_time, ranked.c.path).filter(
+            ranked.c.position == 1).all()
+
+    for row in latest_rows(frequency_start):
+        stats[row.user_id]["latest"] = row
+    if frequency_start and any("latest" not in item for item in stats.values()):
+        for row in latest_rows(None):
+            stats[row.user_id].setdefault("latest", row)
+    return stats
+
+
 def _build_admin_analytics_context(section="overview"):
     now = datetime.utcnow()
     today_start = _ist_day_start_utc()
@@ -280,6 +321,8 @@ def _build_admin_analytics_context(section="overview"):
     last_7d = now - timedelta(days=7)
     last_30d = now - timedelta(days=30)
     last_365d = now - timedelta(days=365)
+    traffic_quality = traffic_quality_summary()
+    live_analytics = safe_live_summary()
     admin_user_ids = [user.id for user in User.query.filter_by(role="admin").all()]
 
     tracked_visits = WebsiteVisit.query.filter_by(is_page_view=True)
@@ -296,18 +339,6 @@ def _build_admin_analytics_context(section="overview"):
         WebsiteVisit.visit_time >= yesterday_start,
         WebsiteVisit.visit_time < today_start
     ).count()
-    total_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
-        WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.visitor_id.isnot(None),
-        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
-    ).scalar() or 0
-    today_unique_visitors = db.session.query(db.func.count(db.func.distinct(WebsiteVisit.visitor_id))).filter(
-        WebsiteVisit.is_page_view.is_(True),
-        WebsiteVisit.visitor_id.isnot(None),
-        WebsiteVisit.visit_time >= today_start,
-        (WebsiteVisit.user_id.is_(None)) | (~WebsiteVisit.user_id.in_(admin_user_ids))
-    ).scalar() or 0
-
     device_breakdown = db.session.query(
         WebsiteVisit.device_type,
         db.func.count(WebsiteVisit.id).label("views")
@@ -329,21 +360,9 @@ def _build_admin_analytics_context(section="overview"):
         .limit(5000)
         .all()
     )
-    total_unique_visitors = len({_visitor_key(visit) for visit in all_public_visit_rows})
-    today_unique_visitors = len({
-        _visitor_key(visit)
-        for visit in all_public_visit_rows
-        if visit.visit_time and visit.visit_time >= today_start
-    })
     admin_visit_rows = admin_visits_query.filter(WebsiteVisit.visit_time >= last_30d).order_by(
         WebsiteVisit.visit_time.desc()
     ).limit(2000).all()
-    visits_24h = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_24h]
-    visits_30d = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_30d]
-    hourly_traffic = _count_by_hour(visits_24h)
-    daily_traffic = _count_by_day(visits_30d)
-    monthly_traffic = _count_by_month(recent_visit_rows)
-
     public_click_query = WebsiteEvent.query.filter_by(event_type="click").filter(
         WebsiteEvent.event_time >= last_30d,
         (WebsiteEvent.user_id.is_(None)) | (~WebsiteEvent.user_id.in_(admin_user_ids))
@@ -357,6 +376,31 @@ def _build_admin_analytics_context(section="overview"):
     security_events = WebsiteEvent.query.filter_by(event_type="security").filter(
         WebsiteEvent.event_time >= last_30d
     ).order_by(WebsiteEvent.event_time.desc()).limit(2000).all()
+    cars = Car.query.options(selectinload(Car.owner)).order_by(Car.created_at.desc()).limit(1000).all()
+    frequency_filter = request.args.get("frequency", "30d")
+    frequency_start, frequency_label = _frequency_start(frequency_filter)
+    users = User.query.options(selectinload(User.cars)).order_by(User.id.desc()).limit(500).all()
+    user_stats = _legacy_user_stats([user.id for user in users], frequency_start)
+    logged_in_views = public_visits_query.filter_by(is_authenticated=True).count()
+    guest_views = public_visits_query.filter_by(is_authenticated=False).count()
+    car_owner_count = db.session.query(db.func.count(db.func.distinct(Car.owner_id))).scalar() or 0
+    # All scalar fields and template relationships are loaded. Detach before
+    # rollback so expiry cannot trigger a new checkout during Python/rendering.
+    db.session.expunge_all()
+    db.session.rollback()
+
+    total_unique_visitors = len({_visitor_key(visit) for visit in all_public_visit_rows})
+    today_unique_visitors = len({
+        _visitor_key(visit)
+        for visit in all_public_visit_rows
+        if visit.visit_time and visit.visit_time >= today_start
+    })
+    visits_24h = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_24h]
+    visits_30d = [visit for visit in recent_visit_rows if visit.visit_time and visit.visit_time >= last_30d]
+    hourly_traffic = _count_by_hour(visits_24h)
+    daily_traffic = _count_by_day(visits_30d)
+    monthly_traffic = _count_by_month(recent_visit_rows)
+
     security_events_24h = [
         event for event in security_events
         if event.event_time and event.event_time >= last_24h
@@ -415,7 +459,6 @@ def _build_admin_analytics_context(section="overview"):
             "detail": "No unusual security pattern detected from tracked events.",
         })
 
-    cars = Car.query.order_by(Car.created_at.desc()).limit(1000).all()
     today = now.date()
     service_due_cars = [
         car for car in cars
@@ -434,33 +477,18 @@ def _build_admin_analytics_context(section="overview"):
         if car.pollution_expiry and car.pollution_expiry < today
     ]
 
-    frequency_filter = request.args.get("frequency", "30d")
-    frequency_start, frequency_label = _frequency_start(frequency_filter)
     user_rows = []
-    for user in User.query.order_by(User.id.desc()).limit(500).all():
-        user_visits_query = WebsiteVisit.query.filter(
-            WebsiteVisit.user_id == user.id,
-            WebsiteVisit.is_page_view.is_(True)
-        )
-        if frequency_start:
-            user_visits_query = user_visits_query.filter(WebsiteVisit.visit_time >= frequency_start)
-        user_visits = user_visits_query.order_by(WebsiteVisit.visit_time.desc()).limit(1000).all()
-        latest_visit = user_visits[0] if user_visits else (
-            WebsiteVisit.query.filter_by(user_id=user.id, is_page_view=True)
-            .order_by(WebsiteVisit.visit_time.desc())
-            .first()
-        )
+    for user in users:
+        stats = user_stats.get(user.id, {})
+        latest_visit = stats.get("latest")
         user_cars = sorted(user.cars, key=lambda car: car.created_at or datetime.min, reverse=True)
         primary_car = next((car for car in user_cars if car.is_default), user_cars[0] if user_cars else None)
-        user_events_query = WebsiteEvent.query.filter(WebsiteEvent.user_id == user.id)
-        if frequency_start:
-            user_events_query = user_events_query.filter(WebsiteEvent.event_time >= frequency_start)
         user_rows.append({
             "user": user,
             "cars": user_cars,
             "primary_car": primary_car,
-            "visit_count": len(user_visits),
-            "event_count": user_events_query.count(),
+            "visit_count": stats.get("visits", 0),
+            "event_count": stats.get("events", 0),
             "last_seen": _format_ist(latest_visit.visit_time) if latest_visit else "No visit tracked",
             "last_path": latest_visit.path if latest_visit else "N/A",
         })
@@ -481,8 +509,8 @@ def _build_admin_analytics_context(section="overview"):
     }
 
     return {
-        "traffic_quality": traffic_quality_summary(),
-        "live_analytics": safe_live_summary(),
+        "traffic_quality": traffic_quality,
+        "live_analytics": live_analytics,
         "section": section,
         "frequency_filter": frequency_filter,
         "frequency_label": frequency_label,
@@ -498,8 +526,8 @@ def _build_admin_analytics_context(section="overview"):
         "traffic_delta_today": today_page_views - yesterday_page_views,
         "total_unique_visitors": total_unique_visitors,
         "today_unique_visitors": today_unique_visitors,
-        "logged_in_views": public_visits_query.filter_by(is_authenticated=True).count(),
-        "guest_views": public_visits_query.filter_by(is_authenticated=False).count(),
+        "logged_in_views": logged_in_views,
+        "guest_views": guest_views,
         "page_metrics": page_metrics,
         "device_breakdown": device_breakdown,
         "hourly_traffic": hourly_traffic,
@@ -514,7 +542,7 @@ def _build_admin_analytics_context(section="overview"):
         "safety_alerts": safety_alerts,
         "click_events_count": len(click_events),
         "total_cars": len(cars),
-        "car_owner_count": db.session.query(db.func.count(db.func.distinct(Car.owner_id))).scalar() or 0,
+        "car_owner_count": car_owner_count,
         "service_due_cars": service_due_cars,
         "service_soon_cars": service_soon_cars,
         "insurance_expired_cars": insurance_expired_cars,
@@ -581,28 +609,31 @@ def _safe_admin_scalar(load_value, default=0):
 
 def _mechanic_profile_columns():
     try:
-        inspector = sqlalchemy_inspect(db.engine)
+        inspector = sqlalchemy_inspect(db.session.connection())
         if not inspector.has_table("mechanic_profile"):
-            return set()
+            raise RuntimeError("Mechanic table unavailable")
         return {column["name"] for column in inspector.get_columns("mechanic_profile")}
     except Exception:
+        g.admin_mechanics_unavailable = True
         current_app.logger.warning("admin_mechanic_column_inspection_failed", exc_info=True)
-        return {column.name for column in MechanicProfile.__table__.columns}
+        raise
 
 
 def _admin_mechanic_query():
     columns = _mechanic_profile_columns()
     mapped_columns = {column.name for column in MechanicProfile.__table__.columns}
     loadable_columns = sorted(columns & mapped_columns)
+    if "id" not in loadable_columns:
+        g.admin_mechanics_unavailable = True
+        raise RuntimeError("Mechanic primary key unavailable")
     query = MechanicProfile.query
-    if loadable_columns:
-        query = query.options(load_only(*(getattr(MechanicProfile, name) for name in loadable_columns)))
+    query = query.options(load_only(*(getattr(MechanicProfile, name) for name in loadable_columns)))
     return query, columns
 
 
 def _admin_mechanic_value(mechanic, name, default=None, columns=None):
     columns = columns if columns is not None else _mechanic_profile_columns()
-    if columns and name not in columns:
+    if name not in columns:
         return default
     try:
         value = getattr(mechanic, name)
@@ -686,12 +717,15 @@ def _admin_review_payloads(mechanics, limit=10):
 
 
 def _admin_mechanic_count(columns, column_name=None, value=None, fallback=0):
+    if not columns:
+        return fallback
+    query = db.session.query(db.func.count(MechanicProfile.id))
     if column_name and column_name in columns:
         return _safe_admin_scalar(
-            lambda: MechanicProfile.query.filter(getattr(MechanicProfile, column_name).is_(value)).count(),
+            lambda: query.filter(getattr(MechanicProfile, column_name).is_(value)).scalar(),
             fallback,
         )
-    return _safe_admin_scalar(lambda: MechanicProfile.query.count(), fallback) if not column_name else fallback
+    return _safe_admin_scalar(query.scalar, fallback) if not column_name else fallback
 
 
 def _render_degraded_admin_dashboard():
