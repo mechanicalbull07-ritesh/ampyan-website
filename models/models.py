@@ -3,7 +3,9 @@ from sqlalchemy import CheckConstraint
 from flask_login import UserMixin
 from datetime import datetime
 
-db = SQLAlchemy()
+from services.request_db import RequestSession
+
+db = SQLAlchemy(session_options={"class_": RequestSession})
 
 
 class TrafficMetric(db.Model):

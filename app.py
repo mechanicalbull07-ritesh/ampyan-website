@@ -89,6 +89,7 @@ from io import BytesIO
 import textwrap
 from authlib.integrations.flask_client import OAuth
 from services.google_profile_picture import current_user_picture, log_authenticated_avatar_state
+from services.request_db import fence_connection_invalidated
 from routes.main_routes import main_bp
 from routes.canonical_garage_routes import garage_bp
 from routes.tools_routes import tools_bp
@@ -1573,7 +1574,7 @@ def google_callback():
 
 @app.after_request
 def avatar_boolean_diagnostics(response):
-    if getattr(g, "community_read_only_rejected", False):
+    if getattr(g, "community_read_only_rejected", False) or fence_connection_invalidated():
         return response
     if request.endpoint != 'google_callback':
         log_authenticated_avatar_state(current_user)
@@ -1623,6 +1624,24 @@ def client_ip():
 
 def wants_json_response():
     return request.path.startswith("/api") or "application/json" in request.headers.get("Accept", "")
+
+
+def invalidated_fence_error_response():
+    """A terminal request failure must not render templates or load ORM users."""
+    if wants_json_response():
+        response = jsonify({"status": "error", "message": "Internal server error"})
+    else:
+        response = Response(
+            '<!doctype html><html lang="en"><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">'
+            '<title>AMPYAN — Request unavailable</title><main>'
+            '<h1>The request could not be completed safely</h1>'
+            '<p>Please try again later.</p></main></html>',
+            mimetype="text/html",
+        )
+    response.status_code = 500
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 def security_path_matches(path):
@@ -1872,7 +1891,8 @@ def attach_visitor_cookie(response):
     elapsed = None
     if hasattr(g, "request_start_time") and not getattr(g, "community_read_only_rejected", False):
         elapsed = time.perf_counter() - g.request_start_time
-        safe_track_api_request(request.path, request.method, response.status_code, elapsed * 1000)
+        if not fence_connection_invalidated():
+            safe_track_api_request(request.path, request.method, response.status_code, elapsed * 1000)
         log_message = (
             "route=%s method=%s path=%s status=%s start=%s end=%s duration=%.3fs"
         )
@@ -2872,28 +2892,37 @@ def account_deletion_write_fence():
     if db.engine.dialect.name == "postgresql":
         from sqlalchemy import text as deletion_text
         from flask import g
-        conn = db.engine.connect()
-        g.deletion_fence = conn
+        conn = db.session.connection()
         g.deletion_owner = current_user.id
-        conn.execute(deletion_text("SELECT pg_advisory_lock_shared(16603,:owner)"), {"owner": current_user.id})
+        try:
+            conn.execute(deletion_text("SELECT pg_advisory_lock_shared(16603,:owner)"), {"owner": current_user.id})
+            g.deletion_fence_locked = True
+        except BaseException:
+            conn.invalidate()
+            raise
         flags = conn.execute(deletion_text('SELECT is_banned FROM "user" WHERE id=:owner'), {"owner": current_user.id}).first()
         if not flags or flags[0]:
             return "Account unavailable", 403
 
 @app.teardown_request
 def account_deletion_unlock(_):
-    from flask import g
-    from sqlalchemy import text as deletion_text
-    conn = getattr(g, "deletion_fence", None)
-    if conn is not None:
-        try:conn.execute(deletion_text("SELECT pg_advisory_unlock_shared(16603,:owner)"), {"owner": g.deletion_owner})
-        finally:conn.close()
+    from services.request_db import close_request_connection
+    close_request_connection(db)
 
 @app.after_request
 def deletion_private_response(response):
     if request.path.startswith('/account-deletion') or request.path.startswith('/admin/account-deletion'):
         response.headers['Cache-Control'] = 'no-store'
         response.headers['Referrer-Policy'] = 'no-referrer'
+    return response
+
+
+@app.after_request
+def recover_invalidated_fence_response(response):
+    # Runs before the existing headers/consent callbacks and avatar diagnostics.
+    # Also catches routes that swallowed a DB error and returned success.
+    if fence_connection_invalidated():
+        return invalidated_fence_error_response()
     return response
 
 @app.route("/account-deletion", methods=["GET", "POST"])
@@ -3656,6 +3685,8 @@ def ensure_database_ready():
 
 @app.errorhandler(404)
 def handle_not_found(error):
+    if fence_connection_invalidated():
+        return invalidated_fence_error_response()
     if wants_json_response():
         return jsonify({"status": "error", "message": "Not found"}), 404
     is_news_path = (request.path or "").startswith("/news")
@@ -3676,6 +3707,8 @@ def handle_not_found(error):
 
 @app.errorhandler(503)
 def handle_service_unavailable(error):
+    if fence_connection_invalidated():
+        return invalidated_fence_error_response()
     db.session.rollback()
     if wants_json_response():
         return jsonify({"status": "error", "message": "Service temporarily unavailable"}), 503
@@ -3691,6 +3724,8 @@ def handle_service_unavailable(error):
 
 @app.errorhandler(500)
 def handle_server_error(error):
+    if fence_connection_invalidated():
+        return invalidated_fence_error_response()
     db.session.rollback()
     if wants_json_response():
         return jsonify({"status": "error", "message": "Internal server error"}), 500
@@ -3705,6 +3740,8 @@ def handle_server_error(error):
 
 @app.errorhandler(Exception)
 def handle_unexpected_error(error):
+    if fence_connection_invalidated():
+        return invalidated_fence_error_response()
     if isinstance(error, HTTPException):
         return error
     db.session.rollback()
